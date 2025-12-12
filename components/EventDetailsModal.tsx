@@ -107,20 +107,20 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all scale-100 flex flex-col max-h-[90vh]">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all scale-100 flex flex-col max-h-[90vh] transition-colors">
 
         {/* Header with Status/Urgency Color */}
-        <div className={`px-6 py-4 border-b flex justify-between items-start ${displayConfig.colorBg} bg-opacity-30 shrink-0 transition-colors duration-300`}>
+        <div className={`px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex justify-between items-start ${displayConfig.colorBg} bg-opacity-30 shrink-0 transition-colors duration-300`}>
           <div className="flex-1">
              {/* Status Toggle UI for Authorized Users */}
             {(isDesigner || isKampanyaYapan) && (
-              <div className="flex bg-white/50 p-1 rounded-lg border border-gray-200/50 mb-3 w-fit backdrop-blur-sm">
+              <div className="flex bg-white/50 dark:bg-slate-700/50 p-1 rounded-lg border border-gray-200/50 dark:border-slate-600/50 mb-3 w-fit backdrop-blur-sm">
                 <button
                   onClick={() => handleStatusChange('Planlandı')}
                   className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all ${
                     status === 'Planlandı' 
                     ? 'bg-yellow-100 text-yellow-700 shadow-sm' 
-                    : 'text-gray-500 hover:bg-gray-100'
+                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600'
                   }`}
                   title="Planlandı"
                 >
@@ -131,7 +131,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all ${
                     status === 'Tamamlandı' 
                     ? 'bg-green-100 text-green-700 shadow-sm' 
-                    : 'text-gray-500 hover:bg-gray-100'
+                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600'
                   }`}
                   title="Tamamlandı"
                 >
@@ -142,7 +142,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all ${
                     status === 'İptal Edildi' 
                     ? 'bg-red-100 text-red-700 shadow-sm' 
-                    : 'text-gray-500 hover:bg-gray-100'
+                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600'
                   }`}
                   title="İptal Edildi"
                 >
@@ -151,7 +151,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               </div>
             )}
 
-            <span className={`inline-block px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${displayConfig.colorBorder} ${displayConfig.colorText} bg-white/50 mb-2`}>
+            <span className={`inline-block px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${displayConfig.colorBorder} ${displayConfig.colorText} bg-white/50 dark:bg-slate-700/50 mb-2`}>
               {displayConfig.label}
             </span>
             {isEditMode ? (
@@ -159,18 +159,18 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 type="text"
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
-                className="text-xl font-bold text-gray-800 leading-tight w-full border-b-2 border-violet-300 focus:border-violet-600 outline-none bg-transparent"
+                className="text-xl font-bold text-gray-800 dark:text-white leading-tight w-full border-b-2 border-violet-300 dark:border-violet-600 focus:border-violet-600 dark:focus:border-violet-400 outline-none bg-transparent"
                 placeholder="Kampanya Başlığı"
               />
             ) : (
-              <h2 className={`text-xl font-bold text-gray-800 leading-tight ${status === 'İptal Edildi' ? 'line-through opacity-60' : ''}`}>
+              <h2 className={`text-xl font-bold text-gray-800 dark:text-white leading-tight ${status === 'İptal Edildi' ? 'line-through opacity-60' : ''}`}>
                 {event.title}
               </h2>
             )}
           </div>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-800 bg-white/50 hover:bg-white rounded-full p-1 transition-colors ml-2"
+            className="text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white bg-white/50 dark:bg-slate-700/50 hover:bg-white dark:hover:bg-slate-600 rounded-full p-1 transition-colors ml-2"
           >
             <X size={20} />
           </button>
@@ -180,20 +180,20 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
 
           {/* Date Section */}
           <div className="flex items-start gap-3">
-            <div className="p-2 bg-violet-50 text-violet-600 rounded-lg shrink-0">
+            <div className="p-2 bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 rounded-lg shrink-0">
               <Calendar size={20} />
             </div>
             <div className="flex-1">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Tarih</p>
+              <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Tarih</p>
               {isEditMode ? (
                 <input
                   type="date"
                   value={editDate}
                   onChange={(e) => setEditDate(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm"
+                  className="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                 />
               ) : (
-                <p className="text-gray-800 font-medium">
+                <p className="text-gray-800 dark:text-gray-200 font-medium">
                   {format(event.date, 'd MMMM yyyy, EEEE', { locale: tr })}
                 </p>
               )}
@@ -202,16 +202,16 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
 
           {/* Department Section */}
           <div className="flex items-start gap-3">
-            <div className="p-2 bg-teal-50 text-teal-600 rounded-lg shrink-0">
+            <div className="p-2 bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400 rounded-lg shrink-0">
               <Building size={20} />
             </div>
             <div className="flex-1">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Talep Eden Birim</p>
+              <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Talep Eden Birim</p>
               {isEditMode ? (
                 <select
                   value={editDepartmentId}
                   onChange={(e) => setEditDepartmentId(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white"
+                  className="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                 >
                   <option value="">Seçiniz</option>
                   {departments.map(dept => (
@@ -219,7 +219,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   ))}
                 </select>
               ) : (
-                <p className="text-gray-800 font-medium">
+                <p className="text-gray-800 dark:text-gray-200 font-medium">
                   {department ? department.name : 'Belirtilmemiş'}
                 </p>
               )}
@@ -228,16 +228,16 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
 
           {/* Assignee Section */}
           <div className="flex items-start gap-3">
-            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg shrink-0">
+            <div className="p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg shrink-0">
               <UserIcon size={20} />
             </div>
             <div className="flex-1">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Görevli Personel</p>
+              <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Görevli Personel</p>
               {isEditMode ? (
                 <select
                   value={editAssigneeId}
                   onChange={(e) => setEditAssigneeId(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white"
+                  className="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                 >
                   <option value="">Atama Yok</option>
                   {users.map(user => (
@@ -250,7 +250,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 assignee ? (
                   <div className="flex items-center gap-2 mt-1">
                     {assignee.emoji ? (
-                      <span className="text-xl bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center border border-gray-200">
+                      <span className="text-xl bg-gray-100 dark:bg-slate-700 rounded-full w-8 h-8 flex items-center justify-center border border-gray-200 dark:border-slate-600">
                         {assignee.emoji}
                       </span>
                     ) : (
@@ -259,12 +259,12 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                       </div>
                     )}
                     <div>
-                      <p className="text-sm font-semibold text-gray-800">{assignee.name}</p>
-                      <p className="text-xs text-gray-500">{assignee.email}</p>
+                      <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{assignee.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{assignee.email}</p>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-500 italic mt-1">Atama yapılmadı.</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 italic mt-1">Atama yapılmadı.</p>
                 )
               )}
             </div>
@@ -272,16 +272,16 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
 
           {/* Urgency Section */}
           <div className="flex items-start gap-3">
-            <div className="p-2 bg-gray-50 text-gray-600 rounded-lg shrink-0">
+            <div className="p-2 bg-gray-50 dark:bg-slate-700/50 text-gray-600 dark:text-gray-300 rounded-lg shrink-0">
               <AlertCircle size={20} />
             </div>
             <div className="flex-1">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Aciliyet Seviyesi</p>
+              <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Aciliyet Seviyesi</p>
               {isEditMode ? (
                 <select
                   value={editUrgency}
                   onChange={(e) => setEditUrgency(e.target.value as UrgencyLevel)}
-                  className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white"
+                  className="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                 >
                   <option value="Low">Düşük (Low)</option>
                   <option value="Medium">Orta (Medium)</option>
@@ -289,7 +289,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   <option value="Critical">Kritik (Critical)</option>
                 </select>
               ) : (
-                <p className="text-sm text-gray-700 mt-1">
+                <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
                   Bu kampanya <strong>{urgencyConfig.label}</strong> öncelik seviyesindedir.
                 </p>
               )}
@@ -298,26 +298,26 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
 
           {/* Description Section */}
           <div className="flex items-start gap-3">
-            <div className="p-2 bg-yellow-50 text-yellow-600 rounded-lg shrink-0">
+            <div className="p-2 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 rounded-lg shrink-0">
               <AlignLeft size={20} />
             </div>
             <div className="w-full">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Açıklama</p>
+              <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Açıklama</p>
               {isEditMode ? (
                 <textarea
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
                   rows={4}
-                  className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm resize-none"
+                  className="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm resize-none bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                   placeholder="Kampanya açıklaması (isteğe bağlı)"
                 />
               ) : (
                 event.description ? (
-                  <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap leading-relaxed bg-gray-50 p-3 rounded-lg border border-gray-100">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap leading-relaxed bg-gray-50 dark:bg-slate-700/50 p-3 rounded-lg border border-gray-100 dark:border-slate-700">
                     {event.description}
                   </p>
                 ) : (
-                  <p className="text-sm text-gray-400 italic mt-1">Açıklama eklenmemiş.</p>
+                  <p className="text-sm text-gray-400 dark:text-gray-500 italic mt-1">Açıklama eklenmemiş.</p>
                 )
               )}
             </div>
@@ -326,7 +326,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 shrink-0">
+        <div className="px-6 py-4 bg-gray-50 dark:bg-slate-700/30 border-t border-gray-100 dark:border-slate-700 shrink-0">
           {isDesigner && !isEditMode ? (
             <div className="flex gap-3">
               <button
@@ -343,7 +343,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               </button>
               <button
                 onClick={onClose}
-                className="px-4 py-2 text-gray-500 hover:text-gray-800 font-medium text-sm transition-colors"
+                className="px-4 py-2 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white font-medium text-sm transition-colors"
               >
                 Kapat
               </button>
@@ -358,7 +358,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               </button>
               <button
                 onClick={handleCancel}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm flex items-center justify-center gap-2 transition-colors"
+                className="px-4 py-2 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600 font-medium text-sm flex items-center justify-center gap-2 transition-colors"
               >
                 <XCircle size={16} /> İptal
               </button>
@@ -367,7 +367,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
             <div className="text-center">
               <button
                 onClick={onClose}
-                className="text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors"
+                className="text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-colors"
               >
                 Kapat
               </button>

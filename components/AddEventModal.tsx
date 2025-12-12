@@ -80,21 +80,21 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, o
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
-        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 shrink-0">
-          <h2 className="text-lg font-bold text-gray-800">Kampanya Ekle</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex justify-between items-center bg-gray-50/50 dark:bg-slate-800/50 shrink-0">
+          <h2 className="text-lg font-bold text-gray-800 dark:text-white">Kampanya Ekle</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
             <X size={20} />
           </button>
         </div>
 
         {/* Holiday Warning Popup Inside Modal */}
         {holidayWarning && (
-          <div className="bg-amber-50 border-b border-amber-200 p-4 flex items-start gap-3 animate-in slide-in-from-top-2">
-            <AlertTriangle className="text-amber-500 shrink-0 mt-0.5" size={20} />
+          <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-900/30 p-4 flex items-start gap-3 animate-in slide-in-from-top-2">
+            <AlertTriangle className="text-amber-500 dark:text-amber-400 shrink-0 mt-0.5" size={20} />
             <div>
-              <h4 className="font-bold text-amber-800 text-sm">Resmi Tatil Uyarısı</h4>
-              <p className="text-amber-700 text-xs mt-1">
+              <h4 className="font-bold text-amber-800 dark:text-amber-300 text-sm">Resmi Tatil Uyarısı</h4>
+              <p className="text-amber-700 dark:text-amber-400 text-xs mt-1">
                 Seçilen tarih <strong>{holidayWarning}</strong> gününe denk gelmektedir.
               </p>
             </div>
@@ -103,7 +103,7 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, o
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto custom-scrollbar">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Kampanya Adı <span className="text-red-500">*</span>
             </label>
             <input
@@ -111,34 +111,34 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, o
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Kampanya adı girin..."
-              className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-200 outline-none transition-all"
+              className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-slate-600 focus:border-violet-500 focus:ring-2 focus:ring-violet-200 outline-none transition-all bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Tarih <span className="text-red-500">*</span>
             </label>
             <input
               type="date"
               value={dateStr}
               onChange={handleDateChange}
-              className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-200 outline-none transition-all"
+              className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-slate-600 focus:border-violet-500 focus:ring-2 focus:ring-violet-200 outline-none transition-all bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
               required
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Görev Atanan <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <select
                   value={assigneeId}
                   onChange={(e) => setAssigneeId(e.target.value)}
-                  className="w-full px-3 py-2 pl-8 rounded-lg border border-gray-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-200 outline-none transition-all appearance-none bg-white text-sm"
+                  className="w-full px-3 py-2 pl-8 rounded-lg border border-gray-200 dark:border-slate-600 focus:border-violet-500 focus:ring-2 focus:ring-violet-200 outline-none transition-all appearance-none bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm"
                   required
                 >
                   <option value="">Seçiniz</option>
@@ -146,19 +146,19 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, o
                     <option key={user.id} value={user.id}>{user.name}</option>
                   ))}
                 </select>
-                <UserPlus className="absolute left-2.5 top-2.5 text-gray-400" size={16} />
+                <UserPlus className="absolute left-2.5 top-2.5 text-gray-400 dark:text-gray-500" size={16} />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Talep Eden Birim <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <select
                   value={departmentId}
                   onChange={(e) => setDepartmentId(e.target.value)}
-                  className="w-full px-3 py-2 pl-8 rounded-lg border border-gray-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-200 outline-none transition-all appearance-none bg-white text-sm"
+                  className="w-full px-3 py-2 pl-8 rounded-lg border border-gray-200 dark:border-slate-600 focus:border-violet-500 focus:ring-2 focus:ring-violet-200 outline-none transition-all appearance-none bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm"
                   required
                 >
                   <option value="">Seçiniz</option>
@@ -166,13 +166,13 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, o
                     <option key={dept.id} value={dept.id}>{dept.name}</option>
                   ))}
                 </select>
-                <Building className="absolute left-2.5 top-2.5 text-gray-400" size={16} />
+                <Building className="absolute left-2.5 top-2.5 text-gray-400 dark:text-gray-500" size={16} />
               </div>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
               <AlertCircle size={14} /> Aciliyet Durumu <span className="text-red-500">*</span>
             </label>
             <div className="grid grid-cols-2 gap-2">
@@ -199,15 +199,15 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, o
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-              <AlignLeft size={14} /> Açıklama <span className="text-gray-400 font-normal text-xs">(İsteğe Bağlı)</span>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
+              <AlignLeft size={14} /> Açıklama <span className="text-gray-400 dark:text-gray-500 font-normal text-xs">(İsteğe Bağlı)</span>
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Kampanya detayları, notlar vb..."
               rows={3}
-              className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-200 outline-none transition-all resize-none"
+              className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-slate-600 focus:border-violet-500 focus:ring-2 focus:ring-violet-200 outline-none transition-all resize-none bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
             />
           </div>
 
@@ -215,13 +215,13 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, o
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
             >
               İptal
             </button>
             <button
               type="submit"
-              className="px-6 py-2 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg shadow-lg shadow-violet-200 transition-all transform active:scale-95"
+              className="px-6 py-2 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg shadow-lg shadow-violet-200 dark:shadow-none transition-all transform active:scale-95"
             >
               Ekle
             </button>
