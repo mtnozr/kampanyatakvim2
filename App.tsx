@@ -998,7 +998,7 @@ function App() {
                 <div className="flex flex-col items-end mr-2">
                   <span className="text-xs font-semibold text-gray-700">{loggedInDeptUser.username}</span>
                   <span className="text-[10px] text-gray-400 font-medium">
-                    {loggedInDeptUser.isDesigner ? 'Designer' : loggedInDeptUser.isKampanyaYapan ? 'Kampanya Yapan' : 'Personel'}
+                    {loggedInDeptUser.isDesigner ? 'Designer' : loggedInDeptUser.isKampanyaYapan ? 'Kampanya Yapan' : 'Birim Kullanıcısı'}
                   </span>
                 </div>
               )}
