@@ -70,4 +70,5 @@ export interface Announcement {
   createdAt: Date;
   createdBy: string;
   visibleTo: 'admin' | 'kampanya' | 'all';
+  readBy: string[];
 }

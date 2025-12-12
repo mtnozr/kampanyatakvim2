@@ -44,8 +44,10 @@ import {
   orderBy,
   Timestamp,
   setDoc,
-  writeBatch
+  writeBatch,
+  arrayUnion
 } from 'firebase/firestore';
+import { auth } from './firebase';
 
 // --- EMAILJS CONFIGURATION ---
 const EMAILJS_SERVICE_ID = 'service_q4mufkj';
@@ -204,6 +206,7 @@ function App() {
       const fetchedAnns: Announcement[] = snapshot.docs.map(doc => ({
         ...doc.data(),
         id: doc.id,
+        readBy: doc.data().readBy || [], // Ensure readBy exists
         createdAt: doc.data().createdAt instanceof Timestamp ? doc.data().createdAt.toDate() : new Date()
       } as Announcement));
       setAnnouncements(fetchedAnns);
@@ -289,11 +292,27 @@ function App() {
 
   const filteredAnnouncements = useMemo(() => {
     return announcements.filter(ann => {
-      if (isDesigner) return true; // Admin sees all
+      // Admin sees all
+      if (!loggedInDeptUser && auth.currentUser) return true;
+      // Designer sees all
+      if (isDesigner) return true; 
+      // Kampanya Yapan sees public and 'kampanya' visible
       if (isKampanyaYapan) return ann.visibleTo === 'all' || ann.visibleTo === 'kampanya';
+      // Others see only public
       return ann.visibleTo === 'all';
     });
-  }, [announcements, isDesigner, isKampanyaYapan]);
+  }, [announcements, isDesigner, isKampanyaYapan, loggedInDeptUser]);
+
+  const unreadAnnouncementCount = useMemo(() => {
+    let userId = loggedInDeptUser ? loggedInDeptUser.id : 'guest';
+    if (!loggedInDeptUser && auth.currentUser) {
+      userId = auth.currentUser.uid;
+    }
+    
+    if (userId === 'guest') return 0; // Don't show badge for guests
+
+    return filteredAnnouncements.filter(ann => !ann.readBy || !ann.readBy.includes(userId)).length;
+  }, [filteredAnnouncements, loggedInDeptUser]);
 
   // --- Calendar Logic ---
   const calendarDays = useMemo(() => {
@@ -503,7 +522,8 @@ function App() {
         content,
         visibleTo,
         createdAt: Timestamp.now(),
-        createdBy: user
+        createdBy: user,
+        readBy: []
       });
       
       // Log action
@@ -515,6 +535,40 @@ function App() {
       addToast('Duyuru yayınlandı.', 'success');
     } catch (e) {
       addToast('Duyuru eklenemedi.', 'info');
+    }
+  };
+
+  const handleMarkAsRead = async (ids: string[]) => {
+    // Determine user ID
+    let userId = loggedInDeptUser ? loggedInDeptUser.id : 'guest';
+    // If Admin (Firebase Auth) but not Dept User, use uid
+    if (!loggedInDeptUser && auth.currentUser) {
+      userId = auth.currentUser.uid;
+    }
+    
+    if (userId === 'guest') return; // Don't track guests in Firestore
+
+    // Filter only those not already read by this user
+    const unreadIds = ids.filter(id => {
+       const ann = announcements.find(a => a.id === id);
+       return ann && (!ann.readBy || !ann.readBy.includes(userId));
+    });
+
+    if (unreadIds.length === 0) return;
+
+    // Batch update
+    const batch = writeBatch(db);
+    unreadIds.forEach(id => {
+       const ref = doc(db, "announcements", id);
+       batch.update(ref, {
+          readBy: arrayUnion(userId)
+       });
+    });
+
+    try {
+      await batch.commit();
+    } catch (e) {
+      console.error("Error marking announcements as read:", e);
     }
   };
 
@@ -955,8 +1009,10 @@ function App() {
                 title="Duyurular"
               >
                 <Megaphone size={20} />
-                {announcements.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+                {unreadAnnouncementCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white">
+                    {unreadAnnouncementCount}
+                  </span>
                 )}
               </button>
 
@@ -1311,6 +1367,10 @@ function App() {
           isOpen={isAnnBoardOpen}
           onClose={() => setIsAnnBoardOpen(false)}
           announcements={filteredAnnouncements}
+          canManage={(!loggedInDeptUser && !!auth.currentUser) || isDesigner}
+          onAddAnnouncement={handleAddAnnouncement}
+          onDeleteAnnouncement={handleDeleteAnnouncement}
+          onMarkAsRead={handleMarkAsRead}
         />
 
         <ToastContainer toasts={toasts} removeToast={removeToast} />
