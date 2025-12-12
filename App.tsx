@@ -107,6 +107,9 @@ function App() {
   // Refactor: Store ID instead of object to ensure reactivity
   const [viewEventId, setViewEventId] = useState<string | null>(null);
   const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null);
+  
+  // Refresh Key for manual data reload
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Derived state for viewEvent
   const viewEvent = useMemo(() => {
@@ -117,7 +120,7 @@ function App() {
 
   // 1. Sync Events
   useEffect(() => {
-    setIsEventsLoading(true);
+    if (refreshKey === 0) setIsEventsLoading(true);
     const q = query(collection(db, "events"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetchedEvents: CalendarEvent[] = snapshot.docs.map(doc => {
@@ -139,18 +142,18 @@ function App() {
       setIsEventsLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [refreshKey]);
 
   // 2. Sync Users
   useEffect(() => {
-    setIsUsersLoading(true);
+    if (refreshKey === 0) setIsUsersLoading(true);
     const unsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
       const fetchedUsers: User[] = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as User));
       setUsers(fetchedUsers);
       setIsUsersLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [refreshKey]);
 
   // 3. Sync Departments
   useEffect(() => {
@@ -159,7 +162,7 @@ function App() {
       setDepartments(fetchedDepts);
     });
     return () => unsubscribe();
-  }, []);
+  }, [refreshKey]);
 
   // 4. Sync Department Users (for login system)
   useEffect(() => {
@@ -173,7 +176,7 @@ function App() {
       setDepartmentUsers(fetchedUsers);
     });
     return () => unsubscribe();
-  }, []);
+  }, [refreshKey]);
 
   // 5. Sync Notifications
   useEffect(() => {
@@ -187,7 +190,7 @@ function App() {
       setNotifications(fetchedNotifs);
     });
     return () => unsubscribe();
-  }, []);
+  }, [refreshKey]);
 
   // 6. Sync Logs
   useEffect(() => {
@@ -201,7 +204,7 @@ function App() {
       setLogs(fetchedLogs);
     });
     return () => unsubscribe();
-  }, []);
+  }, [refreshKey]);
 
   // 7. Sync Announcements
   useEffect(() => {
@@ -216,7 +219,7 @@ function App() {
       setAnnouncements(fetchedAnns);
     });
     return () => unsubscribe();
-  }, []);
+  }, [refreshKey]);
 
   // --- Derived Permissions based on Login ---
   // Designer = logged in via Firebase Auth in AdminModal
@@ -891,6 +894,12 @@ function App() {
 
   const hasActiveFilters = searchQuery || filterAssignee || filterUrgency || filterStatus;
 
+  const handleDashboardRefresh = async () => {
+    setRefreshKey(prev => prev + 1);
+    // Short delay to allow effects to re-trigger and loading state to appear
+    await new Promise(resolve => setTimeout(resolve, 500));
+  };
+
   // Render Loading State if Initial Data Fetching
   if (isEventsLoading || isUsersLoading) {
     return (
@@ -1436,6 +1445,7 @@ function App() {
           events={events}
           departments={departments}
           users={users}
+          onRefresh={handleDashboardRefresh}
         />
 
         <ToastContainer toasts={toasts} removeToast={removeToast} />

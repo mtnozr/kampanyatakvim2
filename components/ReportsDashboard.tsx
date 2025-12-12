@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { X, BarChart3, TrendingUp, Calendar, Users, PieChart, Download } from 'lucide-react';
+import { X, BarChart3, TrendingUp, Calendar, Users, PieChart, Download, RefreshCw } from 'lucide-react';
 import { CalendarEvent, Department, User } from '../types';
 import { format, isSameMonth, isSameYear, startOfYear, endOfYear, eachMonthOfInterval } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -10,10 +10,21 @@ interface ReportsDashboardProps {
   events: CalendarEvent[];
   departments: Department[];
   users: User[];
+  onRefresh?: () => void;
 }
 
-export function ReportsDashboard({ isOpen, onClose, events, departments, users }: ReportsDashboardProps) {
+export function ReportsDashboard({ isOpen, onClose, events, departments, users, onRefresh }: ReportsDashboardProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'departments' | 'users'>('overview');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    if (onRefresh) {
+      setIsRefreshing(true);
+      await onRefresh();
+      // Small delay to show animation
+      setTimeout(() => setIsRefreshing(false), 800);
+    }
+  };
 
   // --- Data Processing ---
   const stats = useMemo(() => {
@@ -155,12 +166,24 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users }
               {new Date().getFullYear()} yılı performans özeti ve istatistikler
             </p>
           </div>
-          <button 
-            onClick={onClose}
-            className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full transition-colors text-gray-500 dark:text-gray-400"
-          >
-            <X size={24} />
-          </button>
+          <div className="flex items-center gap-2">
+            {onRefresh && (
+              <button
+                onClick={handleRefresh}
+                className={`p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full transition-colors text-gray-500 dark:text-gray-400 ${isRefreshing ? 'animate-spin text-violet-600' : ''}`}
+                title="Verileri Yenile"
+                disabled={isRefreshing}
+              >
+                <RefreshCw size={20} />
+              </button>
+            )}
+            <button 
+              onClick={onClose}
+              className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full transition-colors text-gray-500 dark:text-gray-400"
+            >
+              <X size={24} />
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}
