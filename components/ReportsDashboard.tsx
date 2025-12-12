@@ -22,25 +22,29 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users }
     const currentMonth = now.getMonth();
 
     // Initialize counters
-    const deptStats: Record<string, { name: string; month: number; year: number }> = {};
-    const userStats: Record<string, { name: string; month: number; year: number; role: string }> = {};
+    const deptStats: Record<string, { name: string; active: number; completed: number }> = {};
+    const userStats: Record<string, { name: string; active: number; completed: number; role: string }> = {};
     const monthlyActivity = new Array(12).fill(0);
     
     // Fill initial maps
     departments.forEach(d => {
-      deptStats[d.id] = { name: d.name, month: 0, year: 0 };
+      deptStats[d.id] = { name: d.name, active: 0, completed: 0 };
     });
     users.forEach(u => {
-      userStats[u.id] = { name: u.name, month: 0, year: 0, role: u.role };
+      userStats[u.id] = { name: u.name, active: 0, completed: 0, role: u.role };
     });
 
     let totalYear = 0;
     let totalMonth = 0;
 
     events.forEach(event => {
+      // Exclude Cancelled events
+      if (event.status === 'İptal Edildi') return;
+
       const date = new Date(event.date);
       const year = date.getFullYear();
       const month = date.getMonth();
+      const isCompleted = event.status === 'Tamamlandı';
 
       if (year === currentYear) {
         totalYear++;
@@ -48,38 +52,40 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users }
         
         // Department Stats
         if (deptStats[event.departmentId]) {
-          deptStats[event.departmentId].year++;
+          if (isCompleted) {
+            deptStats[event.departmentId].completed++;
+          } else {
+            deptStats[event.departmentId].active++;
+          }
         }
         
         // User Stats
         if (event.assigneeId && userStats[event.assigneeId]) {
-          userStats[event.assigneeId].year++;
+          if (isCompleted) {
+            userStats[event.assigneeId].completed++;
+          } else {
+            userStats[event.assigneeId].active++;
+          }
         }
 
         if (month === currentMonth) {
           totalMonth++;
-          if (deptStats[event.departmentId]) {
-            deptStats[event.departmentId].month++;
-          }
-          if (event.assigneeId && userStats[event.assigneeId]) {
-            userStats[event.assigneeId].month++;
-          }
         }
       }
     });
 
-    // Sort for charts (Top 5 etc)
-    const sortedDeptByYear = Object.values(deptStats).sort((a, b) => b.year - a.year);
-    const sortedUsersByYear = Object.values(userStats)
+    // Sort for charts (Active + Completed)
+    const sortedDeptByTotal = Object.values(deptStats).sort((a, b) => (b.active + b.completed) - (a.active + a.completed));
+    const sortedUsersByTotal = Object.values(userStats)
       // .filter(u => u.role === 'kampanya') // Role filtering disabled until database update
-      .sort((a, b) => b.year - a.year);
+      .sort((a, b) => (b.active + b.completed) - (a.active + a.completed));
 
     return {
       deptStats,
       userStats,
       monthlyActivity,
-      sortedDeptByYear,
-      sortedUsersByYear,
+      sortedDeptByTotal,
+      sortedUsersByTotal,
       totalYear,
       totalMonth
     };
@@ -221,30 +227,31 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users }
           {activeTab === 'departments' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm">
-                <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-6">Birimlere Göre (Bu Ay)</h3>
+                <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-6">Tüm Kampanyalar (Devam Eden + Tamamlanan)</h3>
                 <div className="space-y-1">
-                  {stats.sortedDeptByYear.map(d => (
+                  {stats.sortedDeptByTotal.map(d => (
                     <SimpleBar 
                       key={d.name} 
                       label={d.name} 
-                      value={d.month} 
-                      max={Math.max(...stats.sortedDeptByYear.map(x => x.month))} 
+                      value={d.active + d.completed} 
+                      max={Math.max(...stats.sortedDeptByTotal.map(x => x.active + x.completed))} 
                       color="bg-blue-500"
+                      subValue={`${d.completed} Tamamlandı`}
                     />
                   ))}
                 </div>
               </div>
 
               <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm">
-                <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-6">Birimlere Göre (Yıllık Toplam)</h3>
+                <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-6">Sadece Tamamlananlar</h3>
                 <div className="space-y-1">
-                  {stats.sortedDeptByYear.map(d => (
+                  {stats.sortedDeptByTotal.map(d => (
                     <SimpleBar 
                       key={d.name} 
                       label={d.name} 
-                      value={d.year} 
-                      max={stats.sortedDeptByYear[0]?.year || 1} 
-                      color="bg-indigo-500"
+                      value={d.completed} 
+                      max={Math.max(...stats.sortedDeptByTotal.map(x => x.completed), 1)} 
+                      color="bg-emerald-500"
                     />
                   ))}
                 </div>
@@ -256,38 +263,39 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users }
           {activeTab === 'users' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm">
-                <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-6">Personel Performansı (Bu Ay)</h3>
+                <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-6">Tüm Kampanyalar (Devam Eden + Tamamlanan)</h3>
                 <p className="text-xs text-gray-400 mb-4">* Sadece 'Kampanya Yapan' rolündeki kullanıcılar listelenir.</p>
                 <div className="space-y-1">
-                  {stats.sortedUsersByYear.map(u => (
+                  {stats.sortedUsersByTotal.map(u => (
                     <SimpleBar 
                       key={u.name} 
                       label={u.name} 
-                      value={u.month} 
-                      max={Math.max(...stats.sortedUsersByYear.map(x => x.month))} 
-                      color="bg-emerald-500"
+                      value={u.active + u.completed} 
+                      max={Math.max(...stats.sortedUsersByTotal.map(x => x.active + x.completed))} 
+                      color="bg-indigo-500"
+                      subValue={`${u.completed} Tamamlandı`}
                     />
                   ))}
-                  {stats.sortedUsersByYear.length === 0 && (
+                  {stats.sortedUsersByTotal.length === 0 && (
                     <p className="text-center text-gray-400 py-4">Veri bulunamadı.</p>
                   )}
                 </div>
               </div>
 
               <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm">
-                <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-6">Personel Performansı (Yıllık Toplam)</h3>
+                <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-6">Sadece Tamamlananlar</h3>
                  <p className="text-xs text-gray-400 mb-4">* Sadece 'Kampanya Yapan' rolündeki kullanıcılar listelenir.</p>
                 <div className="space-y-1">
-                  {stats.sortedUsersByYear.map(u => (
+                  {stats.sortedUsersByTotal.map(u => (
                     <SimpleBar 
                       key={u.name} 
                       label={u.name} 
-                      value={u.year} 
-                      max={stats.sortedUsersByYear[0]?.year || 1} 
+                      value={u.completed} 
+                      max={Math.max(...stats.sortedUsersByTotal.map(x => x.completed), 1)} 
                       color="bg-teal-500"
                     />
                   ))}
-                   {stats.sortedUsersByYear.length === 0 && (
+                   {stats.sortedUsersByTotal.length === 0 && (
                     <p className="text-center text-gray-400 py-4">Veri bulunamadı.</p>
                   )}
                 </div>
