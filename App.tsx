@@ -104,6 +104,7 @@ function App() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   // Refactor: Store ID instead of object to ensure reactivity
   const [viewEventId, setViewEventId] = useState<string | null>(null);
+  const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null);
 
   // Derived state for viewEvent
   const viewEvent = useMemo(() => {
@@ -812,6 +813,22 @@ function App() {
     }
   };
 
+  const handleEventDrop = async (event: CalendarEvent, newDate: Date) => {
+    if (!isDesigner) return;
+
+    // If dropped on the same day, do nothing
+    if (isSameDay(event.date, newDate)) return;
+
+    try {
+      // Create a toast to indicate progress
+      addToast('Tarih güncelleniyor...', 'info');
+      await handleEditEvent(event.id, { date: newDate });
+    } catch (error) {
+      console.error('Drag drop update failed:', error);
+      addToast('Tarih güncellemesi başarısız.', 'info');
+    }
+  };
+
   const handleBulkAddEvents = async (newEvents: Partial<CalendarEvent>[]) => {
     try {
       const batch = writeBatch(db);
@@ -1196,6 +1213,19 @@ function App() {
                 <div
                   key={day.toString()}
                   onClick={() => openAddModal(day)}
+                  onDragOver={(e) => {
+                    if (isDesigner) {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = "move";
+                    }
+                  }}
+                  onDrop={(e) => {
+                    if (isDesigner && draggedEvent) {
+                      e.preventDefault();
+                      handleEventDrop(draggedEvent, day);
+                      setDraggedEvent(null);
+                    }
+                  }}
                   className={`
                   relative min-h-[120px] p-2 rounded-2xl border transition-colors transition-shadow duration-200 group
                   flex flex-col
@@ -1267,14 +1297,27 @@ function App() {
                       }
 
                       return (
-                        <EventBadge
+                        <div
                           key={event.id}
-                          event={event}
-                          user={users.find(u => u.id === event.assigneeId)}
-                          onClick={(e) => setViewEventId(e.id)}
-                          isBlurred={isBlurred}
-                          isClickable={isClickable}
-                        />
+                          draggable={isDesigner}
+                          onDragStart={(e) => {
+                            if (isDesigner) {
+                              setDraggedEvent(event);
+                              e.dataTransfer.effectAllowed = "move";
+                              // Optional: Set drag image or data if needed
+                              e.dataTransfer.setData("text/plain", event.id);
+                            }
+                          }}
+                          className={isDesigner ? 'cursor-grab active:cursor-grabbing' : ''}
+                        >
+                          <EventBadge
+                            event={event}
+                            user={users.find(u => u.id === event.assigneeId)}
+                            onClick={(e) => setViewEventId(e.id)}
+                            isBlurred={isBlurred}
+                            isClickable={isClickable}
+                          />
+                        </div>
                       );
                     })}
                   </div>
