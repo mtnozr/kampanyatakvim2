@@ -1,4 +1,5 @@
 export type UrgencyLevel = 'Very High' | 'High' | 'Medium' | 'Low';
+export type DifficultyLevel = 'BASİT' | 'BASİT ÜSTÜ' | 'ORTA' | 'ZOR' | 'ÇOK ZOR';
 
 export interface User {
   id: string;
@@ -21,6 +22,7 @@ export interface CalendarEvent {
   title: string;
   description?: string;
   urgency: UrgencyLevel; // Changed from platform
+  difficulty?: DifficultyLevel; // New property for campaign difficulty
   assigneeId?: string; // ID of the assigned User
   departmentId?: string; // ID of the requesting Department
   status?: CampaignStatus;
@@ -31,6 +33,12 @@ export interface UrgencyConfig {
   colorBg: string;
   colorBorder: string;
   colorText: string;
+}
+
+export interface DifficultyConfig {
+  label: string;
+  color: string;
+  textColor: string;
 }
 
 export interface AppNotification {

@@ -1,4 +1,32 @@
-import { CalendarEvent, UrgencyConfig, User, UrgencyLevel, Department } from './types';
+import { CalendarEvent, UrgencyConfig, User, UrgencyLevel, Department, DifficultyLevel, DifficultyConfig } from './types';
+
+export const DIFFICULTY_CONFIGS: Record<DifficultyLevel, DifficultyConfig> = {
+  'BASİT': {
+    label: 'Basit',
+    color: 'bg-green-100 border-green-200',
+    textColor: 'text-green-700'
+  },
+  'BASİT ÜSTÜ': {
+    label: 'Basit Üstü',
+    color: 'bg-emerald-100 border-emerald-200',
+    textColor: 'text-emerald-700'
+  },
+  'ORTA': {
+    label: 'Orta',
+    color: 'bg-yellow-100 border-yellow-200',
+    textColor: 'text-yellow-700'
+  },
+  'ZOR': {
+    label: 'Zor',
+    color: 'bg-orange-100 border-orange-200',
+    textColor: 'text-orange-700'
+  },
+  'ÇOK ZOR': {
+    label: 'Çok Zor',
+    color: 'bg-red-100 border-red-200',
+    textColor: 'text-red-700'
+  }
+};
 
 export const URGENCY_CONFIGS: Record<UrgencyLevel, UrgencyConfig> = {
   'Very High': {

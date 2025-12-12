@@ -17,8 +17,8 @@ import { Bell, ChevronLeft, ChevronRight, Plus, Users, ClipboardList, Loader2, S
 import emailjs from '@emailjs/browser';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { CalendarEvent, UrgencyLevel, User, AppNotification, ToastMessage, ActivityLog, Department, DepartmentUser, Announcement } from './types';
-import { INITIAL_EVENTS, DAYS_OF_WEEK, INITIAL_USERS, URGENCY_CONFIGS, TURKISH_HOLIDAYS, INITIAL_DEPARTMENTS } from './constants';
+import { CalendarEvent, UrgencyLevel, User, AppNotification, ToastMessage, ActivityLog, Department, DepartmentUser, Announcement, DifficultyLevel } from './types';
+import { INITIAL_EVENTS, DAYS_OF_WEEK, INITIAL_USERS, URGENCY_CONFIGS, TURKISH_HOLIDAYS, INITIAL_DEPARTMENTS, DIFFICULTY_CONFIGS } from './constants';
 import { EventBadge } from './components/EventBadge';
 import { AddEventModal } from './components/AddEventModal';
 import { AdminModal } from './components/AdminModal';
@@ -683,16 +683,19 @@ function App() {
     date: Date,
     assigneeId?: string,
     description?: string,
-    departmentId?: string
+    departmentId?: string,
+    difficulty?: DifficultyLevel
   ) => {
 
     const eventData = {
       title,
       date: Timestamp.fromDate(date),
       urgency,
+      difficulty: difficulty || 'ORTA',
       assigneeId,
       description,
-      departmentId
+      departmentId,
+      status: 'Planlandı'
     };
 
     let newEventId = "";
@@ -727,6 +730,7 @@ function App() {
         setIsSendingEmail(true);
 
         let emailMessage = `${format(date, 'd MMMM yyyy', { locale: tr })} tarihindeki "${title}" kampanyası için görevlendirildiniz.\nAciliyet: ${URGENCY_CONFIGS[urgency].label}`;
+        if (difficulty) emailMessage += `\nZorluk Seviyesi: ${DIFFICULTY_CONFIGS[difficulty].label}`;
         if (description) emailMessage += `\n\nAçıklama:\n${description}`;
 
         if (departmentId) {

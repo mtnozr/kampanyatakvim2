@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, User as UserIcon, AlertCircle, AlignLeft, Building, Edit2, Save, XCircle, Trash2, CheckCircle2, XCircle as CancelIcon, Clock } from 'lucide-react';
-import { CalendarEvent, User, Department, UrgencyLevel, CampaignStatus } from '../types';
-import { URGENCY_CONFIGS, STATUS_STYLES } from '../constants';
+import { X, Calendar, User as UserIcon, AlertCircle, AlignLeft, Building, Edit2, Save, XCircle, Trash2, CheckCircle2, XCircle as CancelIcon, Clock, Gauge } from 'lucide-react';
+import { CalendarEvent, User, Department, UrgencyLevel, CampaignStatus, DifficultyLevel } from '../types';
+import { URGENCY_CONFIGS, STATUS_STYLES, DIFFICULTY_CONFIGS } from '../constants';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
@@ -32,6 +32,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   const [editTitle, setEditTitle] = useState('');
   const [editDate, setEditDate] = useState('');
   const [editUrgency, setEditUrgency] = useState<UrgencyLevel>('Medium');
+  const [editDifficulty, setEditDifficulty] = useState<DifficultyLevel>('ORTA');
   const [editDescription, setEditDescription] = useState('');
   const [editAssigneeId, setEditAssigneeId] = useState('');
   const [editDepartmentId, setEditDepartmentId] = useState('');
@@ -42,6 +43,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
       setEditTitle(event.title);
       setEditDate(format(event.date, 'yyyy-MM-dd'));
       setEditUrgency(event.urgency);
+      setEditDifficulty(event.difficulty || 'ORTA');
       setEditDescription(event.description || '');
       setEditAssigneeId(event.assigneeId || '');
       setEditDepartmentId(event.departmentId || '');
@@ -76,6 +78,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
       title: editTitle,
       date: new Date(editDate),
       urgency: editUrgency,
+      difficulty: editDifficulty,
       description: editDescription,
       assigneeId: editAssigneeId || undefined,
       departmentId: editDepartmentId || undefined,
@@ -90,6 +93,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     setEditTitle(event.title);
     setEditDate(format(event.date, 'yyyy-MM-dd'));
     setEditUrgency(event.urgency);
+    setEditDifficulty(event.difficulty || 'ORTA');
     setEditDescription(event.description || '');
     setEditAssigneeId(event.assigneeId || '');
     setEditDepartmentId(event.departmentId || '');
@@ -266,6 +270,45 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 ) : (
                   <p className="text-sm text-gray-500 dark:text-gray-400 italic mt-1">Atama yapılmadı.</p>
                 )
+              )}
+            </div>
+          </div>
+
+          {/* Difficulty Section */}
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-lg shrink-0">
+              <Gauge size={20} />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Zorluk Seviyesi</p>
+              {isEditMode ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1">
+                  {(Object.keys(DIFFICULTY_CONFIGS) as DifficultyLevel[]).map((level) => {
+                    const config = DIFFICULTY_CONFIGS[level];
+                    const isSelected = editDifficulty === level;
+                    return (
+                      <button
+                        key={level}
+                        type="button"
+                        onClick={() => setEditDifficulty(level)}
+                        className={`
+                          px-2 py-1.5 rounded-lg text-xs font-medium text-center border transition-all
+                          ${isSelected
+                            ? `${config.color} border-current ring-1 ring-offset-1 ring-gray-300 dark:ring-gray-600`
+                            : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 text-gray-600 dark:text-gray-300'}
+                        `}
+                      >
+                        <span className={isSelected ? config.textColor : ''}>{config.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="mt-1 flex items-center gap-2">
+                  <span className={`px-2 py-1 rounded text-xs font-bold ${event.difficulty ? DIFFICULTY_CONFIGS[event.difficulty].color : 'bg-gray-100 text-gray-600'} ${event.difficulty ? DIFFICULTY_CONFIGS[event.difficulty].textColor : ''}`}>
+                    {event.difficulty ? DIFFICULTY_CONFIGS[event.difficulty].label : 'Belirtilmemiş'}
+                  </span>
+                </div>
               )}
             </div>
           </div>

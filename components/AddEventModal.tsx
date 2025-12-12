@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { X, UserPlus, AlertCircle, AlignLeft, AlertTriangle, Building } from 'lucide-react';
-import { UrgencyLevel, User, Department } from '../types';
-import { URGENCY_CONFIGS, TURKISH_HOLIDAYS } from '../constants';
+import { X, UserPlus, AlertCircle, AlignLeft, AlertTriangle, Building, Gauge } from 'lucide-react';
+import { UrgencyLevel, User, Department, DifficultyLevel } from '../types';
+import { URGENCY_CONFIGS, TURKISH_HOLIDAYS, DIFFICULTY_CONFIGS } from '../constants';
 
 interface AddEventModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (title: string, urgency: UrgencyLevel, date: Date, assigneeId?: string, description?: string, departmentId?: string) => void;
+  onAdd: (title: string, urgency: UrgencyLevel, date: Date, assigneeId?: string, description?: string, departmentId?: string, difficulty?: DifficultyLevel) => void;
   initialDate?: Date;
   users: User[];
   departments: Department[];
@@ -15,6 +15,7 @@ interface AddEventModalProps {
 export const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onAdd, initialDate, users, departments }) => {
   const [title, setTitle] = useState('');
   const [urgency, setUrgency] = useState<UrgencyLevel>('Medium');
+  const [difficulty, setDifficulty] = useState<DifficultyLevel>('ORTA');
   const [dateStr, setDateStr] = useState('');
   const [assigneeId, setAssigneeId] = useState<string>('');
   const [departmentId, setDepartmentId] = useState<string>('');
@@ -33,6 +34,7 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, o
     } else {
       setTitle('');
       setUrgency('Medium');
+      setDifficulty('ORTA');
       setAssigneeId('');
       setDepartmentId('');
       setDescription('');
@@ -67,9 +69,11 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, o
     }
 
     const selectedDate = new Date(dateStr);
-    onAdd(title, urgency, selectedDate, assigneeId, description, departmentId);
+    onAdd(title, urgency, selectedDate, assigneeId, description, departmentId, difficulty);
     onClose();
     setTitle('');
+    setUrgency('Medium');
+    setDifficulty('ORTA');
     setAssigneeId('');
     setDepartmentId('');
     setDescription('');
@@ -168,6 +172,33 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, o
                 </select>
                 <Building className="absolute left-2.5 top-2.5 text-gray-400 dark:text-gray-500" size={16} />
               </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
+              <Gauge size={14} /> Zorluk Seviyesi
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {(Object.keys(DIFFICULTY_CONFIGS) as DifficultyLevel[]).map((level) => {
+                const config = DIFFICULTY_CONFIGS[level];
+                const isSelected = difficulty === level;
+                return (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => setDifficulty(level)}
+                    className={`
+                      px-3 py-2 rounded-lg text-xs font-medium text-center border transition-all
+                      ${isSelected
+                        ? `${config.color} border-current ring-1 ring-offset-1 ring-gray-300 dark:ring-gray-600`
+                        : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 text-gray-600 dark:text-gray-300'}
+                    `}
+                  >
+                    <span className={isSelected ? config.textColor : ''}>{config.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
