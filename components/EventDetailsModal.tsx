@@ -282,24 +282,32 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
             <div className="flex-1">
               <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Zorluk Seviyesi</p>
               {isEditMode ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1">
+                <div className="flex flex-wrap gap-2 mt-1">
                   {(Object.keys(DIFFICULTY_CONFIGS) as DifficultyLevel[]).map((level) => {
                     const config = DIFFICULTY_CONFIGS[level];
                     const isSelected = editDifficulty === level;
                     return (
-                      <button
+                      <label
                         key={level}
-                        type="button"
-                        onClick={() => setEditDifficulty(level)}
                         className={`
-                          px-2 py-1.5 rounded-lg text-xs font-medium text-center border transition-all
+                          relative flex items-center gap-2 px-2 py-1.5 rounded-lg border cursor-pointer transition-all select-none
                           ${isSelected
-                            ? `${config.color} border-current ring-1 ring-offset-1 ring-gray-300 dark:ring-gray-600`
-                            : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 text-gray-600 dark:text-gray-300'}
+                            ? 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-700 ring-1 ring-violet-500'
+                            : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600'}
                         `}
                       >
-                        <span className={isSelected ? config.textColor : ''}>{config.label}</span>
-                      </button>
+                        <input
+                          type="radio"
+                          name="editDifficulty"
+                          value={level}
+                          checked={isSelected}
+                          onChange={() => setEditDifficulty(level)}
+                          className="w-3.5 h-3.5 text-violet-600 border-gray-300 focus:ring-violet-500 dark:bg-slate-600 dark:border-slate-500"
+                        />
+                        <span className={`text-xs font-medium ${isSelected ? config.textColor : 'text-gray-600 dark:text-gray-300'}`}>
+                          {config.label}
+                        </span>
+                      </label>
                     );
                   })}
                 </div>
