@@ -321,23 +321,23 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl overflow-hidden flex flex-col h-[80vh] md:h-auto md:max-h-[90vh]">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-4xl overflow-hidden flex flex-col h-[80vh] md:h-auto md:max-h-[90vh] transition-colors">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-slate-50 shrink-0">
-          <div className="flex items-center gap-2 text-slate-800">
-            <ShieldCheck className="text-violet-600" size={24} />
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 shrink-0 transition-colors">
+          <div className="flex items-center gap-2 text-slate-800 dark:text-slate-100">
+            <ShieldCheck className="text-violet-600 dark:text-violet-400" size={24} />
             <h2 className="text-lg font-bold">Yönetici Paneli</h2>
           </div>
           <div className="flex items-center gap-2">
             {authUser && (
               <button
                 onClick={handleLogout}
-                className="text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg font-medium hover:bg-red-100 flex items-center gap-1"
+                className="text-xs bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-3 py-1.5 rounded-lg font-medium hover:bg-red-100 dark:hover:bg-red-900/30 flex items-center gap-1 transition-colors"
               >
                 <LogOut size={14} /> Çıkış
               </button>
             )}
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
               <X size={20} />
             </button>
           </div>
@@ -346,11 +346,11 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         {!authUser ? (
           // Login View
           <form onSubmit={handleLogin} className="p-8 flex flex-col gap-4 items-center justify-center flex-1">
-            <div className="p-4 bg-violet-50 rounded-full text-violet-500 mb-2">
+            <div className="p-4 bg-violet-50 dark:bg-violet-900/20 rounded-full text-violet-500 dark:text-violet-400 mb-2 transition-colors">
               <Lock size={32} />
             </div>
-            <h3 className="text-xl font-semibold text-gray-800">Admin Girişi</h3>
-            <p className="text-sm text-gray-500 text-center max-w-xs">
+            <h3 className="text-xl font-semibold text-gray-800 dark:text-white">Admin Girişi</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-xs">
               Yönetim paneline erişmek için yetkili e-posta ve şifrenizi giriniz.
             </p>
 
@@ -360,7 +360,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 placeholder="E-posta"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm"
+                className="w-full px-4 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-colors"
                 autoFocus
               />
               <input
@@ -368,12 +368,12 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 placeholder="Şifre"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm"
+                className="w-full px-4 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-colors"
               />
-              {error && <div className="p-3 bg-red-50 text-red-600 text-xs rounded-lg text-center">{error}</div>}
+              {error && <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs rounded-lg text-center transition-colors">{error}</div>}
             </div>
 
-            <button type="submit" className="w-full max-w-xs bg-violet-600 text-white py-2 rounded-lg font-medium hover:bg-violet-700 transition shadow-lg shadow-violet-200 mt-2">
+            <button type="submit" className="w-full max-w-xs bg-violet-600 hover:bg-violet-700 dark:bg-violet-600 dark:hover:bg-violet-700 text-white py-2 rounded-lg font-medium transition shadow-lg shadow-violet-200 dark:shadow-none mt-2">
               Giriş Yap
             </button>
           </form>
@@ -381,82 +381,82 @@ export const AdminModal: React.FC<AdminModalProps> = ({
           // Authenticated View
           <div className="flex flex-col flex-1 overflow-hidden">
             {/* Tabs */}
-            <div className="flex border-b border-gray-100 shrink-0 overflow-x-auto p-1">
+            <div className="flex border-b border-gray-100 dark:border-slate-700 shrink-0 overflow-x-auto p-1 transition-colors">
               <button
                 onClick={() => setActiveTab('users')}
-                className={`flex-1 py-3 px-2 text-xs md:text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === 'users' ? 'border-violet-600 text-violet-600 bg-violet-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                className={`flex-1 py-3 px-2 text-xs md:text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === 'users' ? 'border-violet-600 text-violet-600 dark:text-violet-400 bg-violet-50/50 dark:bg-violet-900/20' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
               >
                 <Users size={16} /> Personel
               </button>
               <button
                 onClick={() => setActiveTab('departments')}
-                className={`flex-1 py-3 px-2 text-xs md:text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === 'departments' ? 'border-violet-600 text-violet-600 bg-violet-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                className={`flex-1 py-3 px-2 text-xs md:text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === 'departments' ? 'border-violet-600 text-violet-600 dark:text-violet-400 bg-violet-50/50 dark:bg-violet-900/20' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
               >
                 <Building size={16} /> Birimler
               </button>
               <button
                 onClick={() => setActiveTab('dept-users')}
-                className={`flex-1 py-3 px-2 text-xs md:text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === 'dept-users' ? 'border-violet-600 text-violet-600 bg-violet-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                className={`flex-1 py-3 px-2 text-xs md:text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === 'dept-users' ? 'border-violet-600 text-violet-600 dark:text-violet-400 bg-violet-50/50 dark:bg-violet-900/20' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
               >
                 <UserPlus size={16} /> Birim Kullanıcıları
               </button>
               <button
                 onClick={() => setActiveTab('import-export')}
-                className={`flex-1 py-3 px-2 text-xs md:text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === 'import-export' ? 'border-violet-600 text-violet-600 bg-violet-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                className={`flex-1 py-3 px-2 text-xs md:text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === 'import-export' ? 'border-violet-600 text-violet-600 dark:text-violet-400 bg-violet-50/50 dark:bg-violet-900/20' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
               >
                 <FileText size={16} /> İçe/Dışa Aktar
               </button>
               <button
                 onClick={() => setActiveTab('events')}
-                className={`flex-1 py-3 px-2 text-xs md:text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === 'events' ? 'border-violet-600 text-violet-600 bg-violet-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                className={`flex-1 py-3 px-2 text-xs md:text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === 'events' ? 'border-violet-600 text-violet-600 dark:text-violet-400 bg-violet-50/50 dark:bg-violet-900/20' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
               >
                 <Calendar size={16} /> Kampanyalar
               </button>
               <button
                 onClick={() => setActiveTab('announcements')}
-                className={`flex-1 py-3 px-2 text-xs md:text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === 'announcements' ? 'border-violet-600 text-violet-600 bg-violet-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                className={`flex-1 py-3 px-2 text-xs md:text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === 'announcements' ? 'border-violet-600 text-violet-600 dark:text-violet-400 bg-violet-50/50 dark:bg-violet-900/20' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
               >
                 <Megaphone size={16} /> Duyurular
               </button>
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-y-auto bg-gray-50/50 relative">
+            <div className="flex-1 overflow-y-auto bg-gray-50/50 dark:bg-slate-900/50 relative transition-colors">
 
               {/* --- USERS TAB --- */}
               {activeTab === 'users' && (
                 <div className="flex flex-col h-full">
                   {/* Add User Form */}
-                  <div className="p-6 bg-white border-b space-y-4 shrink-0">
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide">Yeni Personel Ekle</h3>
+                  <div className="p-6 bg-white dark:bg-slate-800 border-b dark:border-slate-700 space-y-4 shrink-0 transition-colors">
+                    <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Yeni Personel Ekle</h3>
                     <form onSubmit={handleAddSubmit} className="space-y-3">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
-                          <label className="text-xs font-semibold text-gray-500 mb-1 block">İsim Soyisim</label>
+                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">İsim Soyisim</label>
                           <input
                             type="text"
                             value={newName}
                             onChange={(e) => setNewName(e.target.value)}
                             placeholder="Örn: Ali Veli"
-                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm"
+                            className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-colors"
                           />
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-gray-500 mb-1 block">E-posta</label>
+                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">E-posta</label>
                           <input
                             type="email"
                             value={newEmail}
                             onChange={(e) => setNewEmail(e.target.value)}
                             placeholder="ali@mail.com"
-                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm"
+                            className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-colors"
                           />
                         </div>
                       </div>
 
                       <div>
-                        <label className="text-xs font-semibold text-gray-500 mb-2 block">Emoji Seçimi</label>
+                        <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 block">Emoji Seçimi</label>
 
-                        <div className="grid grid-cols-8 gap-2 p-3 bg-gray-50 rounded-lg border border-gray-100 max-h-32 overflow-y-auto custom-scrollbar">
+                        <div className="grid grid-cols-8 gap-2 p-3 bg-gray-50 dark:bg-slate-900/50 rounded-lg border border-gray-100 dark:border-slate-700 max-h-32 overflow-y-auto custom-scrollbar transition-colors">
                           {AVAILABLE_EMOJIS.map((emoji) => (
                             <button
                               key={emoji}
@@ -465,8 +465,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                               className={`
                                 w-8 h-8 flex items-center justify-center rounded-full text-lg transition-all
                                 ${selectedEmoji === emoji
-                                  ? 'bg-violet-600 ring-2 ring-violet-300 transform scale-110 shadow-md'
-                                  : 'bg-white hover:bg-gray-200'}
+                                  ? 'bg-violet-600 ring-2 ring-violet-300 dark:ring-violet-500/50 transform scale-110 shadow-md'
+                                  : 'bg-white dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600'}
                               `}
                             >
                               {emoji}
@@ -479,7 +479,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         <p className="text-red-500 text-xs h-4">{error}</p>
                         <button
                           type="submit"
-                          className="px-6 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 flex items-center gap-2 shadow-lg shadow-violet-200 text-sm"
+                          className="px-6 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 flex items-center gap-2 shadow-lg shadow-violet-200 dark:shadow-none text-sm transition-colors"
                         >
                           <Plus size={16} /> Ekle
                         </button>
@@ -489,22 +489,22 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
                   {/* Users List */}
                   <div className="p-6">
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-4">Mevcut Personel ({users.length})</h3>
+                    <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">Mevcut Personel ({users.length})</h3>
                     <div className="space-y-2">
                       {users.map(user => (
-                        <div key={user.id} className="bg-white p-3 rounded-xl border border-gray-100 flex items-center justify-between group hover:shadow-sm transition-all">
+                        <div key={user.id} className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-gray-100 dark:border-slate-700 flex items-center justify-between group hover:shadow-sm transition-all">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center text-xl shadow-sm">
+                            <div className="w-10 h-10 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-xl shadow-sm">
                               {user.emoji}
                             </div>
                             <div>
-                              <p className="font-semibold text-gray-800 text-sm">{user.name}</p>
-                              <p className="text-xs text-gray-500">{user.email}</p>
+                              <p className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{user.name}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
                             </div>
                           </div>
                           <button
                             onClick={() => onDeleteUser(user.id)}
-                            className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            className="p-2 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                             title="Personeli Sil"
                           >
                             <Trash2 size={16} />
@@ -512,7 +512,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         </div>
                       ))}
                       {users.length === 0 && (
-                        <p className="text-gray-400 text-center py-4 text-sm">Henüz personel eklenmemiş.</p>
+                        <p className="text-gray-400 dark:text-gray-500 text-center py-4 text-sm">Henüz personel eklenmemiş.</p>
                       )}
                     </div>
                   </div>
@@ -523,20 +523,20 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               {activeTab === 'departments' && (
                 <div className="flex flex-col h-full">
                   {/* Add Department Form */}
-                  <div className="p-6 bg-white border-b space-y-4 shrink-0">
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide">Yeni İş Birimi Ekle</h3>
+                  <div className="p-6 bg-white dark:bg-slate-800 border-b dark:border-slate-700 space-y-4 shrink-0 transition-colors">
+                    <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Yeni İş Birimi Ekle</h3>
                     <form onSubmit={handleAddDeptSubmit} className="flex gap-3 items-start">
                       <div className="flex-1">
-                        <label className="text-xs font-semibold text-gray-500 mb-1 block">Birim Adı</label>
+                        <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Birim Adı</label>
                         <input
                           type="text"
                           value={newDeptName}
                           onChange={(e) => setNewDeptName(e.target.value)}
                           placeholder="Örn: Pazarlama, İK..."
-                          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm"
+                          className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-colors"
                         />
                       </div>
-                      <button type="submit" className="mt-5 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 flex items-center gap-2 shadow-lg shadow-violet-200 text-sm">
+                      <button type="submit" className="mt-5 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 flex items-center gap-2 shadow-lg shadow-violet-200 dark:shadow-none text-sm transition-colors">
                         <Plus size={16} /> Ekle
                       </button>
                     </form>
@@ -545,19 +545,19 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
                   {/* Departments List */}
                   <div className="p-6">
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-4">Tanımlı Birimler ({departments.length})</h3>
+                    <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">Tanımlı Birimler ({departments.length})</h3>
                     <div className="space-y-2">
                       {departments.map(dept => (
-                        <div key={dept.id} className="bg-white p-3 rounded-xl border border-gray-100 flex items-center justify-between group hover:shadow-sm transition-all">
+                        <div key={dept.id} className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-gray-100 dark:border-slate-700 flex items-center justify-between group hover:shadow-sm transition-all">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center shadow-sm">
+                            <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-500 dark:text-blue-400 flex items-center justify-center shadow-sm">
                               <Building size={18} />
                             </div>
-                            <p className="font-semibold text-gray-800 text-sm">{dept.name}</p>
+                            <p className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{dept.name}</p>
                           </div>
                           <button
                             onClick={() => onDeleteDepartment(dept.id)}
-                            className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            className="p-2 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                             title="Birimi Sil"
                           >
                             <Trash2 size={16} />
@@ -565,7 +565,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         </div>
                       ))}
                       {departments.length === 0 && (
-                        <p className="text-gray-400 text-center py-4 text-sm">Henüz birim eklenmemiş.</p>
+                        <p className="text-gray-400 dark:text-gray-500 text-center py-4 text-sm">Henüz birim eklenmemiş.</p>
                       )}
                     </div>
                   </div>
@@ -576,39 +576,39 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               {activeTab === 'dept-users' && (
                 <div className="flex flex-col h-full">
                   {/* Add Department User Form */}
-                  <div className="p-6 bg-white border-b space-y-4 shrink-0">
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide flex items-center gap-2">
+                  <div className="p-6 bg-white dark:bg-slate-800 border-b dark:border-slate-700 space-y-4 shrink-0 transition-colors">
+                    <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide flex items-center gap-2">
                       <UserPlus size={14} /> Yeni Birim Kullanıcısı Ekle
                     </h3>
 
                     <form onSubmit={handleAddDeptUser} className="space-y-3">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <div>
-                          <label className="text-xs font-semibold text-gray-500 mb-1 block">Kullanıcı Adı</label>
+                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Kullanıcı Adı</label>
                           <input
                             type="text"
                             value={newDeptUsername}
                             onChange={(e) => setNewDeptUsername(e.target.value)}
                             placeholder="ornek_kullanici"
-                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm"
+                            className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-colors"
                           />
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-gray-500 mb-1 block">Şifre</label>
+                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Şifre</label>
                           <input
                             type="text"
                             value={newDeptPassword}
                             onChange={(e) => setNewDeptPassword(e.target.value)}
                             placeholder="sifre123"
-                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm"
+                            className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-colors"
                           />
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-gray-500 mb-1 block">Birim</label>
+                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Birim</label>
                           <select
                             value={newDeptUserDeptId}
                             onChange={(e) => setNewDeptUserDeptId(e.target.value)}
-                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white"
+                            className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white transition-colors"
                           >
                             <option value="">Seçiniz</option>
                             {departments.map(d => (
@@ -626,10 +626,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                               setNewDeptUserIsDesigner(e.target.checked);
                               if (e.target.checked) setNewDeptUserIsKampanyaYapan(false);
                             }}
-                            className="w-4 h-4 rounded border-gray-300 text-violet-600 focus:ring-violet-500"
+                            className="w-4 h-4 rounded border-gray-300 dark:border-slate-600 text-violet-600 focus:ring-violet-500 bg-white dark:bg-slate-700"
                           />
-                          <span className="text-sm text-gray-700">Designer Yetkisi Ver</span>
-                          <span className="text-[10px] text-gray-400">(Kampanya düzenleme izni)</span>
+                          <span className="text-sm text-gray-700 dark:text-gray-300">Designer Yetkisi Ver</span>
+                          <span className="text-[10px] text-gray-400 dark:text-gray-500">(Kampanya düzenleme izni)</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
@@ -639,17 +639,17 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                               setNewDeptUserIsKampanyaYapan(e.target.checked);
                               if (e.target.checked) setNewDeptUserIsDesigner(false);
                             }}
-                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            className="w-4 h-4 rounded border-gray-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 bg-white dark:bg-slate-700"
                           />
-                          <span className="text-sm text-gray-700">Kampanya Yapan Yetkisi Ver</span>
-                          <span className="text-[10px] text-gray-400">(Tüm kampanyaları görüntüleme izni)</span>
+                          <span className="text-sm text-gray-700 dark:text-gray-300">Kampanya Yapan Yetkisi Ver</span>
+                          <span className="text-[10px] text-gray-400 dark:text-gray-500">(Tüm kampanyaları görüntüleme izni)</span>
                         </label>
                       </div>
                       <div className="flex justify-between items-center">
                         <p className="text-red-500 text-xs h-4">{error}</p>
                         <button
                           type="submit"
-                          className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 text-sm flex items-center gap-2"
+                          className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 text-sm flex items-center gap-2 shadow-lg shadow-violet-200 dark:shadow-none transition-colors"
                         >
                           <Plus size={16} /> Ekle
                         </button>
@@ -659,35 +659,35 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
                   {/* Department Users List */}
                   <div className="p-6 flex-1 overflow-y-auto">
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-4">
+                    <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">
                       Mevcut Kullanıcılar ({departmentUsers.length})
                     </h3>
                     <div className="space-y-2">
                       {departmentUsers.map(user => {
                         const dept = departments.find(d => d.id === user.departmentId);
                         return (
-                          <div key={user.id} className="bg-white p-3 rounded-xl border border-gray-100 flex items-center justify-between group hover:shadow-sm transition-all">
+                          <div key={user.id} className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-gray-100 dark:border-slate-700 flex items-center justify-between group hover:shadow-sm transition-all">
                             <div className="flex items-center gap-3">
-                              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${user.isDesigner ? 'bg-violet-100 text-violet-600' : user.isKampanyaYapan ? 'bg-blue-100 text-blue-600' : 'bg-teal-100 text-teal-600'}`}>
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${user.isDesigner ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400' : user.isKampanyaYapan ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400'}`}>
                                 {user.username.charAt(0).toUpperCase()}
                               </div>
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <p className="font-semibold text-gray-800 text-sm">{user.username}</p>
-                                  <span className="text-xs text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 font-mono">{user.password}</span>
+                                  <p className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{user.username}</p>
+                                  <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-slate-700 px-1.5 py-0.5 rounded border border-gray-100 dark:border-slate-600 font-mono">{user.password}</span>
                                   {user.isDesigner && (
-                                    <span className="text-[10px] bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded font-medium">Designer</span>
+                                    <span className="text-[10px] bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 px-1.5 py-0.5 rounded font-medium">Designer</span>
                                   )}
                                   {user.isKampanyaYapan && (
-                                    <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">Kampanya Yapan</span>
+                                    <span className="text-[10px] bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded font-medium">Kampanya Yapan</span>
                                   )}
                                 </div>
-                                <p className="text-xs text-gray-500">{dept ? dept.name : 'Silinmiş Birim'}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{dept ? dept.name : 'Silinmiş Birim'}</p>
                               </div>
                             </div>
                             <button
                               onClick={() => onDeleteDepartmentUser(user.id)}
-                              className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                              className="p-2 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                               title="Kullanıcıyı Sil"
                             >
                               <Trash2 size={16} />
@@ -696,7 +696,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         );
                       })}
                       {departmentUsers.length === 0 && (
-                        <p className="text-gray-400 text-center py-4 text-sm">Henüz birim kullanıcısı eklenmemiş.</p>
+                        <p className="text-gray-400 dark:text-gray-500 text-center py-4 text-sm">Henüz birim kullanıcısı eklenmemiş.</p>
                       )}
                     </div>
                   </div>
@@ -706,12 +706,12 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               {/* --- EVENTS TAB --- */}
               {activeTab === 'events' && (
                 <div className="flex flex-col h-full">
-                  <div className="p-6 bg-red-50 border-b border-red-100 flex items-center justify-between shrink-0">
-                    <div className="flex items-center gap-3 text-red-800">
+                  <div className="p-6 bg-red-50 dark:bg-red-900/10 border-b border-red-100 dark:border-red-900/20 flex items-center justify-between shrink-0 transition-colors">
+                    <div className="flex items-center gap-3 text-red-800 dark:text-red-400">
                       <AlertTriangle size={20} />
                       <div>
                         <h4 className="font-bold text-sm">Toplu İşlem</h4>
-                        <p className="text-xs text-red-600 opacity-80">Tüm takvimi sıfırlamak için kullanılır.</p>
+                        <p className="text-xs text-red-600 dark:text-red-400/80 opacity-80">Tüm takvimi sıfırlamak için kullanılır.</p>
                       </div>
                     </div>
                     <button
@@ -721,7 +721,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       className={`
                           px-4 py-2 text-white text-xs font-bold rounded-lg shadow-sm transition-all
                           ${isDeleteConfirming
-                          ? 'bg-red-800 hover:bg-red-900 ring-2 ring-red-400 ring-offset-1'
+                          ? 'bg-red-800 hover:bg-red-900 ring-2 ring-red-400 ring-offset-1 dark:ring-offset-slate-800'
                           : 'bg-red-600 hover:bg-red-700'} 
                           disabled:opacity-50 disabled:cursor-not-allowed
                         `}
@@ -731,24 +731,24 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                   </div>
 
                   <div className="p-6">
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-4">Aktif Kampanyalar ({events.length})</h3>
+                    <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">Aktif Kampanyalar ({events.length})</h3>
                     <div className="space-y-2 pb-6">
                       {events.length === 0 ? (
                         <div className="text-center py-10 opacity-50">
-                          <Calendar size={48} className="mx-auto mb-2 text-gray-300" />
-                          <p className="text-gray-500 text-sm">Henüz kampanya bulunmuyor.</p>
+                          <Calendar size={48} className="mx-auto mb-2 text-gray-300 dark:text-gray-600" />
+                          <p className="text-gray-500 dark:text-gray-400 text-sm">Henüz kampanya bulunmuyor.</p>
                         </div>
                       ) : (
                         [...events].sort((a, b) => b.date.getTime() - a.date.getTime()).map(event => {
                           const config = URGENCY_CONFIGS[event.urgency];
                           return (
-                            <div key={event.id} className="bg-white p-3 rounded-xl border border-gray-100 flex items-center justify-between group hover:shadow-sm transition-all">
+                            <div key={event.id} className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-gray-100 dark:border-slate-700 flex items-center justify-between group hover:shadow-sm transition-all">
                               <div className="flex items-center gap-4">
                                 <div className={`w-2 h-10 rounded-full ${config.colorBg} border border-opacity-20 ${config.colorBorder}`}></div>
                                 <div>
-                                  <h4 className="font-semibold text-gray-800 text-sm">{event.title}</h4>
+                                  <h4 className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{event.title}</h4>
                                   <div className="flex items-center gap-2 mt-1">
-                                    <span className="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded">
+                                    <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-slate-700 px-2 py-0.5 rounded">
                                       {format(event.date, 'd MMMM yyyy', { locale: tr })}
                                     </span>
                                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${config.colorBg} ${config.colorText} border border-opacity-20 ${config.colorBorder}`}>
@@ -760,7 +760,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
                               <button
                                 onClick={() => onDeleteEvent(event.id)}
-                                className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                className="p-2 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                                 title="Kampanyayı Sil"
                               >
                                 <Trash2 size={16} />
@@ -776,24 +776,24 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
               {/* --- IMPORT / EXPORT TAB --- */}
               {activeTab === 'import-export' && (
-                <div className="flex flex-col h-full bg-slate-50">
+                <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900/50 transition-colors">
                   <div className="p-6 space-y-8">
 
                     {/* Export Section */}
-                    <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm transition-colors">
                       <div className="flex items-start gap-4">
-                        <div className="p-3 bg-violet-100 text-violet-600 rounded-lg">
+                        <div className="p-3 bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 rounded-lg">
                           <Download size={24} />
                         </div>
                         <div className="flex-1">
-                          <h3 className="text-sm font-bold text-gray-800 mb-1">Dışa Aktar (CSV)</h3>
-                          <p className="text-xs text-gray-500 mb-4">
+                          <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 mb-1">Dışa Aktar (CSV)</h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
                             Mevcut tüm kampanyaları, birimleri ve atanan kişileri içeren bir CSV dosyası indirir.
                             Yedekleme veya Excel'de raporlama için kullanabilirsiniz.
                           </p>
                           <button
                             onClick={handleExportCSV}
-                            className="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-medium hover:bg-slate-900 flex items-center gap-2"
+                            className="px-4 py-2 bg-slate-800 dark:bg-slate-700 text-white rounded-lg text-sm font-medium hover:bg-slate-900 dark:hover:bg-slate-600 flex items-center gap-2 transition-colors"
                           >
                             <Download size={16} /> İndir (.csv)
                           </button>
@@ -802,28 +802,28 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     </div>
 
                     {/* Import Section */}
-                    <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm transition-colors">
                       <div className="flex items-start gap-4">
-                        <div className="p-3 bg-emerald-100 text-emerald-600 rounded-lg">
+                        <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg">
                           <FileText size={24} />
                         </div>
                         <div className="flex-1">
-                          <h3 className="text-sm font-bold text-gray-800 mb-1">İçe Aktar (CSV Yükle)</h3>
-                          <p className="text-xs text-gray-500 mb-4">
+                          <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 mb-1">İçe Aktar (CSV Yükle)</h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
                             CSV formatındaki verileri yapıştırarak toplu kampanya ekleyebilirsiniz.
                             Format: `Title, Date, Urgency, Description, Department, Assignee`
                           </p>
                           <textarea
                             value={importText}
                             onChange={(e) => setImportText(e.target.value)}
-                            className="w-full h-32 p-3 text-xs font-mono border rounded-lg mb-3 focus:ring-2 focus:ring-emerald-500 outline-none"
+                            className="w-full h-32 p-3 text-xs font-mono border dark:border-slate-600 rounded-lg mb-3 focus:ring-2 focus:ring-emerald-500 outline-none bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-colors"
                             placeholder='Örn: "Yaz Kampanyası",2024-06-01,High,"Açıklama","Pazarlama","Ahmet Yılmaz"'
                           />
                           <div className="flex justify-between items-center">
                             {error && <span className="text-red-500 text-xs">{error}</span>}
                             <button
                               onClick={handleImportCSV}
-                              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-start gap-2 ml-auto"
+                              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-start gap-2 ml-auto shadow-lg shadow-emerald-200 dark:shadow-none transition-colors"
                             >
                               <FileText size={16} /> İçe Aktar
                             </button>
@@ -840,35 +840,35 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               {activeTab === 'announcements' && (
                 <div className="flex flex-col h-full">
                   {/* Add Announcement Form */}
-                  <div className="p-6 bg-white border-b space-y-4 shrink-0">
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide">Yeni Duyuru Ekle</h3>
+                  <div className="p-6 bg-white dark:bg-slate-800 border-b dark:border-slate-700 space-y-4 shrink-0 transition-colors">
+                    <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Yeni Duyuru Ekle</h3>
                     <form onSubmit={handleAnnSubmit} className="space-y-3">
                       <div>
-                        <label className="text-xs font-semibold text-gray-500 mb-1 block">Başlık</label>
+                        <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Başlık</label>
                         <input
                           type="text"
                           value={newAnnTitle}
                           onChange={(e) => setNewAnnTitle(e.target.value)}
                           placeholder="Duyuru başlığı..."
-                          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm"
+                          className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-colors"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold text-gray-500 mb-1 block">İçerik</label>
+                        <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">İçerik</label>
                         <textarea
                           value={newAnnContent}
                           onChange={(e) => setNewAnnContent(e.target.value)}
                           placeholder="Duyuru detayı..."
                           rows={3}
-                          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm"
+                          className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-colors"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold text-gray-500 mb-1 block">Görünürlük</label>
+                        <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Görünürlük</label>
                         <select
                           value={newAnnVisibleTo}
                           onChange={(e) => setNewAnnVisibleTo(e.target.value as any)}
-                          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white"
+                          className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white transition-colors"
                         >
                           <option value="all">Tüm Herkes</option>
                           <option value="kampanya">Kampanya Yapan ve Admin</option>
@@ -878,7 +878,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         <p className="text-red-500 text-xs h-4">{error}</p>
                         <button
                           type="submit"
-                          className="px-6 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 flex items-center gap-2 shadow-lg shadow-violet-200 text-sm"
+                          className="px-6 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 flex items-center gap-2 shadow-lg shadow-violet-200 dark:shadow-none text-sm transition-colors"
                         >
                           <Plus size={16} /> Ekle
                         </button>
@@ -888,21 +888,21 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
                   {/* Announcements List */}
                   <div className="p-6 flex-1 overflow-y-auto">
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-4">Yayınlanan Duyurular ({announcements.length})</h3>
+                    <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">Yayınlanan Duyurular ({announcements.length})</h3>
                     <div className="space-y-3">
                       {announcements.map(ann => (
-                        <div key={ann.id} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
+                        <div key={ann.id} className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-all">
                           <div className="flex justify-between items-start">
                             <div>
-                              <h4 className="font-bold text-gray-800 text-sm mb-1">{ann.title}</h4>
-                              <p className="text-xs text-gray-500 mb-2 whitespace-pre-wrap">{ann.content}</p>
+                              <h4 className="font-bold text-gray-800 dark:text-gray-200 text-sm mb-1">{ann.title}</h4>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 whitespace-pre-wrap">{ann.content}</p>
                               <div className="flex items-center gap-2">
-                                <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                                <span className="text-[10px] bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full">
                                   {format(ann.createdAt, 'd MMM yyyy HH:mm', { locale: tr })}
                                 </span>
                                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${
-                                  ann.visibleTo === 'all' ? 'bg-green-50 text-green-600 border-green-100' :
-                                  'bg-blue-50 text-blue-600 border-blue-100'
+                                  ann.visibleTo === 'all' ? 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 border-green-100 dark:border-green-900/30' :
+                                  'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-900/30'
                                 }`}>
                                   {ann.visibleTo === 'all' ? 'Tüm Herkes' : 'Kampanya Yapan ve Admin'}
                                 </span>
@@ -910,7 +910,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             </div>
                             <button
                               onClick={() => onDeleteAnnouncement(ann.id)}
-                              className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                              className="p-2 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                               title="Duyuruyu Sil"
                             >
                               <Trash2 size={16} />
@@ -919,7 +919,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         </div>
                       ))}
                       {announcements.length === 0 && (
-                        <p className="text-gray-400 text-center py-4 text-sm">Henüz duyuru eklenmemiş.</p>
+                        <p className="text-gray-400 dark:text-gray-500 text-center py-4 text-sm">Henüz duyuru eklenmemiş.</p>
                       )}
                     </div>
                   </div>

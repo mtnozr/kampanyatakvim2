@@ -61,13 +61,13 @@ export const AnnouncementBoard: React.FC<AnnouncementBoardProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col h-[80vh]">
-        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-slate-50">
-          <div className="flex items-center gap-2 text-slate-800">
-            <Megaphone className="text-violet-600" size={24} />
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col h-[80vh]">
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+          <div className="flex items-center gap-2 text-slate-800 dark:text-white">
+            <Megaphone className="text-violet-600 dark:text-violet-400" size={24} />
             <h2 className="text-lg font-bold">Duyurular</h2>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
             <X size={20} />
           </button>
         </div>
@@ -79,15 +79,15 @@ export const AnnouncementBoard: React.FC<AnnouncementBoardProps> = ({
               {!isAdding ? (
                 <button 
                   onClick={() => setIsAdding(true)}
-                  className="w-full py-3 border-2 border-dashed border-violet-200 rounded-xl text-violet-600 font-medium hover:bg-violet-50 transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-3 border-2 border-dashed border-violet-200 dark:border-violet-700 rounded-xl text-violet-600 dark:text-violet-400 font-medium hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors flex items-center justify-center gap-2"
                 >
                   <Plus size={20} /> Yeni Duyuru Yayınla
                 </button>
               ) : (
-                <div className="bg-slate-50 p-4 rounded-xl border border-violet-100">
+                <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl border border-violet-100 dark:border-violet-900/50">
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-bold text-gray-700">Yeni Duyuru</h3>
-                    <button onClick={() => setIsAdding(false)} className="text-gray-400 hover:text-gray-600">
+                    <h3 className="font-bold text-gray-700 dark:text-gray-200">Yeni Duyuru</h3>
+                    <button onClick={() => setIsAdding(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                       <X size={18} />
                     </button>
                   </div>
@@ -97,19 +97,19 @@ export const AnnouncementBoard: React.FC<AnnouncementBoardProps> = ({
                       value={newTitle}
                       onChange={(e) => setNewTitle(e.target.value)}
                       placeholder="Başlık"
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm"
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm dark:bg-slate-600 dark:border-slate-500 dark:text-white"
                     />
                     <textarea
                       value={newContent}
                       onChange={(e) => setNewContent(e.target.value)}
                       placeholder="İçerik"
                       rows={3}
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm"
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm dark:bg-slate-600 dark:border-slate-500 dark:text-white"
                     />
                     <select
                       value={newVisibleTo}
                       onChange={(e) => setNewVisibleTo(e.target.value as any)}
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white"
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white dark:bg-slate-600 dark:border-slate-500 dark:text-white"
                     >
                       <option value="all">Tüm Herkes</option>
                       <option value="kampanya">Kampanya Yapan ve Admin</option>
@@ -130,16 +130,16 @@ export const AnnouncementBoard: React.FC<AnnouncementBoardProps> = ({
           )}
 
           {announcements.length === 0 ? (
-            <div className="text-center text-gray-500 py-10">
+            <div className="text-center text-gray-500 dark:text-gray-400 py-10">
               Henüz duyuru bulunmamaktadır.
             </div>
           ) : (
             announcements.map((ann) => (
-              <div key={ann.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow relative group">
+              <div key={ann.id} className="bg-white dark:bg-slate-700 border border-gray-100 dark:border-slate-600 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow relative group">
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-semibold text-lg text-gray-800">{ann.title}</h3>
+                  <h3 className="font-semibold text-lg text-gray-800 dark:text-white">{ann.title}</h3>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-full">
+                    <span className="text-xs text-gray-400 dark:text-gray-300 bg-gray-50 dark:bg-slate-600 px-2 py-1 rounded-full">
                       {format(ann.createdAt, 'd MMMM yyyy HH:mm', { locale: tr })}
                     </span>
                     {canManage && (
@@ -153,17 +153,17 @@ export const AnnouncementBoard: React.FC<AnnouncementBoardProps> = ({
                     )}
                   </div>
                 </div>
-                <p className="text-gray-600 text-sm whitespace-pre-wrap">{ann.content}</p>
+                <p className="text-gray-600 dark:text-gray-200 text-sm whitespace-pre-wrap">{ann.content}</p>
                  <div className="mt-3 flex justify-between items-end">
                     <div className="flex gap-2">
                        <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
-                          ann.visibleTo === 'all' ? 'bg-green-50 text-green-600 border-green-100' :
-                          'bg-blue-50 text-blue-600 border-blue-100'
+                          ann.visibleTo === 'all' ? 'bg-green-50 text-green-600 border-green-100 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800' :
+                          'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800'
                         }`}>
                           {ann.visibleTo === 'all' ? 'Tüm Herkes' : 'Kampanya Yapan ve Admin'}
                        </span>
                     </div>
-                    <span className="text-xs text-violet-500 font-medium">
+                    <span className="text-xs text-violet-500 dark:text-violet-400 font-medium">
                         {ann.createdBy} tarafından
                     </span>
                  </div>

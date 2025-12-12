@@ -29,6 +29,7 @@ import { EventDetailsModal } from './components/EventDetailsModal';
 import { DepartmentLoginModal } from './components/DepartmentLoginModal';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { AnnouncementBoard } from './components/AnnouncementBoard';
+import { ThemeToggle } from './components/ThemeToggle';
 import { setCookie, getCookie, deleteCookie } from './utils/cookies';
 
 // --- FIREBASE IMPORTS ---
@@ -882,7 +883,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen p-4 md:p-8 text-gray-800">
+    <div className="min-h-screen p-4 md:p-8 text-gray-800 dark:text-gray-100 transition-colors duration-300">
       <div className="max-w-[1400px] mx-auto flex flex-col h-[calc(100vh-4rem)]">
 
         {/* Header Section */}
@@ -956,7 +957,8 @@ function App() {
               )}
             </div>
 
-            <div className="flex items-center gap-2 md:gap-4 bg-white/50 p-2 rounded-2xl backdrop-blur-sm shadow-sm flex-wrap relative z-20">
+            <div className="flex items-center gap-2 md:gap-4 bg-white/50 dark:bg-slate-800/50 p-2 rounded-2xl backdrop-blur-sm shadow-sm flex-wrap relative z-20 transition-colors">
+              <ThemeToggle />
               <button onClick={resetToToday} className="bg-violet-100 text-violet-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-violet-200 transition-colors">
                 Bugün
               </button>
@@ -1096,7 +1098,7 @@ function App() {
 
           {/* Search Bar Panel */}
           {isSearchOpen && (
-            <div className="bg-white p-4 rounded-2xl shadow-lg border border-violet-100 grid grid-cols-1 md:grid-cols-4 gap-4 animate-in fade-in slide-in-from-top-4">
+            <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-lg border border-violet-100 dark:border-slate-700 grid grid-cols-1 md:grid-cols-4 gap-4 animate-in fade-in slide-in-from-top-4">
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
                 <input
@@ -1104,7 +1106,7 @@ function App() {
                   placeholder="Başlık veya Ref ID ile ara..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-200 focus:border-violet-500 outline-none transition-all text-sm"
+                  className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-200 focus:border-violet-500 outline-none transition-all text-sm"
                 />
               </div>
 
@@ -1113,7 +1115,7 @@ function App() {
                 <select
                   value={filterAssignee}
                   onChange={(e) => setFilterAssignee(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-200 focus:border-violet-500 outline-none transition-all text-sm appearance-none"
+                  className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-200 focus:border-violet-500 outline-none transition-all text-sm appearance-none"
                 >
                   <option value="">Tüm Personel</option>
                   {users.map(u => (
@@ -1127,7 +1129,7 @@ function App() {
                 <select
                   value={filterUrgency}
                   onChange={(e) => setFilterUrgency(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-200 focus:border-violet-500 outline-none transition-all text-sm appearance-none"
+                  className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-200 focus:border-violet-500 outline-none transition-all text-sm appearance-none"
                 >
                   <option value="">Tüm Öncelikler</option>
                   {(Object.keys(URGENCY_CONFIGS) as UrgencyLevel[]).map(level => (
@@ -1143,7 +1145,7 @@ function App() {
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-200 focus:border-violet-500 outline-none transition-all text-sm appearance-none"
+                  className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-200 focus:border-violet-500 outline-none transition-all text-sm appearance-none"
                 >
                   <option value="">Tüm Durumlar</option>
                   <option value="Planlandı">Planlandı</option>
@@ -1199,12 +1201,12 @@ function App() {
                   flex flex-col
                   ${isCurrentMonth
                       ? (isHoliday
-                        ? 'bg-red-50/70 border-red-200 shadow-sm'
+                        ? 'bg-red-50/70 dark:bg-red-900/20 border-red-200 dark:border-red-800/30 shadow-sm'
                         : isDayWeekend
-                          ? 'bg-gray-100 border-gray-200 shadow-sm'
-                          : 'bg-white border-transparent shadow-sm hover:shadow-md')
-                      : 'bg-gray-50/50 border-transparent opacity-60'}
-                  ${isTodayDate ? 'ring-2 ring-violet-400 ring-offset-2' : ''}
+                          ? 'bg-gray-100 dark:bg-slate-900 border-gray-200 dark:border-slate-800 shadow-sm'
+                          : 'bg-white dark:bg-slate-800 border-transparent dark:border-slate-700 shadow-sm hover:shadow-md')
+                      : 'bg-gray-50/50 dark:bg-slate-900/50 border-transparent opacity-60'}
+                  ${isTodayDate ? 'ring-2 ring-violet-400 ring-offset-2 dark:ring-offset-slate-900' : ''}
                   ${!isDesigner ? 'cursor-default' : 'cursor-pointer'}
                 `}
                 >
@@ -1220,7 +1222,7 @@ function App() {
                     ${isTodayDate
                         ? 'bg-violet-600 text-white'
                         : isHoliday && isCurrentMonth ? 'text-red-600'
-                          : isCurrentMonth ? 'text-gray-700' : 'text-gray-400'}
+                          : isCurrentMonth ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400 dark:text-gray-600'}
                   `}>
                       {format(day, 'd')}
                     </span>
