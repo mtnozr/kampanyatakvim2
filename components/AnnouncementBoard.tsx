@@ -111,9 +111,8 @@ export const AnnouncementBoard: React.FC<AnnouncementBoardProps> = ({
                       onChange={(e) => setNewVisibleTo(e.target.value as any)}
                       className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white"
                     >
-                      <option value="all">Herkese Açık</option>
-                      <option value="kampanya">Sadece Kampanya & Admin</option>
-                      <option value="admin">Sadece Admin</option>
+                      <option value="all">Tüm Herkes</option>
+                      <option value="kampanya">Kampanya Yapan ve Admin</option>
                     </select>
                     <div className="flex justify-between items-center">
                       <span className="text-red-500 text-xs">{error}</span>
@@ -159,10 +158,9 @@ export const AnnouncementBoard: React.FC<AnnouncementBoardProps> = ({
                     <div className="flex gap-2">
                        <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
                           ann.visibleTo === 'all' ? 'bg-green-50 text-green-600 border-green-100' :
-                          ann.visibleTo === 'kampanya' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                          'bg-purple-50 text-purple-600 border-purple-100'
+                          'bg-blue-50 text-blue-600 border-blue-100'
                         }`}>
-                          {ann.visibleTo === 'all' ? 'Herkese' : ann.visibleTo === 'kampanya' ? 'Kampanya' : 'Admin'}
+                          {ann.visibleTo === 'all' ? 'Tüm Herkes' : 'Kampanya Yapan ve Admin'}
                        </span>
                     </div>
                     <span className="text-xs text-violet-500 font-medium">
