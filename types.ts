@@ -5,6 +5,7 @@ export interface User {
   name: string;
   email: string;
   emoji?: string;     // New property for selected emoji
+  role?: string;      // Optional role for reporting
 }
 
 export interface Department {

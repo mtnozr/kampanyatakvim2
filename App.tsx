@@ -13,7 +13,7 @@ import {
   startOfWeek
 } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Bell, ChevronLeft, ChevronRight, Plus, Users, ClipboardList, Loader2, Search, Filter, X, LogIn, LogOut, Database, Download, Lock, Megaphone } from 'lucide-react';
+import { Bell, ChevronLeft, ChevronRight, Plus, Users, ClipboardList, Loader2, Search, Filter, X, LogIn, LogOut, Database, Download, Lock, Megaphone, PieChart } from 'lucide-react';
 import emailjs from '@emailjs/browser';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -29,6 +29,7 @@ import { EventDetailsModal } from './components/EventDetailsModal';
 import { DepartmentLoginModal } from './components/DepartmentLoginModal';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { AnnouncementBoard } from './components/AnnouncementBoard';
+import { ReportsDashboard } from './components/ReportsDashboard';
 import { ThemeToggle } from './components/ThemeToggle';
 import { setCookie, getCookie, deleteCookie } from './utils/cookies';
 
@@ -101,6 +102,7 @@ function App() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   // Refactor: Store ID instead of object to ensure reactivity
   const [viewEventId, setViewEventId] = useState<string | null>(null);
@@ -1013,6 +1015,16 @@ function App() {
                 <Download size={20} />
               </button>
 
+              {isDesigner && (
+                <button
+                  onClick={() => setIsReportsOpen(true)}
+                  className="p-2 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm"
+                  title="Raporlar ve Dashboard"
+                >
+                  <PieChart size={20} />
+                </button>
+              )}
+
               {loggedInDeptUser && (
                 <div className="flex flex-col items-end mr-2">
                   <span className="text-xs font-semibold text-gray-700">{loggedInDeptUser.username}</span>
@@ -1416,6 +1428,14 @@ function App() {
           onAddAnnouncement={handleAddAnnouncement}
           onDeleteAnnouncement={handleDeleteAnnouncement}
           onMarkAsRead={handleMarkAsRead}
+        />
+
+        <ReportsDashboard
+          isOpen={isReportsOpen}
+          onClose={() => setIsReportsOpen(false)}
+          events={events}
+          departments={departments}
+          users={users}
         />
 
         <ToastContainer toasts={toasts} removeToast={removeToast} />
