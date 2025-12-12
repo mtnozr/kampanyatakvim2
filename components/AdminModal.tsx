@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Trash2, Plus, ShieldCheck, Lock, Users, Calendar, AlertTriangle, Building, UserPlus, LogOut, FileText, Download } from 'lucide-react';
-import { User, CalendarEvent, Department, DepartmentUser } from '../types';
+import { X, Trash2, Plus, ShieldCheck, Lock, Users, Calendar, AlertTriangle, Building, UserPlus, LogOut, FileText, Download, Megaphone } from 'lucide-react';
+import { User, CalendarEvent, Department, DepartmentUser, Announcement } from '../types';
 import { AVAILABLE_EMOJIS, URGENCY_CONFIGS } from '../constants';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -24,6 +24,9 @@ interface AdminModalProps {
   onDeleteDepartmentUser: (id: string) => void;
   onBulkAddEvents: (events: Partial<CalendarEvent>[]) => Promise<void>;
   onSetIsDesigner: (value: boolean) => void;
+  announcements: Announcement[];
+  onAddAnnouncement: (title: string, content: string, visibleTo: 'admin' | 'kampanya' | 'all') => void;
+  onDeleteAnnouncement: (id: string) => void;
 }
 
 export const AdminModal: React.FC<AdminModalProps> = ({
@@ -42,12 +45,15 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   onAddDepartmentUser,
   onDeleteDepartmentUser,
   onBulkAddEvents,
-  onSetIsDesigner
+  onSetIsDesigner,
+  announcements,
+  onAddAnnouncement,
+  onDeleteAnnouncement
 }) => {
   const [authUser, setAuthUser] = useState<FirebaseUser | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [activeTab, setActiveTab] = useState<'users' | 'events' | 'departments' | 'dept-users' | 'import-export'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'events' | 'departments' | 'dept-users' | 'import-export' | 'announcements'>('users');
   const [importText, setImportText] = useState('');
 
   // Loading state for auth check
@@ -57,6 +63,11 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState('');
+
+  // Announcement Form States
+  const [newAnnTitle, setNewAnnTitle] = useState('');
+  const [newAnnContent, setNewAnnContent] = useState('');
+  const [newAnnVisibleTo, setNewAnnVisibleTo] = useState<'admin' | 'kampanya' | 'all'>('all');
 
   // Department Form States
   const [newDeptName, setNewDeptName] = useState('');
@@ -150,6 +161,19 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     }
     onAddDepartment(newDeptName);
     setNewDeptName('');
+    setError('');
+  };
+
+  const handleAnnSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAnnTitle.trim() || !newAnnContent.trim()) {
+      setError('Başlık ve içerik alanları zorunludur.');
+      return;
+    }
+    onAddAnnouncement(newAnnTitle, newAnnContent, newAnnVisibleTo);
+    setNewAnnTitle('');
+    setNewAnnContent('');
+    setNewAnnVisibleTo('all');
     setError('');
   };
 
@@ -387,6 +411,12 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 className={`flex-1 py-3 px-2 text-xs md:text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === 'events' ? 'border-violet-600 text-violet-600 bg-violet-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
               >
                 <Calendar size={16} /> Kampanyalar
+              </button>
+              <button
+                onClick={() => setActiveTab('announcements')}
+                className={`flex-1 py-3 px-2 text-xs md:text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === 'announcements' ? 'border-violet-600 text-violet-600 bg-violet-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+              >
+                <Megaphone size={16} /> Duyurular
               </button>
             </div>
 
@@ -802,6 +832,98 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       </div>
                     </div>
 
+                  </div>
+                </div>
+              )}
+
+              {/* --- ANNOUNCEMENTS TAB --- */}
+              {activeTab === 'announcements' && (
+                <div className="flex flex-col h-full">
+                  {/* Add Announcement Form */}
+                  <div className="p-6 bg-white border-b space-y-4 shrink-0">
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide">Yeni Duyuru Ekle</h3>
+                    <form onSubmit={handleAnnSubmit} className="space-y-3">
+                      <div>
+                        <label className="text-xs font-semibold text-gray-500 mb-1 block">Başlık</label>
+                        <input
+                          type="text"
+                          value={newAnnTitle}
+                          onChange={(e) => setNewAnnTitle(e.target.value)}
+                          placeholder="Duyuru başlığı..."
+                          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-gray-500 mb-1 block">İçerik</label>
+                        <textarea
+                          value={newAnnContent}
+                          onChange={(e) => setNewAnnContent(e.target.value)}
+                          placeholder="Duyuru detayı..."
+                          rows={3}
+                          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-gray-500 mb-1 block">Görünürlük</label>
+                        <select
+                          value={newAnnVisibleTo}
+                          onChange={(e) => setNewAnnVisibleTo(e.target.value as any)}
+                          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white"
+                        >
+                          <option value="all">Herkese Açık</option>
+                          <option value="kampanya">Sadece Kampanya & Admin</option>
+                          <option value="admin">Sadece Admin</option>
+                        </select>
+                      </div>
+                      <div className="flex justify-between items-center pt-2">
+                        <p className="text-red-500 text-xs h-4">{error}</p>
+                        <button
+                          type="submit"
+                          className="px-6 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 flex items-center gap-2 shadow-lg shadow-violet-200 text-sm"
+                        >
+                          <Plus size={16} /> Ekle
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* Announcements List */}
+                  <div className="p-6 flex-1 overflow-y-auto">
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-4">Yayınlanan Duyurular ({announcements.length})</h3>
+                    <div className="space-y-3">
+                      {announcements.map(ann => (
+                        <div key={ann.id} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h4 className="font-bold text-gray-800 text-sm mb-1">{ann.title}</h4>
+                              <p className="text-xs text-gray-500 mb-2 whitespace-pre-wrap">{ann.content}</p>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                                  {format(ann.createdAt, 'd MMM yyyy HH:mm', { locale: tr })}
+                                </span>
+                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${
+                                  ann.visibleTo === 'all' ? 'bg-green-50 text-green-600 border-green-100' :
+                                  ann.visibleTo === 'kampanya' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                  'bg-purple-50 text-purple-600 border-purple-100'
+                                }`}>
+                                  {ann.visibleTo === 'all' ? 'Herkese Açık' : ann.visibleTo === 'kampanya' ? 'Kampanya' : 'Admin'}
+                                </span>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => onDeleteAnnouncement(ann.id)}
+                              className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Duyuruyu Sil"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      {announcements.length === 0 && (
+                        <p className="text-gray-400 text-center py-4 text-sm">Henüz duyuru eklenmemiş.</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}

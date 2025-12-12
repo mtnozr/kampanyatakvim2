@@ -13,11 +13,11 @@ import {
   startOfWeek
 } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Bell, ChevronLeft, ChevronRight, Plus, Users, ClipboardList, Loader2, Search, Filter, X, LogIn, LogOut, Database, Download, Lock } from 'lucide-react';
+import { Bell, ChevronLeft, ChevronRight, Plus, Users, ClipboardList, Loader2, Search, Filter, X, LogIn, LogOut, Database, Download, Lock, Megaphone } from 'lucide-react';
 import emailjs from '@emailjs/browser';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { CalendarEvent, UrgencyLevel, User, AppNotification, ToastMessage, ActivityLog, Department, DepartmentUser } from './types';
+import { CalendarEvent, UrgencyLevel, User, AppNotification, ToastMessage, ActivityLog, Department, DepartmentUser, Announcement } from './types';
 import { INITIAL_EVENTS, DAYS_OF_WEEK, INITIAL_USERS, URGENCY_CONFIGS, TURKISH_HOLIDAYS, INITIAL_DEPARTMENTS } from './constants';
 import { EventBadge } from './components/EventBadge';
 import { AddEventModal } from './components/AddEventModal';
@@ -28,6 +28,7 @@ import { ToastContainer } from './components/Toast';
 import { EventDetailsModal } from './components/EventDetailsModal';
 import { DepartmentLoginModal } from './components/DepartmentLoginModal';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
+import { AnnouncementBoard } from './components/AnnouncementBoard';
 import { setCookie, getCookie, deleteCookie } from './utils/cookies';
 
 // --- FIREBASE IMPORTS ---
@@ -77,11 +78,13 @@ function App() {
   // Logs and Notifications
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [logs, setLogs] = useState<ActivityLog[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
 
   // Local UI State
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isLogOpen, setIsLogOpen] = useState(false);
+  const [isAnnBoardOpen, setIsAnnBoardOpen] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   // Search & Filter State
@@ -194,6 +197,20 @@ function App() {
     return () => unsubscribe();
   }, []);
 
+  // 7. Sync Announcements
+  useEffect(() => {
+    const q = query(collection(db, "announcements"), orderBy("createdAt", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedAnns: Announcement[] = snapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id,
+        createdAt: doc.data().createdAt instanceof Timestamp ? doc.data().createdAt.toDate() : new Date()
+      } as Announcement));
+      setAnnouncements(fetchedAnns);
+    });
+    return () => unsubscribe();
+  }, []);
+
   // --- Derived Permissions based on Login ---
   // Designer = logged in via Firebase Auth in AdminModal
   // Department User = logged in via DepartmentLoginModal
@@ -269,6 +286,14 @@ function App() {
       return matchesSearch && matchesAssignee && matchesUrgency && matchesStatus;
     });
   }, [events, searchQuery, filterAssignee, filterUrgency, filterStatus]);
+
+  const filteredAnnouncements = useMemo(() => {
+    return announcements.filter(ann => {
+      if (isDesigner) return true; // Admin sees all
+      if (isKampanyaYapan) return ann.visibleTo === 'all' || ann.visibleTo === 'kampanya';
+      return ann.visibleTo === 'all';
+    });
+  }, [announcements, isDesigner, isKampanyaYapan]);
 
   // --- Calendar Logic ---
   const calendarDays = useMemo(() => {
@@ -467,6 +492,46 @@ function App() {
     } catch (error) {
       console.error('PDF Export Error:', error);
       addToast('PDF oluşturulurken hata oluştu.', 'info');
+    }
+  };
+
+  const handleAddAnnouncement = async (title: string, content: string, visibleTo: 'admin' | 'kampanya' | 'all') => {
+    try {
+      const user = loggedInDeptUser ? loggedInDeptUser.username : 'Admin';
+      await addDoc(collection(db, "announcements"), {
+        title,
+        content,
+        visibleTo,
+        createdAt: Timestamp.now(),
+        createdBy: user
+      });
+      
+      // Log action
+      await addDoc(collection(db, "logs"), {
+        message: `${user} yeni bir duyuru yayınladı: "${title}"`,
+        timestamp: Timestamp.now()
+      });
+
+      addToast('Duyuru yayınlandı.', 'success');
+    } catch (e) {
+      addToast('Duyuru eklenemedi.', 'info');
+    }
+  };
+
+  const handleDeleteAnnouncement = async (id: string) => {
+    try {
+      const user = loggedInDeptUser ? loggedInDeptUser.username : 'Admin';
+      await deleteDoc(doc(db, "announcements", id));
+      
+      // Log action
+      await addDoc(collection(db, "logs"), {
+        message: `${user} bir duyuruyu sildi.`,
+        timestamp: Timestamp.now()
+      });
+
+      addToast('Duyuru silindi.', 'info');
+    } catch (e) {
+      addToast('Silme hatası.', 'info');
     }
   };
 
@@ -885,6 +950,17 @@ function App() {
               )}
 
               <button
+                onClick={() => setIsAnnBoardOpen(true)}
+                className="p-2 text-gray-500 hover:text-violet-600 hover:bg-violet-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm relative"
+                title="Duyurular"
+              >
+                <Megaphone size={20} />
+                {announcements.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+                )}
+              </button>
+
+              <button
                 onClick={() => setIsAdminOpen(true)}
                 className="p-2 text-gray-500 hover:text-violet-600 hover:bg-violet-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm"
                 title="Yönetici Paneli"
@@ -1199,6 +1275,9 @@ function App() {
           onDeleteDepartmentUser={handleDeleteDepartmentUser}
           onBulkAddEvents={handleBulkAddEvents}
           onSetIsDesigner={setIsDesigner}
+          announcements={announcements}
+          onAddAnnouncement={handleAddAnnouncement}
+          onDeleteAnnouncement={handleDeleteAnnouncement}
         />
 
         <ChangePasswordModal
@@ -1226,6 +1305,12 @@ function App() {
           departmentUsers={departmentUsers}
           departments={departments}
           onLogin={handleDepartmentLogin}
+        />
+
+        <AnnouncementBoard
+          isOpen={isAnnBoardOpen}
+          onClose={() => setIsAnnBoardOpen(false)}
+          announcements={filteredAnnouncements}
         />
 
         <ToastContainer toasts={toasts} removeToast={removeToast} />

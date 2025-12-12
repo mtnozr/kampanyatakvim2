@@ -62,3 +62,12 @@ export interface DepartmentUser {
   isKampanyaYapan?: boolean;
   createdAt: Date;
 }
+
+export interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: Date;
+  createdBy: string;
+  visibleTo: 'admin' | 'kampanya' | 'all';
+}
