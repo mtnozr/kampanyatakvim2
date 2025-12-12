@@ -321,7 +321,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col h-[80vh] md:h-auto md:max-h-[90vh]">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl overflow-hidden flex flex-col h-[80vh] md:h-auto md:max-h-[90vh]">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-slate-50 shrink-0">
           <div className="flex items-center gap-2 text-slate-800">
@@ -381,7 +381,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
           // Authenticated View
           <div className="flex flex-col flex-1 overflow-hidden">
             {/* Tabs */}
-            <div className="flex border-b border-gray-100 shrink-0 overflow-x-auto no-scrollbar">
+            <div className="flex border-b border-gray-100 shrink-0 overflow-x-auto p-1">
               <button
                 onClick={() => setActiveTab('users')}
                 className={`flex-1 py-3 px-2 text-xs md:text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === 'users' ? 'border-violet-600 text-violet-600 bg-violet-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
