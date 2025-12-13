@@ -31,6 +31,7 @@ import { EventDetailsModal } from './components/EventDetailsModal';
 import { DepartmentLoginModal } from './components/DepartmentLoginModal';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { AnnouncementBoard } from './components/AnnouncementBoard';
+import { AnnouncementPopup } from './components/AnnouncementPopup';
 import { ReportsDashboard } from './components/ReportsDashboard';
 import { ThemeToggle } from './components/ThemeToggle';
 import { useTheme } from './hooks/useTheme';
@@ -1645,6 +1646,8 @@ function App() {
           users={users}
           onRefresh={handleDashboardRefresh}
         />
+
+        <AnnouncementPopup latestAnnouncement={filteredAnnouncements[0]} />
 
         <ToastContainer toasts={toasts} removeToast={removeToast} />
       </div>
