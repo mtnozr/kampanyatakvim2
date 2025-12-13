@@ -29,7 +29,7 @@ export const AnnouncementPopup: React.FC<AnnouncementPopupProps> = ({ latestAnno
         return () => clearTimeout(timer);
       }
     }
-  }, [latestAnnouncement]);
+  }, [latestAnnouncement, currentUsername]);
 
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
