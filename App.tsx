@@ -1653,7 +1653,10 @@ function App() {
           onRefresh={handleDashboardRefresh}
         />
 
-        <AnnouncementPopup latestAnnouncement={filteredAnnouncements[0]} />
+        <AnnouncementPopup 
+          latestAnnouncement={filteredAnnouncements[0]} 
+          currentUsername={loggedInDeptUser ? loggedInDeptUser.username : (isDesigner ? 'Admin' : null)}
+        />
 
         <ToastContainer toasts={toasts} removeToast={removeToast} />
       </div>

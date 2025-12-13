@@ -4,14 +4,20 @@ import { Announcement } from '../types';
 
 interface AnnouncementPopupProps {
   latestAnnouncement: Announcement | null;
+  currentUsername?: string | null;
 }
 
-export const AnnouncementPopup: React.FC<AnnouncementPopupProps> = ({ latestAnnouncement }) => {
+export const AnnouncementPopup: React.FC<AnnouncementPopupProps> = ({ latestAnnouncement, currentUsername }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
     if (latestAnnouncement) {
+      // If the current user created this announcement, don't show the popup
+      if (currentUsername && latestAnnouncement.createdBy === currentUsername) {
+        return;
+      }
+
       const dismissedId = localStorage.getItem('dismissed_announcement_id');
       
       // If the latest announcement is different from the dismissed one, show popup
