@@ -5,9 +5,10 @@ import { Announcement } from '../types';
 interface AnnouncementPopupProps {
   latestAnnouncement: Announcement | null;
   currentUsername?: string | null;
+  currentUserId?: string;
 }
 
-export const AnnouncementPopup: React.FC<AnnouncementPopupProps> = ({ latestAnnouncement, currentUsername }) => {
+export const AnnouncementPopup: React.FC<AnnouncementPopupProps> = ({ latestAnnouncement, currentUsername, currentUserId }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
 
@@ -16,33 +17,26 @@ export const AnnouncementPopup: React.FC<AnnouncementPopupProps> = ({ latestAnno
       const storageKey = `dismissed_announcement_id_${currentUsername || 'guest'}`;
       const dismissedId = localStorage.getItem(storageKey);
 
-      console.log('📢 Popup Check:', {
-        announcementId: latestAnnouncement.id,
-        createdBy: latestAnnouncement.createdBy,
-        currentUsername: currentUsername,
-        dismissedId: dismissedId,
-        storageKey: storageKey
-      });
-
-      // If the current user created this announcement, don't show the popup
+      // 1. Check if user is the creator
       if (currentUsername && latestAnnouncement.createdBy === currentUsername) {
-        console.log('🚫 Popup blocked: User is creator');
+        return;
+      }
+
+      // 2. Check if user already read this announcement (DB check)
+      if (currentUserId && latestAnnouncement.readBy && latestAnnouncement.readBy.includes(currentUserId)) {
         return;
       }
       
-      // If the latest announcement is different from the dismissed one, show popup
+      // 3. Check if user dismissed this specific announcement before (Local Storage check)
       if (dismissedId !== latestAnnouncement.id) {
-        console.log('✅ Showing popup in 1s...');
         // Add a small delay for better UX on page load
         const timer = setTimeout(() => {
           setIsVisible(true);
         }, 1000);
         return () => clearTimeout(timer);
-      } else {
-        console.log('🚫 Popup blocked: Already dismissed');
       }
     }
-  }, [latestAnnouncement, currentUsername]);
+  }, [latestAnnouncement, currentUsername, currentUserId]);
 
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {

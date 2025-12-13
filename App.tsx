@@ -1678,6 +1678,7 @@ function App() {
         <AnnouncementPopup 
           latestAnnouncement={filteredAnnouncements[0]} 
           currentUsername={currentUsername}
+          currentUserId={loggedInDeptUser?.id || auth.currentUser?.uid || 'guest'}
         />
 
         <ToastContainer toasts={toasts} removeToast={removeToast} />
