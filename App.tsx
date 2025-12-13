@@ -587,7 +587,7 @@ function App() {
   const handleAddAnnouncement = async (title: string, content: string, visibleTo: 'admin' | 'kampanya' | 'all') => {
     try {
       const user = loggedInDeptUser ? loggedInDeptUser.username : 'Admin';
-      await addDoc(collection(db, "announcements"), {
+      const docRef = await addDoc(collection(db, "announcements"), {
         title,
         content,
         visibleTo,
@@ -595,6 +595,9 @@ function App() {
         createdBy: user,
         readBy: []
       });
+      
+      // Prevent popup for the creator
+      localStorage.setItem('dismissed_announcement_id', docRef.id);
       
       // Log action
       await addDoc(collection(db, "logs"), {
