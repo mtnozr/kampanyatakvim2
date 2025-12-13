@@ -8,11 +8,17 @@ interface AddEventModalProps {
   onClose: () => void;
   onAdd: (title: string, urgency: UrgencyLevel, date: Date, assigneeId?: string, description?: string, departmentId?: string, difficulty?: DifficultyLevel) => void;
   initialDate?: Date;
+  initialData?: {
+    title?: string;
+    urgency?: UrgencyLevel;
+    description?: string;
+    departmentId?: string;
+  };
   users: User[];
   departments: Department[];
 }
 
-export const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onAdd, initialDate, users, departments }) => {
+export const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onAdd, initialDate, initialData, users, departments }) => {
   const [title, setTitle] = useState('');
   const [urgency, setUrgency] = useState<UrgencyLevel>('Medium');
   const [difficulty, setDifficulty] = useState<DifficultyLevel>('ORTA');
@@ -23,15 +29,30 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, o
   const [holidayWarning, setHolidayWarning] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isOpen && initialDate) {
-      // Format date for input type="date" (YYYY-MM-DD)
-      const year = initialDate.getFullYear();
-      const month = String(initialDate.getMonth() + 1).padStart(2, '0');
-      const day = String(initialDate.getDate()).padStart(2, '0');
-      const formattedDate = `${year}-${month}-${day}`;
-      setDateStr(formattedDate);
-      checkHoliday(formattedDate);
-    } else {
+    if (isOpen) {
+      if (initialDate) {
+        const year = initialDate.getFullYear();
+        const month = String(initialDate.getMonth() + 1).padStart(2, '0');
+        const day = String(initialDate.getDate()).padStart(2, '0');
+        const formattedDate = `${year}-${month}-${day}`;
+        setDateStr(formattedDate);
+        checkHoliday(formattedDate);
+      }
+      
+      if (initialData) {
+        setTitle(initialData.title || '');
+        setUrgency(initialData.urgency || 'Medium');
+        setDescription(initialData.description || '');
+        setDepartmentId(initialData.departmentId || '');
+      } else if (!initialDate) {
+        // Only reset if opening fresh (no date provided implies fully fresh, though typically date is always provided)
+        // Actually, if simply opening with a date, we usually reset fields.
+        // Logic: If initialData is present, use it. Else reset fields.
+      }
+    } 
+    
+    if (!isOpen) {
+      // Reset on close
       setTitle('');
       setUrgency('Medium');
       setDifficulty('ORTA');
@@ -40,7 +61,7 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, o
       setDescription('');
       setHolidayWarning(null);
     }
-  }, [isOpen, initialDate]);
+  }, [isOpen, initialDate, initialData]);
 
   const checkHoliday = (date: string) => {
     const d = new Date(date);

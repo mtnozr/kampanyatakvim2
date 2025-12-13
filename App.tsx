@@ -17,10 +17,12 @@ import { Bell, ChevronLeft, ChevronRight, Plus, Users, ClipboardList, Loader2, S
 import emailjs from '@emailjs/browser';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { CalendarEvent, UrgencyLevel, User, AppNotification, ToastMessage, ActivityLog, Department, DepartmentUser, Announcement, DifficultyLevel } from './types';
+import { CalendarEvent, UrgencyLevel, User, AppNotification, ToastMessage, ActivityLog, Department, DepartmentUser, Announcement, DifficultyLevel, WorkRequest } from './types';
 import { INITIAL_EVENTS, DAYS_OF_WEEK, INITIAL_USERS, URGENCY_CONFIGS, TURKISH_HOLIDAYS, INITIAL_DEPARTMENTS, DIFFICULTY_CONFIGS } from './constants';
 import { EventBadge } from './components/EventBadge';
 import { AddEventModal } from './components/AddEventModal';
+import { RequestWorkModal } from './components/RequestWorkModal';
+import { IncomingRequestsModal } from './components/IncomingRequestsModal';
 import { AdminModal } from './components/AdminModal';
 import { NotificationPopover } from './components/NotificationPopover';
 import { LogPopover } from './components/LogPopover';
@@ -31,6 +33,7 @@ import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { AnnouncementBoard } from './components/AnnouncementBoard';
 import { ReportsDashboard } from './components/ReportsDashboard';
 import { ThemeToggle } from './components/ThemeToggle';
+import { useTheme } from './hooks/useTheme';
 import { setCookie, getCookie, deleteCookie } from './utils/cookies';
 
 // --- FIREBASE IMPORTS ---
@@ -64,6 +67,8 @@ const normalizeUrgency = (urgency: any): UrgencyLevel => {
 
 function App() {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const { theme, toggleTheme, setTheme } = useTheme();
+  const [autoThemeConfig, setAutoThemeConfig] = useState<{ enabled: boolean; time: string }>({ enabled: false, time: '20:00' });
 
   // --- STATE MANAGEMENT (Pure Firestore) ---
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -83,6 +88,7 @@ function App() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [requests, setRequests] = useState<WorkRequest[]>([]);
 
   // Local UI State
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -100,6 +106,11 @@ function App() {
 
   // Modals State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [isIncomingRequestsModalOpen, setIsIncomingRequestsModalOpen] = useState(false);
+  const [requestModalDate, setRequestModalDate] = useState<Date | undefined>(undefined);
+  const [convertingRequest, setConvertingRequest] = useState<WorkRequest | null>(null);
+
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
@@ -220,6 +231,57 @@ function App() {
     });
     return () => unsubscribe();
   }, [refreshKey]);
+
+  // 8. Sync Work Requests
+  useEffect(() => {
+    const q = query(collection(db, "work_requests"), orderBy("createdAt", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedRequests: WorkRequest[] = snapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id,
+        createdAt: doc.data().createdAt instanceof Timestamp ? doc.data().createdAt.toDate() : new Date(),
+        targetDate: doc.data().targetDate instanceof Timestamp ? doc.data().targetDate.toDate() : new Date()
+      } as WorkRequest));
+      setRequests(fetchedRequests);
+    });
+    return () => unsubscribe();
+  }, [refreshKey]);
+
+  // 9. Sync System Settings (Theme)
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, "system_settings", "theme_config"), (doc) => {
+      if (doc.exists()) {
+        const data = doc.data() as { enabled: boolean; time: string };
+        setAutoThemeConfig(data);
+        
+        // Check if we should switch theme right now
+        if (data.enabled && data.time) {
+          const now = new Date();
+          const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+          if (currentTime === data.time && theme === 'light') {
+            setTheme('dark');
+          }
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []); // Run once on mount
+
+  // Check time every minute for auto theme switch
+  useEffect(() => {
+    if (!autoThemeConfig.enabled) return;
+
+    const interval = setInterval(() => {
+      const now = new Date();
+      const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      if (currentTime === autoThemeConfig.time && theme === 'light') {
+        setTheme('dark');
+        addToast('Otomatik karanlık mod aktif edildi.', 'info');
+      }
+    }, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, [autoThemeConfig, theme]);
 
   // --- Derived Permissions based on Login ---
   // Designer = logged in via Firebase Auth in AdminModal
@@ -596,7 +658,7 @@ function App() {
     }
   };
 
-  const handleAddDepartmentUser = async (username: string, password: string, departmentId: string, isDesignerRole: boolean, isKampanyaYapanRole: boolean) => {
+  const handleAddDepartmentUser = async (username: string, password: string, departmentId: string, isDesignerRole: boolean, isKampanyaYapanRole: boolean, isBusinessUnitRole: boolean, email?: string) => {
     try {
       await addDoc(collection(db, "departmentUsers"), {
         username,
@@ -604,6 +666,8 @@ function App() {
         departmentId,
         isDesigner: isDesignerRole,
         isKampanyaYapan: isKampanyaYapanRole,
+        isBusinessUnit: isBusinessUnitRole,
+        email: email || '',
         createdAt: Timestamp.now()
       });
       addToast(`${username} kullanıcısı eklendi.`, 'success');
@@ -677,6 +741,57 @@ function App() {
     }
   };
 
+  const handleUpdateAutoThemeConfig = async (config: { enabled: boolean; time: string }) => {
+    try {
+      await setDoc(doc(db, "system_settings", "theme_config"), config);
+      addToast('Tema ayarları güncellendi.', 'success');
+    } catch (e) {
+      console.error(e);
+      addToast('Ayarlar güncellenemedi.', 'info');
+    }
+  };
+
+  const handleAddRequest = async (title: string, urgency: UrgencyLevel, date: Date, description?: string, requesterEmail?: string) => {
+    if (!loggedInDeptUser?.isBusinessUnit) return;
+    try {
+      const emailToUse = requesterEmail || loggedInDeptUser.email || '';
+      await addDoc(collection(db, "work_requests"), {
+        title,
+        urgency,
+        targetDate: Timestamp.fromDate(date),
+        description: description || '',
+        departmentId: loggedInDeptUser.departmentId,
+        requesterEmail: emailToUse,
+        status: 'pending',
+        createdAt: Timestamp.now()
+      });
+      addToast('İş talebi oluşturuldu.', 'success');
+      setIsRequestModalOpen(false);
+    } catch (e) {
+      console.error(e);
+      addToast('Talep oluşturulamadı.', 'info');
+    }
+  };
+
+  const handleAcceptRequest = (request: WorkRequest) => {
+    setConvertingRequest(request);
+    // Ensure we pass a Date object
+    const targetDate = request.targetDate instanceof Date ? request.targetDate : (request.targetDate as any).toDate();
+    setSelectedDate(targetDate);
+    setIsIncomingRequestsModalOpen(false);
+    setIsAddModalOpen(true);
+  };
+
+  const handleRejectRequest = async (request: WorkRequest) => {
+    if (!confirm('Bu talebi reddetmek istediğinize emin misiniz?')) return;
+    try {
+      await updateDoc(doc(db, "work_requests", request.id), { status: 'rejected' });
+      addToast('Talep reddedildi.', 'info');
+    } catch (e) {
+      addToast('İşlem başarısız.', 'info');
+    }
+  };
+
   const handleAddEvent = async (
     title: string,
     urgency: UrgencyLevel,
@@ -704,6 +819,36 @@ function App() {
       const docRef = await addDoc(collection(db, "events"), eventData);
       newEventId = docRef.id;
       addToast('Kampanya oluşturuldu.', 'success');
+
+      // Check if we are converting a request
+      if (convertingRequest) {
+        const reqRef = doc(db, "work_requests", convertingRequest.id);
+        await updateDoc(reqRef, { status: 'approved' });
+        
+        // If assigned and there's a requester email, send notification to requester
+        if (assigneeId && convertingRequest.requesterEmail) {
+          const formattedRequestDate = format(convertingRequest.createdAt instanceof Timestamp ? convertingRequest.createdAt.toDate() : convertingRequest.createdAt, 'd MMMM yyyy HH:mm', { locale: tr });
+          const requesterEmailMessage = `${formattedRequestDate} tarihinde talep ettiğiniz "${title}" kampanya/bilgilendirme için iş planlaması yapılmıştır.`;
+          
+          const requesterParams = {
+            to_email: convertingRequest.requesterEmail,
+            to_name: "İlgili Kişi",
+            name: "Kampanya Takvimi",
+            email: convertingRequest.requesterEmail,
+            title: "Kampanya/Bilgilendirme Talebiniz Atandı",
+            message: requesterEmailMessage,
+            ref_id: `Ref ID: #${newEventId.substring(0, 6).toUpperCase()}`,
+          };
+
+          // We send this asynchronously without blocking or showing toast for it specifically
+          // to keep the flow smooth, or we can add a small toast.
+          emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, requesterParams, EMAILJS_PUBLIC_KEY)
+            .then(() => console.log('✅ Talep edene mail gönderildi'))
+            .catch((err) => console.error('❌ Talep edene mail gönderilemedi', err));
+        }
+
+        setConvertingRequest(null);
+      }
     } catch (e) {
       console.error(e);
       addToast('Hata: Kampanya kaydedilemedi.', 'info');
@@ -880,9 +1025,16 @@ function App() {
   };
 
   const openAddModal = (date?: Date) => {
-    if (!isDesigner) return;
-    setSelectedDate(date || new Date());
-    setIsAddModalOpen(true);
+    if (isDesigner) {
+      setSelectedDate(date || new Date());
+      setIsAddModalOpen(true);
+      return;
+    }
+    if (loggedInDeptUser?.isBusinessUnit) {
+      setRequestModalDate(date || new Date());
+      setIsRequestModalOpen(true);
+      return;
+    }
   };
 
   const getEventsForDay = (date: Date) => {
@@ -943,6 +1095,20 @@ function App() {
                   {isKampanyaYapan && (
                     <span className="text-xs bg-blue-200 text-blue-600 px-2 py-0.5 rounded-md font-normal lowercase">görüntüleme</span>
                   )}
+                  {isDesigner && (
+                    <button
+                      onClick={() => setIsIncomingRequestsModalOpen(true)}
+                      className="ml-4 relative text-xs bg-violet-100 text-violet-700 px-3 py-1.5 rounded-lg hover:bg-violet-200 transition-colors flex items-center gap-2 font-medium"
+                    >
+                      <ClipboardList size={14} />
+                      <span className="hidden sm:inline">İş Talepleri</span>
+                      {requests.filter(r => r.status === 'pending').length > 0 && (
+                        <span className="bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full">
+                          {requests.filter(r => r.status === 'pending').length}
+                        </span>
+                      )}
+                    </button>
+                  )}
                   {isDesigner && users.length === 0 && events.length === 0 && (
                     <button
                       onClick={seedDatabase}
@@ -990,7 +1156,7 @@ function App() {
             </div>
 
             <div className="flex items-center gap-2 md:gap-4 bg-white/50 dark:bg-slate-800/50 p-2 rounded-2xl backdrop-blur-sm shadow-sm flex-wrap relative z-20 transition-colors">
-              <ThemeToggle />
+              <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
               <button onClick={resetToToday} className="bg-violet-100 text-violet-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-violet-200 transition-colors">
                 Bugün
               </button>
@@ -1262,7 +1428,7 @@ function App() {
                           : 'bg-white dark:bg-slate-800 border-transparent dark:border-slate-700 shadow-sm hover:shadow-md')
                       : 'bg-gray-50/50 dark:bg-slate-900/50 border-transparent opacity-60'}
                   ${isTodayDate ? 'ring-2 ring-violet-400 ring-offset-2 dark:ring-offset-slate-900' : ''}
-                  ${!isDesigner ? 'cursor-default' : 'cursor-pointer'}
+                  ${!isDesigner && !loggedInDeptUser?.isBusinessUnit ? 'cursor-default' : 'cursor-pointer'}
                 `}
                 >
                   <div className="flex justify-between items-start mb-2">
@@ -1347,7 +1513,7 @@ function App() {
                     })}
                   </div>
 
-                  {isDesigner && (
+                  {(isDesigner || loggedInDeptUser?.isBusinessUnit) && (
                     <>
                       <div className="absolute inset-0 bg-violet-50/0 group-hover:bg-violet-50/30 rounded-2xl pointer-events-none transition-colors" />
                       <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1377,10 +1543,36 @@ function App() {
 
         <AddEventModal
           isOpen={isAddModalOpen}
-          onClose={() => setIsAddModalOpen(false)}
+          onClose={() => {
+             setIsAddModalOpen(false);
+             setConvertingRequest(null);
+          }}
           onAdd={handleAddEvent}
           initialDate={selectedDate}
+          initialData={convertingRequest ? {
+            title: convertingRequest.title,
+            urgency: convertingRequest.urgency,
+            description: convertingRequest.description,
+            departmentId: convertingRequest.departmentId
+          } : undefined}
           users={users}
+          departments={departments}
+        />
+
+        <RequestWorkModal
+          isOpen={isRequestModalOpen}
+          onClose={() => setIsRequestModalOpen(false)}
+          onRequest={handleAddRequest}
+          initialDate={requestModalDate}
+          defaultEmail={loggedInDeptUser?.email}
+        />
+
+        <IncomingRequestsModal
+          isOpen={isIncomingRequestsModalOpen}
+          onClose={() => setIsIncomingRequestsModalOpen(false)}
+          requests={requests}
+          onAccept={handleAcceptRequest}
+          onReject={handleRejectRequest}
           departments={departments}
         />
 
@@ -1404,6 +1596,8 @@ function App() {
           announcements={announcements}
           onAddAnnouncement={handleAddAnnouncement}
           onDeleteAnnouncement={handleDeleteAnnouncement}
+          autoThemeConfig={autoThemeConfig}
+          onUpdateAutoThemeConfig={handleUpdateAutoThemeConfig}
         />
 
         <ChangePasswordModal

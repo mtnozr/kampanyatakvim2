@@ -69,7 +69,22 @@ export interface DepartmentUser {
   departmentId: string;
   isDesigner?: boolean;
   isKampanyaYapan?: boolean;
+  isBusinessUnit?: boolean; // New role for requesting work
+  email?: string; // Contact email for notifications
   createdAt: Date;
+}
+
+export interface WorkRequest {
+  id: string;
+  title: string;
+  description?: string;
+  urgency: UrgencyLevel;
+  targetDate: Date;
+  departmentId: string; // The department making the request
+  requesterEmail?: string; // Email of the requester for notifications
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: Date;
+  rejectedReason?: string;
 }
 
 export interface Announcement {

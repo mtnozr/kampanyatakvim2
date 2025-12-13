@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Trash2, Plus, ShieldCheck, Lock, Users, Calendar, AlertTriangle, Building, UserPlus, LogOut, FileText, Download, Megaphone } from 'lucide-react';
+import { X, Trash2, Plus, ShieldCheck, Lock, Users, Calendar, AlertTriangle, Building, UserPlus, LogOut, FileText, Download, Megaphone, Settings } from 'lucide-react';
 import { User, CalendarEvent, Department, DepartmentUser, Announcement } from '../types';
 import { AVAILABLE_EMOJIS, URGENCY_CONFIGS } from '../constants';
 import { format } from 'date-fns';
@@ -20,13 +20,15 @@ interface AdminModalProps {
   onAddDepartment: (name: string) => void;
   onDeleteDepartment: (id: string) => void;
   departmentUsers: DepartmentUser[];
-  onAddDepartmentUser: (username: string, password: string, departmentId: string, isDesigner: boolean, isKampanyaYapan: boolean) => void;
+  onAddDepartmentUser: (username: string, password: string, departmentId: string, isDesigner: boolean, isKampanyaYapan: boolean, isBusinessUnit: boolean, email?: string) => void;
   onDeleteDepartmentUser: (id: string) => void;
   onBulkAddEvents: (events: Partial<CalendarEvent>[]) => Promise<void>;
   onSetIsDesigner: (value: boolean) => void;
   announcements: Announcement[];
   onAddAnnouncement: (title: string, content: string, visibleTo: 'admin' | 'kampanya' | 'all') => void;
   onDeleteAnnouncement: (id: string) => void;
+  autoThemeConfig: { enabled: boolean; time: string };
+  onUpdateAutoThemeConfig: (config: { enabled: boolean; time: string }) => Promise<void>;
 }
 
 export const AdminModal: React.FC<AdminModalProps> = ({
@@ -48,12 +50,25 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   onSetIsDesigner,
   announcements,
   onAddAnnouncement,
-  onDeleteAnnouncement
+  onDeleteAnnouncement,
+  autoThemeConfig,
+  onUpdateAutoThemeConfig
 }) => {
+  const [localThemeConfig, setLocalThemeConfig] = useState(autoThemeConfig);
   const [authUser, setAuthUser] = useState<FirebaseUser | null>(null);
+
+  useEffect(() => {
+    setLocalThemeConfig(autoThemeConfig);
+  }, [autoThemeConfig]);
+
+  const handleThemeConfigChange = (newConfig: { enabled: boolean; time: string }) => {
+    setLocalThemeConfig(newConfig);
+    onUpdateAutoThemeConfig(newConfig);
+  };
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [activeTab, setActiveTab] = useState<'users' | 'events' | 'departments' | 'dept-users' | 'import-export' | 'announcements'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'events' | 'departments' | 'dept-users' | 'import-export' | 'announcements' | 'settings'>('users');
   const [importText, setImportText] = useState('');
 
   // Loading state for auth check
@@ -75,9 +90,11 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   // Department User Form States
   const [newDeptUsername, setNewDeptUsername] = useState('');
   const [newDeptPassword, setNewDeptPassword] = useState('');
+  const [newDeptEmail, setNewDeptEmail] = useState('');
   const [newDeptUserDeptId, setNewDeptUserDeptId] = useState('');
   const [newDeptUserIsDesigner, setNewDeptUserIsDesigner] = useState(false);
   const [newDeptUserIsKampanyaYapan, setNewDeptUserIsKampanyaYapan] = useState(false);
+  const [newDeptUserIsBusinessUnit, setNewDeptUserIsBusinessUnit] = useState(false);
 
   const [error, setError] = useState('');
 
@@ -194,12 +211,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       return;
     }
 
-    onAddDepartmentUser(newDeptUsername, newDeptPassword, newDeptUserDeptId, newDeptUserIsDesigner, newDeptUserIsKampanyaYapan);
+    onAddDepartmentUser(newDeptUsername, newDeptPassword, newDeptUserDeptId, newDeptUserIsDesigner, newDeptUserIsKampanyaYapan, newDeptUserIsBusinessUnit, newDeptEmail);
     setNewDeptUsername('');
     setNewDeptPassword('');
+    setNewDeptEmail('');
     setNewDeptUserDeptId('');
     setNewDeptUserIsDesigner(false);
     setNewDeptUserIsKampanyaYapan(false);
+    setNewDeptUserIsBusinessUnit(false);
     setError('');
   };
 
@@ -418,6 +437,12 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               >
                 <Megaphone size={16} /> Duyurular
               </button>
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={`flex-1 py-3 px-2 text-xs md:text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === 'settings' ? 'border-violet-600 text-violet-600 dark:text-violet-400 bg-violet-50/50 dark:bg-violet-900/20' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
+              >
+                <Settings size={16} /> Ayarlar
+              </button>
             </div>
 
             {/* Content Area */}
@@ -582,7 +607,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     </h3>
 
                     <form onSubmit={handleAddDeptUser} className="space-y-3">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
                           <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Kullanıcı Adı</label>
                           <input
@@ -600,6 +625,16 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             value={newDeptPassword}
                             onChange={(e) => setNewDeptPassword(e.target.value)}
                             placeholder="sifre123"
+                            className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-colors"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">E-posta</label>
+                          <input
+                            type="email"
+                            value={newDeptEmail}
+                            onChange={(e) => setNewDeptEmail(e.target.value)}
+                            placeholder="birim@sirket.com"
                             className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-colors"
                           />
                         </div>
@@ -624,7 +659,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             checked={newDeptUserIsDesigner}
                             onChange={(e) => {
                               setNewDeptUserIsDesigner(e.target.checked);
-                              if (e.target.checked) setNewDeptUserIsKampanyaYapan(false);
+                              if (e.target.checked) {
+                                setNewDeptUserIsKampanyaYapan(false);
+                                setNewDeptUserIsBusinessUnit(false);
+                              }
                             }}
                             className="w-4 h-4 rounded border-gray-300 dark:border-slate-600 text-violet-600 focus:ring-violet-500 bg-white dark:bg-slate-700"
                           />
@@ -637,12 +675,31 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             checked={newDeptUserIsKampanyaYapan}
                             onChange={(e) => {
                               setNewDeptUserIsKampanyaYapan(e.target.checked);
-                              if (e.target.checked) setNewDeptUserIsDesigner(false);
+                              if (e.target.checked) {
+                                setNewDeptUserIsDesigner(false);
+                                setNewDeptUserIsBusinessUnit(false);
+                              }
                             }}
                             className="w-4 h-4 rounded border-gray-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 bg-white dark:bg-slate-700"
                           />
                           <span className="text-sm text-gray-700 dark:text-gray-300">Kampanya Yapan Yetkisi Ver</span>
                           <span className="text-[10px] text-gray-400 dark:text-gray-500">(Tüm kampanyaları görüntüleme izni)</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={newDeptUserIsBusinessUnit}
+                            onChange={(e) => {
+                              setNewDeptUserIsBusinessUnit(e.target.checked);
+                              if (e.target.checked) {
+                                setNewDeptUserIsDesigner(false);
+                                setNewDeptUserIsKampanyaYapan(false);
+                              }
+                            }}
+                            className="w-4 h-4 rounded border-gray-300 dark:border-slate-600 text-orange-600 focus:ring-orange-500 bg-white dark:bg-slate-700"
+                          />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">İş Birimi Yetkisi Ver</span>
+                          <span className="text-[10px] text-gray-400 dark:text-gray-500">(İş talebi oluşturma izni)</span>
                         </label>
                       </div>
                       <div className="flex justify-between items-center">
@@ -668,7 +725,15 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         return (
                           <div key={user.id} className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-gray-100 dark:border-slate-700 flex items-center justify-between group hover:shadow-sm transition-all">
                             <div className="flex items-center gap-3">
-                              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${user.isDesigner ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400' : user.isKampanyaYapan ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400'}`}>
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                                user.isDesigner 
+                                  ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400' 
+                                  : user.isKampanyaYapan 
+                                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                                    : user.isBusinessUnit
+                                      ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
+                                      : 'bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400'
+                              }`}>
                                 {user.username.charAt(0).toUpperCase()}
                               </div>
                               <div>
@@ -681,8 +746,11 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                                   {user.isKampanyaYapan && (
                                     <span className="text-[10px] bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded font-medium">Kampanya Yapan</span>
                                   )}
+                                  {user.isBusinessUnit && (
+                                    <span className="text-[10px] bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-1.5 py-0.5 rounded font-medium">İş Birimi</span>
+                                  )}
                                 </div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">{dept ? dept.name : 'Silinmiş Birim'}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{dept ? dept.name : 'Silinmiş Birim'} • {user.email || 'E-posta yok'}</p>
                               </div>
                             </div>
                             <button
@@ -923,6 +991,48 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       )}
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* --- SETTINGS TAB --- */}
+              {activeTab === 'settings' && (
+                <div className="p-6 h-full overflow-y-auto">
+                    <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">Genel Ayarlar</h3>
+                    
+                    <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-6 shadow-sm space-y-6">
+                        
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <h4 className="font-bold text-gray-800 dark:text-gray-200">Otomatik Karanlık Mod</h4>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Belirlenen saatte tüm kullanıcılar için karanlık modu aktif et.</p>
+                            </div>
+                            <div className="flex items-center h-6">
+                              <input 
+                                type="checkbox" 
+                                id="autoDarkMode"
+                                checked={localThemeConfig.enabled}
+                                onChange={(e) => handleThemeConfigChange({ ...localThemeConfig, enabled: e.target.checked })}
+                                className="w-5 h-5 text-violet-600 rounded focus:ring-violet-500 border-gray-300 dark:border-slate-600 dark:bg-slate-700"
+                              />
+                            </div>
+                        </div>
+
+                        {localThemeConfig.enabled && (
+                            <div className="pt-4 border-t dark:border-slate-700 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 block">Aktif Olma Saati</label>
+                                <input
+                                    type="time"
+                                    value={localThemeConfig.time}
+                                    onChange={(e) => handleThemeConfigChange({ ...localThemeConfig, time: e.target.value })}
+                                    className="px-4 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white transition-colors"
+                                />
+                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                                    Sistem saati <strong>{localThemeConfig.time}</strong> olduğunda karanlık mod otomatik olarak açılacaktır. Kullanıcılar manuel olarak kapatabilirler.
+                                </p>
+                            </div>
+                        )}
+
+                    </div>
                 </div>
               )}
             </div>
