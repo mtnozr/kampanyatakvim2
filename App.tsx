@@ -325,6 +325,9 @@ function App() {
       const user = departmentUsers.find(u => u.id === savedDeptUserId);
       if (user) {
         setLoggedInDeptUser(user);
+        // Sync roles explicitly to fix issues where cookie might be missing but user is logged in
+        if (user.isDesigner) setIsDesigner(true);
+        if (user.isKampanyaYapan) setIsKampanyaYapan(true);
       }
     }
   }, [departmentUsers]);
