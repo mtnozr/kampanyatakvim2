@@ -365,16 +365,30 @@ function App() {
 
   const filteredAnnouncements = useMemo(() => {
     return announcements.filter(ann => {
-      // Admin sees all
+      // 1. Admin (Firebase Auth) sees all
       if (!loggedInDeptUser && auth.currentUser) return true;
-      // Designer sees all
+      
+      // 2. Designer (Department User with role) sees all
       if (isDesigner) return true; 
-      // Kampanya Yapan sees public and 'kampanya' visible
-      if (isKampanyaYapan) return ann.visibleTo === 'all' || ann.visibleTo === 'kampanya';
-      // Others see only public
+      
+      // 3. Kampanya Yapan (Department User with role) sees 'all' and 'kampanya'
+      if (isKampanyaYapan) {
+        return ann.visibleTo === 'all' || ann.visibleTo === 'kampanya';
+      }
+      
+      // 4. Business Unit (Department User without above roles) sees only 'all'
+      // Note: If you want Business Units to see 'kampanya' announcements, add logic here.
+      // Currently strictly following the label "Kampanya Yapan ve Admin"
       return ann.visibleTo === 'all';
     });
   }, [announcements, isDesigner, isKampanyaYapan, loggedInDeptUser]);
+
+  // Determine current username for popup logic
+  const currentUsername = useMemo(() => {
+    if (loggedInDeptUser) return loggedInDeptUser.username;
+    if (auth.currentUser) return 'Admin';
+    return null;
+  }, [loggedInDeptUser, auth.currentUser]);
 
   const unreadAnnouncementCount = useMemo(() => {
     let userId = loggedInDeptUser ? loggedInDeptUser.id : 'guest';
@@ -1655,7 +1669,7 @@ function App() {
 
         <AnnouncementPopup 
           latestAnnouncement={filteredAnnouncements[0]} 
-          currentUsername={loggedInDeptUser ? loggedInDeptUser.username : (isDesigner ? 'Admin' : null)}
+          currentUsername={currentUsername}
         />
 
         <ToastContainer toasts={toasts} removeToast={removeToast} />

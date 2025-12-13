@@ -13,8 +13,16 @@ export const AnnouncementPopup: React.FC<AnnouncementPopupProps> = ({ latestAnno
 
   useEffect(() => {
     if (latestAnnouncement) {
+      console.log('📢 Popup Check:', {
+        announcementId: latestAnnouncement.id,
+        createdBy: latestAnnouncement.createdBy,
+        currentUsername: currentUsername,
+        dismissedId: localStorage.getItem('dismissed_announcement_id')
+      });
+
       // If the current user created this announcement, don't show the popup
       if (currentUsername && latestAnnouncement.createdBy === currentUsername) {
+        console.log('🚫 Popup blocked: User is creator');
         return;
       }
 
@@ -22,11 +30,14 @@ export const AnnouncementPopup: React.FC<AnnouncementPopupProps> = ({ latestAnno
       
       // If the latest announcement is different from the dismissed one, show popup
       if (dismissedId !== latestAnnouncement.id) {
+        console.log('✅ Showing popup in 1s...');
         // Add a small delay for better UX on page load
         const timer = setTimeout(() => {
           setIsVisible(true);
         }, 1000);
         return () => clearTimeout(timer);
+      } else {
+        console.log('🚫 Popup blocked: Already dismissed');
       }
     }
   }, [latestAnnouncement, currentUsername]);
