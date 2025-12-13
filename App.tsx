@@ -1111,10 +1111,10 @@ function App() {
                     </span>
                   )}
                   {!isDesigner && !isKampanyaYapan && (
-                    <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-md font-normal lowercase">salt okunur</span>
+                    <span className="text-xs bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-400 px-2 py-0.5 rounded-md font-normal lowercase">salt okunur</span>
                   )}
                   {isKampanyaYapan && (
-                    <span className="text-xs bg-blue-200 text-blue-600 px-2 py-0.5 rounded-md font-normal lowercase">görüntüleme</span>
+                    <span className="text-xs bg-blue-200 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded-md font-normal lowercase">görüntüleme</span>
                   )}
                   {isDesigner && (
                     <button
@@ -1151,18 +1151,18 @@ function App() {
                 )}
               </div>
               {loggedInDeptUser && (
-                <div className="flex items-center gap-2 mt-1 text-xs text-teal-600 bg-teal-50 px-2 py-1 rounded w-fit">
+                <div className="flex items-center gap-2 mt-1 text-xs text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-transparent px-2 py-1 rounded w-fit border border-transparent dark:border-teal-800/50">
                   <LogIn size={12} /> {currentDepartmentName} Birimi olarak giriş yapıldı
                   <button
                     onClick={() => setIsChangePasswordOpen(true)}
-                    className="ml-2 text-[10px] bg-teal-100 text-teal-700 px-2 py-0.5 rounded hover:bg-teal-200 flex items-center gap-1"
+                    className="ml-2 text-[10px] bg-teal-100 text-teal-700 dark:bg-transparent dark:text-teal-400 dark:border dark:border-teal-700 px-2 py-0.5 rounded hover:bg-teal-200 dark:hover:bg-teal-900/50 flex items-center gap-1 transition-colors"
                     title="Şifre Değiştir"
                   >
                     <Lock size={10} /> Şifre
                   </button>
                   <button
                     onClick={handleDepartmentLogout}
-                    className="ml-1 text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded hover:bg-red-200 flex items-center gap-1"
+                    className="ml-1 text-[10px] bg-red-100 text-red-700 dark:bg-transparent dark:text-red-400 dark:border dark:border-red-800 px-2 py-0.5 rounded hover:bg-red-200 dark:hover:bg-red-900/50 flex items-center gap-1 transition-colors"
                   >
                     <LogOut size={10} /> Çıkış
                   </button>
@@ -1178,27 +1178,31 @@ function App() {
 
             <div className="flex items-center gap-2 md:gap-4 bg-white/50 dark:bg-slate-800/50 p-2 rounded-2xl backdrop-blur-sm shadow-sm flex-wrap relative z-20 transition-colors">
               <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
-              <button onClick={resetToToday} className="bg-violet-100 text-violet-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-violet-200 transition-colors">
+              <button onClick={resetToToday} className="bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 dark:border dark:border-violet-700/50 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors">
                 Bugün
               </button>
 
               <div className="flex items-center gap-2">
-                <button onClick={prevMonth} className="p-2 hover:bg-white rounded-full transition-colors text-gray-600">
+                <button onClick={prevMonth} className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded-full transition-colors text-gray-600 dark:text-gray-300">
                   <ChevronLeft size={20} />
                 </button>
-                <h2 className="text-xl md:text-2xl font-bold min-w-[160px] text-center tabular-nums capitalize">
+                <h2 className="text-xl md:text-2xl font-bold min-w-[160px] text-center tabular-nums capitalize text-gray-800 dark:text-gray-100">
                   {format(currentDate, 'MMMM yyyy', { locale: tr })}
                 </h2>
-                <button onClick={nextMonth} className="p-2 hover:bg-white rounded-full transition-colors text-gray-600">
+                <button onClick={nextMonth} className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded-full transition-colors text-gray-600 dark:text-gray-300">
                   <ChevronRight size={20} />
                 </button>
               </div>
 
-              <div className="h-6 w-px bg-gray-300 mx-2 hidden md:block"></div>
+              <div className="h-6 w-px bg-gray-300 dark:bg-slate-600 mx-2 hidden md:block"></div>
 
               <button
                 onClick={() => setIsSearchOpen(!isSearchOpen)}
-                className={`p-2 transition-colors rounded-lg shadow-sm border ${isSearchOpen || hasActiveFilters ? 'text-violet-600 bg-violet-50 border-violet-100' : 'bg-white border-gray-100 text-gray-500 hover:text-violet-600'}`}
+                className={`p-2 transition-colors rounded-lg shadow-sm border ${
+                  isSearchOpen || hasActiveFilters 
+                    ? 'text-violet-600 bg-violet-50 border-violet-100 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-700/50' 
+                    : 'bg-white border-gray-100 text-gray-500 hover:text-violet-600 dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-slate-700'
+                }`}
                 title="Arama ve Filtrele"
               >
                 <Search size={20} />
@@ -1209,7 +1213,7 @@ function App() {
 
               <button
                 onClick={handleExportPdf}
-                className="p-2 text-gray-500 hover:text-pink-600 hover:bg-pink-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm"
+                className="p-2 text-gray-500 hover:text-pink-600 hover:bg-pink-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-pink-300 dark:hover:bg-pink-900/30"
                 title="PDF Olarak İndir"
               >
                 <Download size={20} />
@@ -1218,7 +1222,7 @@ function App() {
               {isDesigner && (
                 <button
                   onClick={() => setIsReportsOpen(true)}
-                  className="p-2 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm"
+                  className="p-2 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-900/30"
                   title="Raporlar ve Dashboard"
                 >
                   <PieChart size={20} />
@@ -1227,8 +1231,8 @@ function App() {
 
               {loggedInDeptUser && (
                 <div className="flex flex-col items-end mr-2">
-                  <span className="text-xs font-semibold text-gray-700">{loggedInDeptUser.username}</span>
-                  <span className="text-[10px] text-gray-400 font-medium">
+                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">{loggedInDeptUser.username}</span>
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
                     {loggedInDeptUser.isDesigner ? 'Designer' : loggedInDeptUser.isKampanyaYapan ? 'Kampanya Yapan' : 'Birim Kullanıcısı'}
                   </span>
                 </div>
@@ -1236,12 +1240,12 @@ function App() {
 
               <button
                 onClick={() => setIsAnnBoardOpen(true)}
-                className="p-2 text-gray-500 hover:text-violet-600 hover:bg-violet-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm relative"
+                className="p-2 text-gray-500 hover:text-violet-600 hover:bg-violet-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm relative dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-violet-900/30"
                 title="Duyurular"
               >
                 <Megaphone size={20} />
                 {unreadAnnouncementCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white">
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800">
                     {unreadAnnouncementCount}
                   </span>
                 )}
@@ -1249,7 +1253,7 @@ function App() {
 
               <button
                 onClick={() => setIsAdminOpen(true)}
-                className="p-2 text-gray-500 hover:text-violet-600 hover:bg-violet-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm"
+                className="p-2 text-gray-500 hover:text-violet-600 hover:bg-violet-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-violet-900/30"
                 title="Yönetici Paneli"
               >
                 <Users size={20} />
@@ -1264,8 +1268,10 @@ function App() {
                         setIsNotifOpen(false);
                       }}
                       className={`
-                                    p-2 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm
-                                    ${isLogOpen ? 'text-orange-600 bg-orange-50' : 'text-gray-400 hover:text-orange-600'}
+                                    p-2 transition-colors rounded-lg shadow-sm border
+                                    ${isLogOpen 
+                                      ? 'text-orange-600 bg-orange-50 border-orange-100 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700/50' 
+                                      : 'bg-white border-gray-100 text-gray-400 hover:text-orange-600 dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-orange-300 dark:hover:bg-orange-900/30'}
                                 `}
                       title="İşlem Kütüğü"
                     >
@@ -1289,13 +1295,15 @@ function App() {
                         setIsLogOpen(false);
                       }}
                       className={`
-                                    p-2 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm
-                                    ${isNotifOpen ? 'text-violet-600 bg-violet-50' : 'text-gray-400 hover:text-violet-600'}
+                                    p-2 transition-colors rounded-lg shadow-sm border
+                                    ${isNotifOpen 
+                                      ? 'text-violet-600 bg-violet-50 border-violet-100 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-700/50' 
+                                      : 'bg-white border-gray-100 text-gray-400 hover:text-violet-600 dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-violet-900/30'}
                                 `}
                     >
                       <Bell size={20} />
                       {notifications.length > 0 && (
-                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white">
+                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800">
                           {notifications.length}
                         </span>
                       )}
@@ -1313,7 +1321,7 @@ function App() {
 
                   <button
                     onClick={() => openAddModal()}
-                    className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg shadow-violet-200 hover:bg-violet-700 transition-transform active:scale-95"
+                    className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg shadow-violet-200 dark:shadow-none hover:bg-violet-700 transition-transform active:scale-95"
                   >
                     <Plus size={18} />
                     <span>Ekle</span>

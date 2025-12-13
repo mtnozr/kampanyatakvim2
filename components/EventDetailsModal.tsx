@@ -123,7 +123,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   onClick={() => handleStatusChange('Planlandı')}
                   className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all ${
                     status === 'Planlandı' 
-                    ? 'bg-yellow-100 text-yellow-700 shadow-sm' 
+                    ? 'bg-yellow-100 text-yellow-700 shadow-sm dark:bg-yellow-900/30 dark:text-yellow-300' 
                     : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600'
                   }`}
                   title="Planlandı"
@@ -134,7 +134,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   onClick={() => handleStatusChange('Tamamlandı')}
                   className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all ${
                     status === 'Tamamlandı' 
-                    ? 'bg-green-100 text-green-700 shadow-sm' 
+                    ? 'bg-green-100 text-green-700 shadow-sm dark:bg-green-900/30 dark:text-green-300' 
                     : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600'
                   }`}
                   title="Tamamlandı"
@@ -145,7 +145,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   onClick={() => handleStatusChange('İptal Edildi')}
                   className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all ${
                     status === 'İptal Edildi' 
-                    ? 'bg-red-100 text-red-700 shadow-sm' 
+                    ? 'bg-red-100 text-red-700 shadow-sm dark:bg-red-900/30 dark:text-red-300' 
                     : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600'
                   }`}
                   title="İptal Edildi"
