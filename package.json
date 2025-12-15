@@ -10,8 +10,10 @@
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
+    "@vercel/node": "^5.5.15",
     "date-fns": "^4.1.0",
     "firebase": "^10.8.1",
+    "firebase-admin": "^13.6.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.1",
     "lucide-react": "^0.344.0",

@@ -773,6 +773,31 @@ function App() {
     }
   };
 
+  const callAdminApi = async (data: any) => {
+    try {
+      const response = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'API işlemi başarısız');
+      }
+      
+      return result;
+    } catch (error: any) {
+      console.error("API Call Error:", error);
+      // Check if we are on localhost
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        throw new Error("Localhost üzerinde API çalışmaz. Lütfen Vercel veya 'vercel dev' kullanın.");
+      }
+      throw error;
+    }
+  };
+
   const handleAddDepartmentUser = async (username: string, password: string, departmentId: string, isDesignerRole: boolean, isKampanyaYapanRole: boolean, isBusinessUnitRole: boolean, email?: string) => {
     try {
       // Enforce email
@@ -790,11 +815,26 @@ function App() {
         await signOut(secondaryAuth); // Sign out from secondary app immediately
       } catch (authError: any) {
          if (authError.code === 'auth/email-already-in-use') {
-             // If user exists in Auth but not in Firestore (or we are re-adding), try to find them?
-             // For now, fail.
-             throw new Error('Bu e-posta adresi zaten kullanımda.');
+             // Ask admin if they want to overwrite the old auth user
+             if (confirm('Bu e-posta adresi (' + userEmail + ') ile kayıtlı eski bir kullanıcı (Auth) bulundu. Veritabanı kaydı yoksa bu "hayalet" bir kayıt olabilir.\n\nEski Auth kaydını silip yenisini oluşturmak ister misiniz?')) {
+                try {
+                  addToast('Eski Auth kaydı temizleniyor...', 'info');
+                  await callAdminApi({ action: 'deleteUser', email: userEmail });
+                  
+                  // Retry creation
+                  addToast('Kullanıcı yeniden oluşturuluyor...', 'info');
+                  const userCredential = await createUserWithEmailAndPassword(secondaryAuth, userEmail, password);
+                  uid = userCredential.user.uid;
+                  await signOut(secondaryAuth);
+                } catch (retryError: any) {
+                   throw new Error('Temizleme ve yeniden oluşturma başarısız: ' + retryError.message);
+                }
+             } else {
+                throw new Error('Bu e-posta adresi zaten kullanımda.');
+             }
+         } else {
+             throw authError;
          }
-         throw authError;
       }
 
       await addDoc(collection(db, "departmentUsers"), {
@@ -817,11 +857,25 @@ function App() {
 
   const handleDeleteDepartmentUser = async (id: string) => {
     try {
-      // Note: We cannot delete from Firebase Auth client-side without that user's credential.
-      // We can only delete the Firestore record. The Auth user will remain orphan.
-      // This is a limitation of client-side only admin.
+      const userToDelete = departmentUsers.find(u => u.id === id);
+
+      // 1. Try to delete from Auth via API
+      if (userToDelete?.uid || userToDelete?.email) {
+          try {
+              await callAdminApi({ 
+                  action: 'deleteUser', 
+                  uid: userToDelete.uid,
+                  email: userToDelete.email 
+              });
+              addToast('Auth kaydı silindi.', 'success');
+          } catch (apiErr: any) {
+              console.warn("Auth deletion failed:", apiErr);
+              addToast('Auth silinemedi (API hatası). Sadece veritabanından siliniyor.', 'info');
+          }
+      }
+
       await deleteDoc(doc(db, "departmentUsers", id));
-      addToast('Kullanıcı (Veritabanı) silindi. Auth kaydı kalıcıdır.', 'info');
+      addToast('Kullanıcı veritabanından silindi.', 'info');
     } catch (e) {
       addToast('Silme hatası.', 'info');
     }
