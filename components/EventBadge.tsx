@@ -79,11 +79,12 @@ export const EventBadge: React.FC<EventBadgeProps> = ({
         rounded-r-md rounded-l-sm p-1.5 shadow-sm
         flex flex-col gap-0.5
         ${isBlurred ? 'blur-[3px] select-none' : ''}
+        dark:bg-opacity-20 dark:border-opacity-60 dark:backdrop-blur-sm
       `}>
-        <span className={`text-[9px] font-bold uppercase tracking-wide opacity-80 ${config.colorText}`}>
+        <span className={`text-[9px] font-bold uppercase tracking-wide opacity-80 ${config.colorText} dark:text-gray-100`}>
           {isBlurred ? '---' : config.label}
         </span>
-        <span className={`text-[11px] font-semibold leading-tight ${config.colorText} line-clamp-2`}>
+        <span className={`text-[11px] font-semibold leading-tight ${config.colorText} line-clamp-2 dark:text-white`}>
           {isBlurred ? 'Diğer Birim Kampanyası' : event.title}
         </span>
       </div>

@@ -1480,7 +1480,7 @@ function App() {
                 {isDesigner && (
                   <button
                     onClick={() => setIsIncomingRequestsModalOpen(true)}
-                    className="relative text-xs bg-violet-100 text-violet-700 px-3 py-1.5 rounded-lg hover:bg-violet-200 transition-colors flex items-center gap-2 font-medium whitespace-nowrap"
+                    className="relative text-xs bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 dark:border dark:border-violet-700/50 px-3 py-1.5 rounded-lg hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors flex items-center gap-2 font-medium whitespace-nowrap"
                   >
                     <ClipboardList size={14} />
                     <span className="hidden sm:inline">İş Talepleri</span>
@@ -1495,7 +1495,7 @@ function App() {
                 {isDesigner && users.length === 0 && events.length === 0 && (
                   <button
                     onClick={seedDatabase}
-                    className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded flex items-center gap-1 hover:bg-green-200 whitespace-nowrap"
+                    className="text-[10px] bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 dark:border dark:border-green-700/50 px-2 py-1 rounded flex items-center gap-1 hover:bg-green-200 dark:hover:bg-green-900/50 whitespace-nowrap"
                     title="Veritabanı boş görünüyor. Örnek verileri yüklemek için tıkla."
                   >
                     <Database size={12} /> Verileri Yükle
@@ -1505,7 +1505,7 @@ function App() {
                 {(isDesigner || isKampanyaYapan) && !loggedInDeptUser && (
                   <button
                     onClick={handleDepartmentLogout}
-                    className="text-xs bg-red-100 text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-200 transition-colors flex items-center gap-1 font-medium whitespace-nowrap"
+                    className="text-xs bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 dark:border dark:border-red-700/50 px-3 py-1.5 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors flex items-center gap-1 font-medium whitespace-nowrap"
                     title="Çıkış Yap"
                   >
                     <LogOut size={14} /> Çıkış
