@@ -790,6 +790,10 @@ function App() {
       return result;
     } catch (error: any) {
       console.error("API Call Error:", error);
+      if (error instanceof SyntaxError && error.message.includes('JSON')) {
+          // This usually happens when Vercel returns an HTML 500 page instead of JSON
+          throw new Error("Sunucu hatası (API): Geçersiz yanıt formatı. (Environment variable sorunu olabilir)");
+      }
       // Check if we are on localhost
       if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
         throw new Error("Localhost üzerinde API çalışmaz. Lütfen Vercel veya 'vercel dev' kullanın.");

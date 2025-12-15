@@ -1,44 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import * as admin from 'firebase-admin';
-
-// Initialize Firebase Admin
-// We expect the service account to be passed as a JSON string in the environment variable
-if (!admin.apps.length) {
-  try {
-    const serviceAccountStr = process.env.FIREBASE_SERVICE_ACCOUNT || '{}';
-    // Handle potential double-escaped newlines if copied from certain sources
-    const serviceAccount = JSON.parse(serviceAccountStr);
-    
-    // Fix private_key newlines if they are escaped literal "\n"
-    if (serviceAccount.private_key) {
-      const rawKey = serviceAccount.private_key;
-      // First, unescape double escapes if present
-      let key = rawKey.replace(/\\n/g, '\n');
-      
-      // If it doesn't look like a PEM (no newlines, or just one line), fix it
-      // Standard PEM has -----BEGIN... and newlines.
-      // If we have headers but no newlines, or headers and messed up spacing:
-      
-      // Extract the body (everything between the headers)
-      const match = key.match(/-----BEGIN PRIVATE KEY-----([\s\S]*)-----END PRIVATE KEY-----/);
-      if (match && match[1]) {
-          // Found body. Remove all whitespace from body.
-          const body = match[1].replace(/\s/g, '');
-          // Reconstruct
-          key = `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----\n`;
-      }
-      
-      serviceAccount.private_key = key;
-    }
-
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
-    });
-  } catch (error) {
-    console.error('Firebase Admin Initialization Error:', error);
-    // Don't crash here, let the handler fail if needed, so we can return a proper error response
-  }
-}
+import admin from 'firebase-admin';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Enable CORS
@@ -55,11 +16,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  // Check if Admin was initialized
+  // Initialize Firebase Admin inside handler to catch errors gracefully
   if (!admin.apps.length) {
-    return res.status(500).json({ 
-      error: 'Firebase Admin not initialized. Check server logs and environment variables.' 
-    });
+    try {
+      const serviceAccountStr = process.env.FIREBASE_SERVICE_ACCOUNT;
+      
+      if (!serviceAccountStr) {
+         throw new Error('FIREBASE_SERVICE_ACCOUNT environment variable is missing.');
+      }
+
+      let serviceAccount;
+      try {
+        serviceAccount = JSON.parse(serviceAccountStr);
+      } catch (e) {
+        throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON.');
+      }
+      
+      // Fix private_key newlines if they are escaped literal "\n"
+      if (serviceAccount.private_key) {
+        const rawKey = serviceAccount.private_key;
+        // First, unescape double escapes if present
+        let key = rawKey.replace(/\\n/g, '\n');
+        
+        // If it doesn't look like a PEM (no newlines, or just one line), fix it
+        // Standard PEM has -----BEGIN... and newlines.
+        // If we have headers but no newlines, or headers and messed up spacing:
+        
+        // Extract the body (everything between the headers)
+        const match = key.match(/-----BEGIN PRIVATE KEY-----([\s\S]*)-----END PRIVATE KEY-----/);
+        if (match && match[1]) {
+            // Found body. Remove all whitespace from body.
+            const body = match[1].replace(/\s/g, '');
+            // Reconstruct
+            key = `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----\n`;
+        }
+        
+        serviceAccount.private_key = key;
+      }
+  
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+      });
+    } catch (error: any) {
+      console.error('Firebase Admin Initialization Error:', error);
+      return res.status(500).json({ 
+        error: `Firebase Admin Init Failed: ${error.message}` 
+      });
+    }
   }
 
   if (req.method !== 'POST') {
