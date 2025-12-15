@@ -403,14 +403,54 @@ function App() {
   useEffect(() => {
     if (!autoThemeConfig.enabled) return;
 
-    const interval = setInterval(() => {
+    const checkTime = () => {
       const now = new Date();
-      const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-      if (currentTime === autoThemeConfig.time && theme === 'light') {
-        setTheme('dark');
-        addToast('Otomatik karanlık mod aktif edildi.', 'info');
+      const currentHours = now.getHours();
+      const currentMinutes = now.getMinutes();
+      const currentTimeInMinutes = currentHours * 60 + currentMinutes;
+
+      // Parse configured time
+      const [configHours, configMinutes] = autoThemeConfig.time.split(':').map(Number);
+      const configTimeInMinutes = configHours * 60 + configMinutes;
+      
+      // Default end time is 09:00
+      const endTimeInMinutes = 9 * 60; // 09:00
+
+      // Case 1: Start time is before midnight (e.g. 16:00) and end time is next day (09:00)
+      // Range: [Start, 24:00) OR [00:00, End)
+      const isNightShift = configTimeInMinutes > endTimeInMinutes;
+
+      let shouldBeDark = false;
+
+      if (isNightShift) {
+        // Example: 16:00 to 09:00
+        // Current time must be >= 16:00 OR < 09:00
+        shouldBeDark = currentTimeInMinutes >= configTimeInMinutes || currentTimeInMinutes < endTimeInMinutes;
+      } else {
+        // Case 2: Start time is early morning (unlikely for dark mode but possible)
+        // Example: 01:00 to 09:00
+        shouldBeDark = currentTimeInMinutes >= configTimeInMinutes && currentTimeInMinutes < endTimeInMinutes;
       }
-    }, 60000); // Check every minute
+
+      if (shouldBeDark && theme === 'light') {
+        setTheme('dark');
+        // Only show toast if it's exactly the switch time to avoid spamming on reload
+        if (currentTimeInMinutes === configTimeInMinutes) {
+          addToast('Otomatik karanlık mod aktif edildi.', 'info');
+        }
+      } else if (!shouldBeDark && theme === 'dark') {
+        // Optional: Auto switch back to light mode? 
+        // User didn't explicitly ask for auto-light, but implied "active until 09:00".
+        // Let's switch back to light if we are outside the dark mode window.
+        setTheme('light');
+      }
+    };
+
+    // Run immediately
+    checkTime();
+
+    // Run every minute
+    const interval = setInterval(checkTime, 60000);
 
     return () => clearInterval(interval);
   }, [autoThemeConfig, theme]);
