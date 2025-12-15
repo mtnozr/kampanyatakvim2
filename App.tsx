@@ -1237,7 +1237,6 @@ function App() {
     }
     if (loggedInDeptUser?.isBusinessUnit) {
       if (!requestSubmissionEnabled) {
-        addToast('Talep girişi şu an için yönetici tarafından kapatılmıştır.', 'info');
         return;
       }
       setRequestModalDate(date || new Date());
