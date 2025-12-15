@@ -13,7 +13,7 @@ import {
   startOfWeek
 } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Bell, ChevronLeft, ChevronRight, Plus, Users, ClipboardList, Loader2, Search, Filter, X, LogIn, LogOut, Database, Download, Lock, Megaphone, PieChart } from 'lucide-react';
+import { Bell, ChevronLeft, ChevronRight, Plus, Users, ClipboardList, Loader2, Search, Filter, X, LogIn, LogOut, Database, Download, Lock, Megaphone, PieChart, CheckSquare } from 'lucide-react';
 import emailjs from '@emailjs/browser';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -33,6 +33,7 @@ import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { AnnouncementBoard } from './components/AnnouncementBoard';
 import { AnnouncementPopup } from './components/AnnouncementPopup';
 import { ReportsDashboard } from './components/ReportsDashboard';
+import { MyTasksModal } from './components/MyTasksModal';
 import { ThemeToggle } from './components/ThemeToggle';
 import { useTheme } from './hooks/useTheme';
 import { setCookie, getCookie, deleteCookie } from './utils/cookies';
@@ -55,7 +56,8 @@ import {
   writeBatch,
   arrayUnion,
   where,
-  getDocs
+  getDocs,
+  getDoc
 } from 'firebase/firestore';
 import { auth } from './firebase';
 import { createUserWithEmailAndPassword, getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
@@ -120,6 +122,7 @@ function App() {
   const [convertingRequest, setConvertingRequest] = useState<WorkRequest | null>(null);
 
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isMyTasksOpen, setIsMyTasksOpen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
@@ -1141,7 +1144,14 @@ function App() {
       assigneeId,
       description,
       departmentId,
-      status: 'Planlandı'
+      status: 'Planlandı',
+      createdAt: Timestamp.now(),
+      history: [{
+        date: Timestamp.now(),
+        action: 'created',
+        newStatus: 'Planlandı',
+        changedBy: loggedInDeptUser?.username || 'System'
+      }]
     };
 
     let newEventId = "";
@@ -1281,6 +1291,29 @@ function App() {
       // Convert Date to Timestamp if date is being updated
       if (updates.date && updates.date instanceof Date) {
         updateData.date = Timestamp.fromDate(updates.date);
+      }
+
+      // 1. Fetch current document to check status change
+      const eventRef = doc(db, "events", eventId);
+      const eventSnap = await getDoc(eventRef);
+      
+      if (eventSnap.exists()) {
+        const currentEvent = eventSnap.data() as CalendarEvent;
+        
+        // Add Updated At
+        updateData.updatedAt = Timestamp.now();
+
+        // Check if status changed
+        if (updates.status && updates.status !== currentEvent.status) {
+          const historyItem = {
+            date: Timestamp.now(),
+            action: 'status_changed',
+            oldStatus: currentEvent.status,
+            newStatus: updates.status,
+            changedBy: loggedInDeptUser?.username || 'System'
+          };
+          updateData.history = arrayUnion(historyItem);
+        }
       }
 
       await setDoc(doc(db, "events", eventId), updateData, { merge: true });
@@ -1581,6 +1614,16 @@ function App() {
                   </span>
                 )}
               </button>
+
+              {loggedInDeptUser && (
+                <button
+                  onClick={() => setIsMyTasksOpen(true)}
+                  className="p-2 text-gray-500 hover:text-violet-600 hover:bg-violet-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-violet-900/30"
+                  title="İşlerim"
+                >
+                  <CheckSquare size={20} />
+                </button>
+              )}
 
               <button
                 onClick={() => setIsAdminOpen(true)}
@@ -2015,6 +2058,13 @@ function App() {
           latestAnnouncement={filteredAnnouncements[0]} 
           currentUsername={currentUsername}
           currentUserId={loggedInDeptUser?.id || auth.currentUser?.uid || 'guest'}
+        />
+
+        <MyTasksModal
+          isOpen={isMyTasksOpen}
+          onClose={() => setIsMyTasksOpen(false)}
+          tasks={events.filter(e => loggedInDeptUser && e.assigneeId === loggedInDeptUser.id)}
+          onUpdateStatus={(id, status) => handleEditEvent(id, { status })}
         />
 
         <ToastContainer toasts={toasts} removeToast={removeToast} />

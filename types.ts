@@ -16,6 +16,14 @@ export interface Department {
 
 export type CampaignStatus = 'Planlandı' | 'Tamamlandı' | 'İptal Edildi';
 
+export interface EventHistoryItem {
+  date: Date;
+  action: string;
+  oldStatus?: CampaignStatus;
+  newStatus?: CampaignStatus;
+  changedBy?: string;
+}
+
 export interface CalendarEvent {
   id: string;
   date: Date;
@@ -26,6 +34,9 @@ export interface CalendarEvent {
   assigneeId?: string; // ID of the assigned User
   departmentId?: string; // ID of the requesting Department
   status?: CampaignStatus;
+  createdAt?: Date;
+  updatedAt?: Date;
+  history?: EventHistoryItem[];
 }
 
 export interface UrgencyConfig {
