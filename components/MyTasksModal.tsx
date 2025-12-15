@@ -209,15 +209,6 @@ export const MyTasksModal: React.FC<MyTasksModalProps> = ({
                           <XCircle size={14} /> İptal Et
                         </button>
                       )}
-
-                      {task.status !== 'Planlandı' && (
-                        <button
-                          onClick={() => onUpdateStatus(task.id, 'Planlandı')}
-                          className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-medium transition-colors flex items-center gap-1 justify-center"
-                        >
-                          <Clock size={14} /> Tekrar Planla
-                        </button>
-                      )}
                     </div>
                   </div>
 
