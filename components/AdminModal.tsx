@@ -7,7 +7,7 @@ import { format, addMonths } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { auth, db } from '../firebase';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, query, collection, where, getDocs } from 'firebase/firestore';
 
 interface AdminModalProps {
   isOpen: boolean;
@@ -148,14 +148,34 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setAuthUser(user);
-      setIsAuthLoading(false);
-      // Only set isDesigner to true if Firebase user exists
-      // Don't set to false - that would override cookie-based department user login
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        onSetIsDesigner(true);
+        // Check permissions
+        const q = query(collection(db, "departmentUsers"), where("uid", "==", user.uid));
+        try {
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+                const deptUser = snap.docs[0].data() as DepartmentUser;
+                if (deptUser.isDesigner) {
+                    setAuthUser(user);
+                    onSetIsDesigner(true);
+                } else {
+                    // Unauthorized for Admin Panel
+                    setAuthUser(null);
+                }
+            } else {
+                // No department user record found -> Assume Super Admin
+                setAuthUser(user);
+                onSetIsDesigner(true);
+            }
+        } catch (e) {
+            console.error("Admin auth check failed", e);
+            setAuthUser(null);
+        }
+      } else {
+        setAuthUser(null);
       }
+      setIsAuthLoading(false);
     });
     return () => unsubscribe();
   }, [onSetIsDesigner]);
@@ -787,7 +807,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                               <div>
                                 <div className="flex items-center gap-2">
                                   <p className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{user.username}</p>
-                                  <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-slate-700 px-1.5 py-0.5 rounded border border-gray-100 dark:border-slate-600 font-mono">{user.password}</span>
                                   {user.isDesigner && (
                                     <span className="text-[10px] bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 px-1.5 py-0.5 rounded font-medium">Designer</span>
                                   )}

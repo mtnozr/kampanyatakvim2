@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { X, LogIn, User as UserIcon, Lock } from 'lucide-react';
 import { DepartmentUser, Department } from '../types';
+import { auth } from '../firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
 interface DepartmentLoginModalProps {
     isOpen: boolean;
@@ -20,8 +22,9 @@ export const DepartmentLoginModal: React.FC<DepartmentLoginModalProps> = ({
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
@@ -30,17 +33,25 @@ export const DepartmentLoginModal: React.FC<DepartmentLoginModalProps> = ({
             return;
         }
 
-        const user = departmentUsers.find(
-            u => u.username.toLowerCase() === username.toLowerCase() && u.password === password
-        );
+        setIsLoading(true);
 
-        if (user) {
-            onLogin(user);
+        // Try to construct email if not provided as email
+        let email = username.trim();
+        if (!email.includes('@')) {
+            email = `${email.toLowerCase().replace(/\s+/g, '')}@kampanyatakvim.com`;
+        }
+
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            // Login successful
             setUsername('');
             setPassword('');
             onClose();
-        } else {
-            setError('Kullanıcı adı veya şifre hatalı.');
+        } catch (err: any) {
+            console.error(err);
+            setError('Giriş başarısız. Kullanıcı adı veya şifre hatalı.');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -103,9 +114,10 @@ export const DepartmentLoginModal: React.FC<DepartmentLoginModalProps> = ({
 
                     <button
                         type="submit"
-                        className="w-full bg-teal-600 hover:bg-teal-700 text-white py-2.5 rounded-lg font-medium transition shadow-lg shadow-teal-200 dark:shadow-none"
+                        disabled={isLoading}
+                        className="w-full bg-teal-600 hover:bg-teal-700 dark:bg-teal-600 dark:hover:bg-teal-700 text-white py-2 rounded-lg font-medium transition shadow-lg shadow-teal-200 dark:shadow-none flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                     >
-                        Giriş Yap
+                        {isLoading ? 'Giriş Yapılıyor...' : 'Giriş Yap'}
                     </button>
                 </form>
             </div>

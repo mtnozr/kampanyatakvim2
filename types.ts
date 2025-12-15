@@ -65,7 +65,8 @@ export interface ToastMessage {
 export interface DepartmentUser {
   id: string;
   username: string;
-  password: string;
+  // password: string; // DEPRECATED: Moved to Firebase Auth
+  uid?: string; // Firebase Auth UID
   departmentId: string;
   isDesigner?: boolean;
   isKampanyaYapan?: boolean;

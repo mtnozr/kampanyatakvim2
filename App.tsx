@@ -39,7 +39,8 @@ import { setCookie, getCookie, deleteCookie } from './utils/cookies';
 import { calculateMonthlyChampion } from './utils/gamification';
 
 // --- FIREBASE IMPORTS ---
-import { db } from './firebase';
+import { initializeApp } from 'firebase/app';
+import { db, firebaseConfig } from './firebase';
 import {
   collection,
   addDoc,
@@ -52,9 +53,12 @@ import {
   Timestamp,
   setDoc,
   writeBatch,
-  arrayUnion
+  arrayUnion,
+  where,
+  getDocs
 } from 'firebase/firestore';
 import { auth } from './firebase';
+import { createUserWithEmailAndPassword, getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 
 // --- EMAILJS CONFIGURATION ---
 const EMAILJS_SERVICE_ID = 'service_q4mufkj';
@@ -131,6 +135,46 @@ function App() {
   }, [events, viewEventId]);
 
   // --- FIREBASE LISTENERS (REAL-TIME SYNC) ---
+
+  // 0. Auth State Listener (Global)
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // User is logged in
+        // Check if they are a Department User
+        const q = query(collection(db, "departmentUsers"), where("uid", "==", user.uid));
+        try {
+          const querySnapshot = await getDocs(q);
+          
+          if (!querySnapshot.empty) {
+            // It IS a Department User
+            const deptUserDoc = querySnapshot.docs[0];
+            const deptUserData = { ...deptUserDoc.data(), id: deptUserDoc.id } as DepartmentUser;
+            
+            setLoggedInDeptUser(deptUserData);
+            setIsDesigner(!!deptUserData.isDesigner);
+            setIsKampanyaYapan(!!deptUserData.isKampanyaYapan);
+            
+            // Only show welcome toast if not recently shown (optional, but simple toast is fine)
+            // addToast(`Hoşgeldiniz, ${deptUserData.username}`, 'success');
+          } else {
+            // It is NOT a Department User (It's a Super Admin)
+            setLoggedInDeptUser(null); 
+            setIsDesigner(true); // Super admins are designers by default
+            setIsKampanyaYapan(false);
+          }
+        } catch (err) {
+          console.error("Auth check failed:", err);
+        }
+      } else {
+        // User is logged out
+        setLoggedInDeptUser(null);
+        setIsDesigner(false);
+        setIsKampanyaYapan(false);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   // 1. Sync Events
   useEffect(() => {
@@ -731,55 +775,66 @@ function App() {
 
   const handleAddDepartmentUser = async (username: string, password: string, departmentId: string, isDesignerRole: boolean, isKampanyaYapanRole: boolean, isBusinessUnitRole: boolean, email?: string) => {
     try {
+      // Enforce email
+      const userEmail = email || `${username.toLowerCase().replace(/\s+/g, '')}@kampanyatakvim.com`;
+
+      // Create user in Firebase Auth using a secondary app instance to avoid logging out the current admin
+      // This is a client-side workaround since we don't have Cloud Functions
+      const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
+      const secondaryAuth = getAuth(secondaryApp);
+      
+      let uid = "";
+      try {
+        const userCredential = await createUserWithEmailAndPassword(secondaryAuth, userEmail, password);
+        uid = userCredential.user.uid;
+        await signOut(secondaryAuth); // Sign out from secondary app immediately
+      } catch (authError: any) {
+         if (authError.code === 'auth/email-already-in-use') {
+             // If user exists in Auth but not in Firestore (or we are re-adding), try to find them?
+             // For now, fail.
+             throw new Error('Bu e-posta adresi zaten kullanımda.');
+         }
+         throw authError;
+      }
+
       await addDoc(collection(db, "departmentUsers"), {
         username,
-        password,
+        // password, // REMOVED FOR SECURITY
+        uid,
         departmentId,
         isDesigner: isDesignerRole,
         isKampanyaYapan: isKampanyaYapanRole,
         isBusinessUnit: isBusinessUnitRole,
-        email: email || '',
+        email: userEmail,
         createdAt: Timestamp.now()
       });
       addToast(`${username} kullanıcısı eklendi.`, 'success');
-    } catch (e) {
-      addToast('Kullanıcı eklenemedi.', 'info');
+    } catch (e: any) {
+      console.error(e);
+      addToast(`Kullanıcı eklenemedi: ${e.message}`, 'info');
     }
   };
 
   const handleDeleteDepartmentUser = async (id: string) => {
     try {
+      // Note: We cannot delete from Firebase Auth client-side without that user's credential.
+      // We can only delete the Firestore record. The Auth user will remain orphan.
+      // This is a limitation of client-side only admin.
       await deleteDoc(doc(db, "departmentUsers", id));
-      addToast('Kullanıcı silindi.', 'info');
+      addToast('Kullanıcı (Veritabanı) silindi. Auth kaydı kalıcıdır.', 'info');
     } catch (e) {
       addToast('Silme hatası.', 'info');
     }
   };
 
   const handleDepartmentLogin = (user: DepartmentUser) => {
-    console.log('🔐 Login - user:', user);
-    console.log('🔐 Login - user.isDesigner:', user.isDesigner, 'user.isKampanyaYapan:', user.isKampanyaYapan);
-    setLoggedInDeptUser(user);
-    setIsDeptLoginOpen(false);
-    // If user has designer role, set isDesigner state
-    if (user.isDesigner) {
-      console.log('✅ Setting designer cookie');
-      setIsDesigner(true);
-      setCookie('designer_auth', 'true', 30);
-    }
-    // If user has kampanya yapan role, set isKampanyaYapan state
-    if (user.isKampanyaYapan) {
-      console.log('✅ Setting kampanya yapan cookie');
-      setIsKampanyaYapan(true);
-      setCookie('kampanya_yapan_auth', 'true', 30);
-    }
-    // Save user ID to cookie for auto-login
-    setCookie('dept_user_id', user.id, 30);
-    console.log('🍪 Cookies set - designer_auth:', getCookie('designer_auth'), 'kampanya_yapan_auth:', getCookie('kampanya_yapan_auth'), 'dept_user_id:', getCookie('dept_user_id'));
-    addToast(`${user.username} olarak giriş yapıldı.`, 'success');
+     // Legacy handler - logic moved to onAuthStateChanged but keeping for now if needed by modal
+     // But modal should now do auth login.
+     // We'll update this to just do nothing or be deprecated.
   };
 
-  const handleDepartmentLogout = () => {
+  const handleDepartmentLogout = async () => {
+    await signOut(auth);
     setLoggedInDeptUser(null);
     setIsDesigner(false);
     setIsKampanyaYapan(false);
@@ -791,24 +846,24 @@ function App() {
   };
 
   const handleChangePassword = async (newPassword: string) => {
-    if (!loggedInDeptUser) return;
+    if (!loggedInDeptUser || !auth.currentUser) return;
 
     try {
-      const userRef = doc(db, "departmentUsers", loggedInDeptUser.id);
-      await updateDoc(userRef, {
-        password: newPassword
+      // Update in Firebase Auth
+      const { updatePassword } = await import('firebase/auth');
+      await updateDoc(doc(db, "departmentUsers", loggedInDeptUser.id), {
+          // No longer storing password in firestore
       });
-      
-      // Update local state
-      setLoggedInDeptUser({
-        ...loggedInDeptUser,
-        password: newPassword
-      });
+      await updatePassword(auth.currentUser, newPassword);
       
       addToast('Şifreniz başarıyla güncellendi.', 'success');
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating password:", error);
-      throw error;
+      if (error.code === 'auth/requires-recent-login') {
+          addToast('Güvenlik nedeniyle yeniden giriş yapmalısınız.', 'info');
+      } else {
+          addToast('Şifre güncellenemedi.', 'info');
+      }
     }
   };
 
