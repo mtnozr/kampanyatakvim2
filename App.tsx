@@ -138,6 +138,12 @@ function App() {
     return events.find(e => e.id === viewEventId) || null;
   }, [events, viewEventId]);
 
+  // Link Department User to Personnel User via Email
+  const connectedPersonnelUser = useMemo(() => {
+    if (!loggedInDeptUser || !loggedInDeptUser.email) return null;
+    return users.find(u => u.email?.trim().toLowerCase() === loggedInDeptUser.email?.trim().toLowerCase());
+  }, [loggedInDeptUser, users]);
+
   // --- FIREBASE LISTENERS (REAL-TIME SYNC) ---
 
   // 0. Auth State Listener (Global)
@@ -2063,7 +2069,14 @@ function App() {
         <MyTasksModal
           isOpen={isMyTasksOpen}
           onClose={() => setIsMyTasksOpen(false)}
-          tasks={events.filter(e => loggedInDeptUser && e.assigneeId === loggedInDeptUser.id)}
+          tasks={events.filter(e => {
+            if (!loggedInDeptUser) return false;
+            // 1. Direct match (DepartmentUser ID)
+            if (e.assigneeId === loggedInDeptUser.id) return true;
+            // 2. Linked match (Personnel User ID via Email)
+            if (connectedPersonnelUser && e.assigneeId === connectedPersonnelUser.id) return true;
+            return false;
+          })}
           onUpdateStatus={(id, status) => handleEditEvent(id, { status })}
         />
 
