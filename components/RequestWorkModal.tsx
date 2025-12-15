@@ -97,7 +97,7 @@ export const RequestWorkModal: React.FC<RequestWorkModalProps> = ({ isOpen, onCl
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-slate-600 focus:border-violet-500 focus:ring-2 focus:ring-violet-200 outline-none transition-all bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
-              placeholder="Örn: Kasım Ayı İndirim Kampanyası"
+              placeholder="Örn: Masrafsız İhtiyaç Kredisi"
               autoFocus
             />
           </div>

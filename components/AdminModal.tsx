@@ -106,19 +106,28 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [isDeleteConfirming, setIsDeleteConfirming] = useState(false);
   const [gamificationMsg, setGamificationMsg] = useState('');
   const [gamificationEnabled, setGamificationEnabled] = useState(true);
+  const [requestSubmissionEnabled, setRequestSubmissionEnabled] = useState(true);
 
-  // Fetch initial gamification config
+  // Fetch initial gamification & request submission config
   useEffect(() => {
     if (isOpen && activeTab === 'settings') {
       const fetchConfig = async () => {
         try {
+          // Gamification Config
           const docRef = doc(db, "system_settings", "gamification_config");
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
             setGamificationEnabled(docSnap.data().enabled);
           }
+
+          // Request Submission Config
+          const reqDocRef = doc(db, "system_settings", "request_submission_config");
+          const reqDocSnap = await getDoc(reqDocRef);
+          if (reqDocSnap.exists()) {
+            setRequestSubmissionEnabled(reqDocSnap.data().enabled);
+          }
         } catch (e) {
-          console.error("Failed to fetch gamification config", e);
+          console.error("Failed to fetch settings config", e);
         }
       };
       fetchConfig();
@@ -132,6 +141,16 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     } catch (e) {
       console.error("Failed to save gamification config", e);
       setGamificationEnabled(!enabled); // Revert on error
+    }
+  };
+
+  const handleRequestSubmissionToggle = async (enabled: boolean) => {
+    setRequestSubmissionEnabled(enabled);
+    try {
+      await setDoc(doc(db, "system_settings", "request_submission_config"), { enabled });
+    } catch (e) {
+      console.error("Failed to save request submission config", e);
+      setRequestSubmissionEnabled(!enabled); // Revert on error
     }
   };
 
@@ -1107,6 +1126,29 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             {gamificationMsg}
                           </div>
                         )}
+
+                        <div className="flex items-start justify-between border-b border-gray-100 dark:border-slate-700 pb-6">
+                            <div>
+                                <h4 className="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                                  <FileText size={18} className="text-blue-500" />
+                                  İş Birimi Talep Girişi
+                                </h4>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                  İş birimi kullanıcılarının kampanya talebi oluşturabilmesini aktif/pasif yapın.
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-2 h-6">
+                                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                                  {requestSubmissionEnabled ? 'Aktif' : 'Pasif'}
+                                </span>
+                                <input 
+                                  type="checkbox" 
+                                  checked={requestSubmissionEnabled}
+                                  onChange={(e) => handleRequestSubmissionToggle(e.target.checked)}
+                                  className="w-5 h-5 text-violet-600 rounded focus:ring-violet-500 border-gray-300 dark:border-slate-600 dark:bg-slate-700"
+                                />
+                            </div>
+                        </div>
                         
                         <div className="flex items-start justify-between">
                             <div>

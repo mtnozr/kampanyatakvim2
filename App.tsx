@@ -96,6 +96,7 @@ function App() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [requests, setRequests] = useState<WorkRequest[]>([]);
   const [monthlyChampionId, setMonthlyChampionId] = useState<string | null>(null);
+  const [requestSubmissionEnabled, setRequestSubmissionEnabled] = useState(true);
 
   // Local UI State
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -360,6 +361,18 @@ function App() {
       unsubscribeConfig();
       unsubscribeChampion();
     };
+  }, []);
+
+  // 11. Request Submission Config Listener
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, "system_settings", "request_submission_config"), (docSnap) => {
+      if (docSnap.exists()) {
+        setRequestSubmissionEnabled(docSnap.data().enabled);
+      } else {
+        setRequestSubmissionEnabled(true); // Default to true
+      }
+    });
+    return () => unsubscribe();
   }, []);
 
   // Check time every minute for auto theme switch
@@ -1223,6 +1236,10 @@ function App() {
       return;
     }
     if (loggedInDeptUser?.isBusinessUnit) {
+      if (!requestSubmissionEnabled) {
+        addToast('Talep girişi şu an için yönetici tarafından kapatılmıştır.', 'info');
+        return;
+      }
       setRequestModalDate(date || new Date());
       setIsRequestModalOpen(true);
       return;
