@@ -12,6 +12,18 @@ if (!admin.apps.length) {
     // Fix private_key newlines if they are escaped literal "\n"
     if (serviceAccount.private_key) {
       serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+      
+      // Robust fix for PEM formatting issues (spaces, missing newlines)
+      if (!serviceAccount.private_key.includes('\n') && serviceAccount.private_key.includes('PRIVATE KEY')) {
+         // It might be a single line blob due to copy-paste. Try to normalize.
+         const parts = serviceAccount.private_key.split('-----');
+         // Expected parts: ["", "BEGIN PRIVATE KEY", "BODY", "END PRIVATE KEY", ""] or similar
+         // Find the part that is the body (longest part usually, or the middle one)
+         if (parts.length >= 5) {
+            const body = parts[2].replace(/\s/g, '');
+            serviceAccount.private_key = `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----\n`;
+         }
+      }
     }
 
     admin.initializeApp({
