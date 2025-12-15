@@ -1163,6 +1163,7 @@ function App() {
           
           const requesterParams = {
             to_email: convertingRequest.requesterEmail,
+            cc: 'kampanyayonetimi@vakifbank.com.tr',
             to_name: "İlgili Kişi",
             name: "Kampanya Takvimi",
             email: convertingRequest.requesterEmail,
@@ -1219,6 +1220,7 @@ function App() {
 
         const templateParams = {
           to_email: assignedUser.email,
+          cc: 'kampanyayonetimi@vakifbank.com.tr',
           to_name: assignedUser.name,
           name: assignedUser.name,
           email: assignedUser.email,
@@ -1253,8 +1255,8 @@ function App() {
           
           setTimeout(() => {
             const subject = encodeURIComponent(`ACİL: Görev Ataması: ${title} - Kampanya Görev Ataması`);
-            const body = encodeURIComponent(`Sayın ${assignedUser.name},\n\n${emailMessage}\n\n----------------\n${footerIdText}`);
-            window.location.href = `mailto:${assignedUser.email}?subject=${subject}&body=${body}&importance=High`;
+            const body = encodeURIComponent(`Merhaba ${assignedUser.name},\n\n${emailMessage}\n\n----------------\n${footerIdText}`);
+            window.location.href = `mailto:${assignedUser.email}?cc=kampanyayonetimi@vakifbank.com.tr&subject=${subject}&body=${body}&importance=High`;
           }, 2000);
         } finally {
           setIsSendingEmail(false);
