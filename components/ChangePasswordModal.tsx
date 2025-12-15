@@ -6,7 +6,7 @@ interface ChangePasswordModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentUser: DepartmentUser | null;
-  onChangePassword: (newPassword: string) => Promise<void>;
+  onChangePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
 export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
@@ -32,11 +32,6 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       return;
     }
 
-    if (currentPassword !== currentUser.password) {
-      setError('Mevcut şifre hatalı.');
-      return;
-    }
-
     if (newPassword !== confirmPassword) {
       setError('Yeni şifreler eşleşmiyor.');
       return;
@@ -49,13 +44,13 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
     setIsLoading(true);
     try {
-      await onChangePassword(newPassword);
+      await onChangePassword(currentPassword, newPassword);
       onClose();
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-    } catch (err) {
-      setError('Şifre değiştirilirken bir hata oluştu.');
+    } catch (err: any) {
+      setError(err.message || 'Şifre değiştirilirken bir hata oluştu.');
       console.error(err);
     } finally {
       setIsLoading(false);

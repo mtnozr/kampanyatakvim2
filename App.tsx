@@ -845,24 +845,28 @@ function App() {
     addToast('Çıkış yapıldı.', 'info');
   };
 
-  const handleChangePassword = async (newPassword: string) => {
-    if (!loggedInDeptUser || !auth.currentUser) return;
+  const handleChangePassword = async (currentPassword: string, newPassword: string) => {
+    if (!loggedInDeptUser || !auth.currentUser || !auth.currentUser.email) return;
 
     try {
       // Update in Firebase Auth
-      const { updatePassword } = await import('firebase/auth');
-      await updateDoc(doc(db, "departmentUsers", loggedInDeptUser.id), {
-          // No longer storing password in firestore
-      });
+      const { updatePassword, EmailAuthProvider, reauthenticateWithCredential } = await import('firebase/auth');
+      
+      // Re-authenticate user before changing password
+      const credential = EmailAuthProvider.credential(auth.currentUser.email, currentPassword);
+      await reauthenticateWithCredential(auth.currentUser, credential);
+
       await updatePassword(auth.currentUser, newPassword);
       
       addToast('Şifreniz başarıyla güncellendi.', 'success');
     } catch (error: any) {
       console.error("Error updating password:", error);
-      if (error.code === 'auth/requires-recent-login') {
-          addToast('Güvenlik nedeniyle yeniden giriş yapmalısınız.', 'info');
+      if (error.code === 'auth/wrong-password') {
+          throw new Error('Mevcut şifre hatalı.');
+      } else if (error.code === 'auth/requires-recent-login') {
+          throw new Error('Güvenlik nedeniyle yeniden giriş yapmalısınız.');
       } else {
-          addToast('Şifre güncellenemedi.', 'info');
+          throw new Error('Şifre güncellenemedi.');
       }
     }
   };
