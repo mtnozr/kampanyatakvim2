@@ -846,7 +846,9 @@ function App() {
   };
 
   const handleChangePassword = async (currentPassword: string, newPassword: string) => {
-    if (!loggedInDeptUser || !auth.currentUser || !auth.currentUser.email) return;
+    if (!loggedInDeptUser || !auth.currentUser || !auth.currentUser.email) {
+      throw new Error("Oturum bilgisi eksik. Lütfen sayfayı yenileyip tekrar giriş yapın.");
+    }
 
     try {
       // Update in Firebase Auth
