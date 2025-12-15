@@ -1142,91 +1142,107 @@ function App() {
       <div className="max-w-[1400px] mx-auto flex flex-col h-[calc(100vh-4rem)]">
 
         {/* Header Section */}
-        <div className="mb-6 flex flex-col gap-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex flex-col">
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-black tracking-tight flex items-center gap-2">
-                  {isDesigner ? (
-                    <span className="bg-gradient-to-r from-violet-700 via-indigo-700 to-violet-500 bg-clip-text text-transparent drop-shadow-sm">
-                      Kampanya Yönetimi Takvimi (CRM)
-                    </span>
-                  ) : isKampanyaYapan ? (
-                    <span className="bg-gradient-to-r from-violet-700 via-indigo-700 to-violet-500 bg-clip-text text-transparent drop-shadow-sm">
-                      Kampanya Yapan Görünümü
-                    </span>
-                  ) : (
-                    <span className="bg-gradient-to-r from-violet-700 via-indigo-700 to-violet-500 bg-clip-text text-transparent drop-shadow-sm font-black">
-                      {`Takvim: ${(currentDepartmentName || 'Misafir Görünümü').toLocaleUpperCase('tr-TR')}`}
-                    </span>
-                  )}
-                  {!isDesigner && !isKampanyaYapan && (
-                    <span className="text-xs bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-400 px-2 py-0.5 rounded-md font-normal lowercase">salt okunur</span>
-                  )}
-                  {isKampanyaYapan && (
-                    <span className="text-xs bg-blue-200 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded-md font-normal lowercase">görüntüleme</span>
-                  )}
-                  {isDesigner && (
-                    <button
-                      onClick={() => setIsIncomingRequestsModalOpen(true)}
-                      className="ml-4 relative text-xs bg-violet-100 text-violet-700 px-3 py-1.5 rounded-lg hover:bg-violet-200 transition-colors flex items-center gap-2 font-medium"
-                    >
-                      <ClipboardList size={14} />
-                      <span className="hidden sm:inline">İş Talepleri</span>
-                      {requests.filter(r => r.status === 'pending').length > 0 && (
-                        <span className="bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full">
-                          {requests.filter(r => r.status === 'pending').length}
-                        </span>
-                      )}
-                    </button>
-                  )}
-                  {isDesigner && users.length === 0 && events.length === 0 && (
-                    <button
-                      onClick={seedDatabase}
-                      className="ml-4 text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded flex items-center gap-1 hover:bg-green-200"
-                      title="Veritabanı boş görünüyor. Örnek verileri yüklemek için tıkla."
-                    >
-                      <Database size={12} /> Verileri Yükle
-                    </button>
-                  )}
-                </h1>
+        <div className="mb-6 flex flex-col xl:flex-row xl:items-start justify-between gap-4">
+          
+          {/* Left Column: Title & Primary Actions */}
+          <div className="flex flex-col gap-3 shrink-0">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl font-black tracking-tight flex items-center gap-2 whitespace-nowrap">
+                {isDesigner ? (
+                  <span className="bg-gradient-to-r from-violet-700 via-indigo-700 to-violet-500 bg-clip-text text-transparent drop-shadow-sm">
+                    Kampanya Yönetimi Takvimi (CRM)
+                  </span>
+                ) : isKampanyaYapan ? (
+                  <span className="bg-gradient-to-r from-violet-700 via-indigo-700 to-violet-500 bg-clip-text text-transparent drop-shadow-sm">
+                    Kampanya Yapan Görünümü
+                  </span>
+                ) : (
+                  <span className="bg-gradient-to-r from-violet-700 via-indigo-700 to-violet-500 bg-clip-text text-transparent drop-shadow-sm font-black">
+                    {`Takvim: ${(currentDepartmentName || 'Misafir Görünümü').toLocaleUpperCase('tr-TR')}`}
+                  </span>
+                )}
+              </h1>
+              
+              {/* Badges */}
+              {!isDesigner && !isKampanyaYapan && (
+                <span className="text-xs bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-400 px-2 py-0.5 rounded-md font-normal lowercase whitespace-nowrap">salt okunur</span>
+              )}
+              {isKampanyaYapan && (
+                <span className="text-xs bg-blue-200 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded-md font-normal lowercase whitespace-nowrap">görüntüleme</span>
+              )}
+
+              {/* Action Buttons Moved Out of H1 */}
+              <div className="flex items-center gap-2">
+                {isDesigner && (
+                  <button
+                    onClick={() => setIsIncomingRequestsModalOpen(true)}
+                    className="relative text-xs bg-violet-100 text-violet-700 px-3 py-1.5 rounded-lg hover:bg-violet-200 transition-colors flex items-center gap-2 font-medium whitespace-nowrap"
+                  >
+                    <ClipboardList size={14} />
+                    <span className="hidden sm:inline">İş Talepleri</span>
+                    {requests.filter(r => r.status === 'pending').length > 0 && (
+                      <span className="bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full">
+                        {requests.filter(r => r.status === 'pending').length}
+                      </span>
+                    )}
+                  </button>
+                )}
+
+                {isDesigner && users.length === 0 && events.length === 0 && (
+                  <button
+                    onClick={seedDatabase}
+                    className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded flex items-center gap-1 hover:bg-green-200 whitespace-nowrap"
+                    title="Veritabanı boş görünüyor. Örnek verileri yüklemek için tıkla."
+                  >
+                    <Database size={12} /> Verileri Yükle
+                  </button>
+                )}
+
                 {(isDesigner || isKampanyaYapan) && !loggedInDeptUser && (
                   <button
                     onClick={handleDepartmentLogout}
-                    className="text-xs bg-red-100 text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-200 transition-colors flex items-center gap-1 font-medium"
+                    className="text-xs bg-red-100 text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-200 transition-colors flex items-center gap-1 font-medium whitespace-nowrap"
                     title="Çıkış Yap"
                   >
                     <LogOut size={14} /> Çıkış
                   </button>
                 )}
               </div>
-              {loggedInDeptUser && (
-                <div className="flex items-center gap-2 mt-1 text-xs text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-transparent px-2 py-1 rounded w-fit border border-transparent dark:border-teal-800/50">
-                  <LogIn size={12} /> {currentDepartmentName} Birimi olarak giriş yapıldı
+            </div>
+
+            {/* Sub-header: Login Info */}
+            {loggedInDeptUser && (
+              <div className="flex items-center flex-wrap gap-2 text-xs text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-transparent px-2 py-1 rounded w-fit border border-transparent dark:border-teal-800/50">
+                <LogIn size={12} /> 
+                <span className="font-medium">{currentDepartmentName} Birimi olarak giriş yapıldı</span>
+                <div className="flex items-center gap-1 ml-2 border-l pl-2 border-teal-200 dark:border-teal-800">
                   <button
                     onClick={() => setIsChangePasswordOpen(true)}
-                    className="ml-2 text-[10px] bg-teal-100 text-teal-700 dark:bg-transparent dark:text-teal-400 dark:border dark:border-teal-700 px-2 py-0.5 rounded hover:bg-teal-200 dark:hover:bg-teal-900/50 flex items-center gap-1 transition-colors"
+                    className="text-[10px] bg-teal-100 text-teal-700 dark:bg-transparent dark:text-teal-400 dark:border dark:border-teal-700 px-2 py-0.5 rounded hover:bg-teal-200 dark:hover:bg-teal-900/50 flex items-center gap-1 transition-colors whitespace-nowrap"
                     title="Şifre Değiştir"
                   >
                     <Lock size={10} /> Şifre
                   </button>
                   <button
                     onClick={handleDepartmentLogout}
-                    className="ml-1 text-[10px] bg-red-100 text-red-700 dark:bg-transparent dark:text-red-400 dark:border dark:border-red-800 px-2 py-0.5 rounded hover:bg-red-200 dark:hover:bg-red-900/50 flex items-center gap-1 transition-colors"
+                    className="text-[10px] bg-red-100 text-red-700 dark:bg-transparent dark:text-red-400 dark:border dark:border-red-800 px-2 py-0.5 rounded hover:bg-red-200 dark:hover:bg-red-900/50 flex items-center gap-1 transition-colors whitespace-nowrap"
                   >
                     <LogOut size={10} /> Çıkış
                   </button>
                 </div>
-              )}
-              {isSendingEmail && (
-                <div className="flex items-center gap-2 mt-2 text-violet-600 text-xs font-bold animate-pulse">
-                  <Loader2 size={12} className="animate-spin" />
-                  E-posta deneniyor...
-                </div>
-              )}
-            </div>
+              </div>
+            )}
+            
+            {isSendingEmail && (
+              <div className="flex items-center gap-2 text-violet-600 text-xs font-bold animate-pulse">
+                <Loader2 size={12} className="animate-spin" />
+                E-posta deneniyor...
+              </div>
+            )}
+          </div>
 
-            <div className="flex items-center gap-2 md:gap-4 bg-white/50 dark:bg-slate-800/50 p-2 rounded-2xl backdrop-blur-sm shadow-sm flex-wrap relative z-20 transition-colors">
+          {/* Right Column: Toolbar */}
+          <div className="flex items-center gap-2 bg-white/50 dark:bg-slate-800/50 p-1.5 rounded-2xl backdrop-blur-sm shadow-sm flex-wrap relative z-20 transition-colors justify-end">
               <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
               <button onClick={resetToToday} className="bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 dark:border dark:border-violet-700/50 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors">
                 Bugün
@@ -1457,7 +1473,6 @@ function App() {
               </button>
             </div>
           )}
-        </div>
 
         {/* Printable Area Wrapper */}
         <div id="printable-calendar" className="p-1">
