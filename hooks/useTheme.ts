@@ -25,7 +25,11 @@ export const useTheme = () => {
   }, [theme]);
 
   const toggleTheme = () => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+    setTheme((prev) => {
+      const newTheme = prev === 'light' ? 'dark' : 'light';
+      localStorage.setItem('theme_manual_override_time', Date.now().toString());
+      return newTheme;
+    });
   };
 
   return { theme, toggleTheme, setTheme };

@@ -432,17 +432,55 @@ function App() {
         shouldBeDark = currentTimeInMinutes >= configTimeInMinutes && currentTimeInMinutes < endTimeInMinutes;
       }
 
-      if (shouldBeDark && theme === 'light') {
-        setTheme('dark');
-        // Only show toast if it's exactly the switch time to avoid spamming on reload
-        if (currentTimeInMinutes === configTimeInMinutes) {
-          addToast('Otomatik karanlık mod aktif edildi.', 'info');
+      // Check for manual override
+      const manualOverrideTimeStr = localStorage.getItem('theme_manual_override_time');
+      const manualOverrideTime = manualOverrideTimeStr ? parseInt(manualOverrideTimeStr) : 0;
+
+      if (shouldBeDark) {
+        // Calculate the start time of the current dark session
+        let lastStartPoint = new Date(now);
+        lastStartPoint.setHours(configHours, configMinutes, 0, 0);
+
+        // If currently it's early morning (e.g. 01:00) and start time was 20:00, 
+        // then the start point was yesterday.
+        if (isNightShift && currentTimeInMinutes < endTimeInMinutes) {
+             lastStartPoint.setDate(lastStartPoint.getDate() - 1);
+        }
+
+        // If user manually changed it AFTER the start point, respect it.
+        if (manualOverrideTime > lastStartPoint.getTime()) {
+           return;
+        }
+
+        if (theme === 'light') {
+          setTheme('dark');
+          // Only show toast if it's exactly the switch time to avoid spamming on reload
+          if (currentTimeInMinutes === configTimeInMinutes) {
+            addToast('Otomatik karanlık mod aktif edildi.', 'info');
+          }
         }
       } else if (!shouldBeDark && theme === 'dark') {
-        // Optional: Auto switch back to light mode? 
-        // User didn't explicitly ask for auto-light, but implied "active until 09:00".
-        // Let's switch back to light if we are outside the dark mode window.
-        setTheme('light');
+         // Should be light.
+         // Check if user manually set it to Dark recently.
+         
+         // Calculate the start time of the current "light session" (which starts at 09:00)
+         let lastLightStart = new Date(now);
+         lastLightStart.setHours(9, 0, 0, 0);
+         
+         // If we are before 09:00, but !shouldBeDark (meaning config time is later),
+         // actually this block executes when we are NOT in the dark window.
+         
+         // If we are before 09:00, we normally WOULD be in dark window (if night shift).
+         // So usually this runs after 09:00.
+         
+         // If manual override happened after 09:00 today, respect it.
+         // If manual override happened yesterday, ignore it (new day, new light).
+         
+         if (manualOverrideTime > lastLightStart.getTime()) {
+             return;
+         }
+         
+         setTheme('light');
       }
     };
 
