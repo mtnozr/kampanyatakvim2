@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Trash2, Plus, ShieldCheck, Lock, Users, Calendar, AlertTriangle, Building, UserPlus, LogOut, FileText, Download, Megaphone, Settings, Trophy } from 'lucide-react';
+import { X, Trash2, Plus, ShieldCheck, Lock, Users, Calendar, AlertTriangle, Building, UserPlus, LogOut, FileText, Download, Megaphone, Settings, Trophy, Activity } from 'lucide-react';
 import { User, CalendarEvent, Department, DepartmentUser, Announcement } from '../types';
 import { calculateMonthlyChampion } from '../utils/gamification';
 import { AVAILABLE_EMOJIS, URGENCY_CONFIGS } from '../constants';
@@ -72,7 +72,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [activeTab, setActiveTab] = useState<'users' | 'events' | 'departments' | 'dept-users' | 'import-export' | 'announcements' | 'settings'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'events' | 'departments' | 'dept-users' | 'import-export' | 'announcements' | 'settings' | 'active-users'>('users');
   const [importText, setImportText] = useState('');
 
   // Loading state for auth check
@@ -521,6 +521,12 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 className={`flex-1 py-3 px-2 text-xs md:text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === 'announcements' ? 'border-violet-600 text-violet-600 dark:text-violet-400 bg-violet-50/50 dark:bg-violet-900/20' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
               >
                 <Megaphone size={16} /> Duyurular
+              </button>
+              <button
+                onClick={() => setActiveTab('active-users')}
+                className={`flex-1 py-3 px-2 text-xs md:text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === 'active-users' ? 'border-violet-600 text-violet-600 dark:text-violet-400 bg-violet-50/50 dark:bg-violet-900/20' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
+              >
+                <Activity size={16} /> Aktif Kullanıcılar
               </button>
               <button
                 onClick={() => setActiveTab('settings')}
@@ -1074,6 +1080,55 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       ))}
                       {announcements.length === 0 && (
                         <p className="text-gray-400 dark:text-gray-500 text-center py-4 text-sm">Henüz duyuru eklenmemiş.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* --- ACTIVE USERS TAB --- */}
+              {activeTab === 'active-users' && (
+                <div className="p-6">
+                  <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
+                    <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-800/50 flex justify-between items-center">
+                      <h3 className="font-bold text-gray-800 dark:text-gray-200">Çevrimiçi Kullanıcılar</h3>
+                      <span className="text-xs px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full font-medium">
+                        {departmentUsers.filter(u => u.lastSeen && new Date().getTime() - new Date(u.lastSeen).getTime() < 5 * 60 * 1000).length} Çevrimiçi
+                      </span>
+                    </div>
+                    
+                    <div className="divide-y divide-gray-100 dark:divide-slate-700">
+                      {departmentUsers
+                        .sort((a, b) => (b.lastSeen ? new Date(b.lastSeen).getTime() : 0) - (a.lastSeen ? new Date(a.lastSeen).getTime() : 0))
+                        .map(user => {
+                          const isOnline = user.lastSeen && new Date().getTime() - new Date(user.lastSeen).getTime() < 5 * 60 * 1000;
+                          const lastSeenText = user.lastSeen 
+                            ? format(new Date(user.lastSeen), 'HH:mm', { locale: tr })
+                            : 'Görülmedi';
+                          const deptName = departments.find(d => d.id === user.departmentId)?.name || 'Bilinmiyor';
+
+                          return (
+                            <div key={user.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-gray-300 dark:bg-slate-600'}`} />
+                                <div>
+                                  <h4 className="font-medium text-gray-900 dark:text-white text-sm">{user.username}</h4>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">{deptName}</p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <span className={`text-xs font-medium px-2 py-1 rounded-full ${isOnline ? 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400' : 'bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-gray-400'}`}>
+                                  {isOnline ? 'Çevrimiçi' : `Son görülme: ${lastSeenText}`}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        
+                      {departmentUsers.length === 0 && (
+                        <div className="p-8 text-center text-gray-500 dark:text-gray-400 text-sm">
+                          Kullanıcı bulunamadı.
+                        </div>
                       )}
                     </div>
                   </div>

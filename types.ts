@@ -73,6 +73,7 @@ export interface DepartmentUser {
   isBusinessUnit?: boolean; // New role for requesting work
   email?: string; // Contact email for notifications
   createdAt: Date;
+  lastSeen?: Date; // For tracking online status
 }
 
 export interface WorkRequest {

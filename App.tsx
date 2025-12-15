@@ -230,7 +230,8 @@ function App() {
       const fetchedUsers: DepartmentUser[] = snapshot.docs.map(doc => ({
         ...doc.data(),
         id: doc.id,
-        createdAt: doc.data().createdAt instanceof Timestamp ? doc.data().createdAt.toDate() : new Date()
+        createdAt: doc.data().createdAt instanceof Timestamp ? doc.data().createdAt.toDate() : new Date(),
+        lastSeen: doc.data().lastSeen instanceof Timestamp ? doc.data().lastSeen.toDate() : undefined
       } as DepartmentUser));
       setDepartmentUsers(fetchedUsers);
     });
@@ -374,6 +375,29 @@ function App() {
     });
     return () => unsubscribe();
   }, []);
+
+  // 12. User Presence Heartbeat
+  useEffect(() => {
+    if (!loggedInDeptUser) return;
+
+    const updatePresence = async () => {
+      try {
+        await updateDoc(doc(db, "departmentUsers", loggedInDeptUser.id), {
+          lastSeen: Timestamp.now()
+        });
+      } catch (e) {
+        console.error("Presence update failed", e);
+      }
+    };
+
+    // Initial update
+    updatePresence();
+
+    // Update every 60 seconds
+    const interval = setInterval(updatePresence, 60000);
+
+    return () => clearInterval(interval);
+  }, [loggedInDeptUser?.id]); // Only re-run if user ID changes
 
   // Check time every minute for auto theme switch
   useEffect(() => {
