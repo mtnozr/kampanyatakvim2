@@ -5,12 +5,21 @@ import * as admin from 'firebase-admin';
 // We expect the service account to be passed as a JSON string in the environment variable
 if (!admin.apps.length) {
   try {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
+    const serviceAccountStr = process.env.FIREBASE_SERVICE_ACCOUNT || '{}';
+    // Handle potential double-escaped newlines if copied from certain sources
+    const serviceAccount = JSON.parse(serviceAccountStr);
+    
+    // Fix private_key newlines if they are escaped literal "\n"
+    if (serviceAccount.private_key) {
+      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+    }
+
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount)
     });
   } catch (error) {
     console.error('Firebase Admin Initialization Error:', error);
+    // Don't crash here, let the handler fail if needed, so we can return a proper error response
   }
 }
 
@@ -27,6 +36,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
+  }
+
+  // Check if Admin was initialized
+  if (!admin.apps.length) {
+    return res.status(500).json({ 
+      error: 'Firebase Admin not initialized. Check server logs and environment variables.' 
+    });
   }
 
   if (req.method !== 'POST') {

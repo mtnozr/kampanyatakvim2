@@ -818,17 +818,19 @@ function App() {
              // Ask admin if they want to overwrite the old auth user
              if (confirm('Bu e-posta adresi (' + userEmail + ') ile kayıtlı eski bir kullanıcı (Auth) bulundu. Veritabanı kaydı yoksa bu "hayalet" bir kayıt olabilir.\n\nEski Auth kaydını silip yenisini oluşturmak ister misiniz?')) {
                 try {
-                  addToast('Eski Auth kaydı temizleniyor...', 'info');
-                  await callAdminApi({ action: 'deleteUser', email: userEmail });
-                  
-                  // Retry creation
-                  addToast('Kullanıcı yeniden oluşturuluyor...', 'info');
-                  const userCredential = await createUserWithEmailAndPassword(secondaryAuth, userEmail, password);
-                  uid = userCredential.user.uid;
-                  await signOut(secondaryAuth);
-                } catch (retryError: any) {
-                   throw new Error('Temizleme ve yeniden oluşturma başarısız: ' + retryError.message);
-                }
+                   addToast('Eski Auth kaydı temizleniyor...', 'info');
+                   await callAdminApi({ action: 'deleteUser', email: userEmail });
+                   
+                   // Retry creation
+                   addToast('Kullanıcı yeniden oluşturuluyor...', 'info');
+                   const userCredential = await createUserWithEmailAndPassword(secondaryAuth, userEmail, password);
+                   uid = userCredential.user.uid;
+                   await signOut(secondaryAuth);
+                 } catch (retryError: any) {
+                    // Extract exact error message
+                    const msg = retryError.message || retryError.toString();
+                    throw new Error('Temizleme ve yeniden oluşturma başarısız: ' + msg);
+                 }
              } else {
                 throw new Error('Bu e-posta adresi zaten kullanımda.');
              }
