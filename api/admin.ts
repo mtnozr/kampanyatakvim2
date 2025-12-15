@@ -11,19 +11,24 @@ if (!admin.apps.length) {
     
     // Fix private_key newlines if they are escaped literal "\n"
     if (serviceAccount.private_key) {
-      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+      const rawKey = serviceAccount.private_key;
+      // First, unescape double escapes if present
+      let key = rawKey.replace(/\\n/g, '\n');
       
-      // Robust fix for PEM formatting issues (spaces, missing newlines)
-      if (!serviceAccount.private_key.includes('\n') && serviceAccount.private_key.includes('PRIVATE KEY')) {
-         // It might be a single line blob due to copy-paste. Try to normalize.
-         const parts = serviceAccount.private_key.split('-----');
-         // Expected parts: ["", "BEGIN PRIVATE KEY", "BODY", "END PRIVATE KEY", ""] or similar
-         // Find the part that is the body (longest part usually, or the middle one)
-         if (parts.length >= 5) {
-            const body = parts[2].replace(/\s/g, '');
-            serviceAccount.private_key = `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----\n`;
-         }
+      // If it doesn't look like a PEM (no newlines, or just one line), fix it
+      // Standard PEM has -----BEGIN... and newlines.
+      // If we have headers but no newlines, or headers and messed up spacing:
+      
+      // Extract the body (everything between the headers)
+      const match = key.match(/-----BEGIN PRIVATE KEY-----([\s\S]*)-----END PRIVATE KEY-----/);
+      if (match && match[1]) {
+          // Found body. Remove all whitespace from body.
+          const body = match[1].replace(/\s/g, '');
+          // Reconstruct
+          key = `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----\n`;
       }
+      
+      serviceAccount.private_key = key;
     }
 
     admin.initializeApp({
@@ -66,8 +71,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (action === 'deleteUser') {
       if (uid) {
-        await admin.auth().deleteUser(uid);
-        return res.status(200).json({ message: 'User deleted successfully by UID' });
+        try {
+          await admin.auth().deleteUser(uid);
+          return res.status(200).json({ message: 'User deleted successfully by UID' });
+        } catch (error: any) {
+          if (error.code === 'auth/user-not-found') {
+            return res.status(200).json({ message: 'User not found, nothing to delete' });
+          }
+          throw error;
+        }
       } 
       
       if (email) {
