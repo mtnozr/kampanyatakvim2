@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, Trash2, Plus, ShieldCheck, Lock, Users, Calendar, AlertTriangle, Building, UserPlus, LogOut, FileText, Download, Megaphone, Settings } from 'lucide-react';
+import { X, Trash2, Plus, ShieldCheck, Lock, Users, Calendar, AlertTriangle, Building, UserPlus, LogOut, FileText, Download, Megaphone, Settings, Trophy } from 'lucide-react';
 import { User, CalendarEvent, Department, DepartmentUser, Announcement } from '../types';
+import { calculateMonthlyChampion } from '../utils/gamification';
 import { AVAILABLE_EMOJIS, URGENCY_CONFIGS } from '../constants';
-import { format } from 'date-fns';
+import { format, addMonths } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { auth } from '../firebase';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
@@ -29,6 +30,7 @@ interface AdminModalProps {
   onDeleteAnnouncement: (id: string) => void;
   autoThemeConfig: { enabled: boolean; time: string };
   onUpdateAutoThemeConfig: (config: { enabled: boolean; time: string }) => Promise<void>;
+  monthlyChampionId?: string | null;
 }
 
 export const AdminModal: React.FC<AdminModalProps> = ({
@@ -52,7 +54,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   onAddAnnouncement,
   onDeleteAnnouncement,
   autoThemeConfig,
-  onUpdateAutoThemeConfig
+  onUpdateAutoThemeConfig,
+  monthlyChampionId
 }) => {
   const [localThemeConfig, setLocalThemeConfig] = useState(autoThemeConfig);
   const [authUser, setAuthUser] = useState<FirebaseUser | null>(null);
@@ -100,6 +103,19 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
   // Delete All Confirmation State
   const [isDeleteConfirming, setIsDeleteConfirming] = useState(false);
+  const [gamificationMsg, setGamificationMsg] = useState('');
+
+  const handleForceCalculate = async () => {
+    setGamificationMsg('Hesaplanıyor (Bu ayın verileriyle)...');
+    // Test için: Bir sonraki ayı referans veriyoruz ki, fonksiyon "geçen ay" (yani bu ay) olarak hesaplasın.
+    const result = await calculateMonthlyChampion(true, addMonths(new Date(), 1));
+    if (result) {
+      const winner = users.find(u => u.id === result.userId);
+      setGamificationMsg(`BU AYIN Şampiyonu: ${winner ? winner.name : 'Bilinmeyen'} (${result.campaignCount} kampanya)`);
+    } else {
+      setGamificationMsg('Şampiyon belirlenemedi (Yetersiz kampanya veya beraberlik)');
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -523,7 +539,9 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                               {user.emoji}
                             </div>
                             <div>
-                              <p className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{user.name}</p>
+                              <p className="font-semibold text-gray-800 dark:text-gray-200 text-sm">
+                                {user.name} {monthlyChampionId === user.id ? '🏆' : ''}
+                              </p>
                               <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
                             </div>
                           </div>
@@ -1000,6 +1018,29 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">Genel Ayarlar</h3>
                     
                     <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-6 shadow-sm space-y-6">
+
+                        <div className="flex items-start justify-between border-b border-gray-100 dark:border-slate-700 pb-6">
+                            <div>
+                                <h4 className="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                                  <Trophy size={18} className="text-yellow-500" />
+                                  Gamification / Rozet Sistemi
+                                </h4>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                  Test Modu: Bu butona bastığınızda, sistem <strong>içinde bulunduğumuz ayın</strong> verilerini kullanarak şampiyonu hesaplar. Normalde sistem otomatik olarak bir önceki ayı baz alır.
+                                </p>
+                            </div>
+                            <button
+                              onClick={handleForceCalculate}
+                              className="px-4 py-2 bg-violet-600 text-white text-xs font-bold rounded-lg hover:bg-violet-700 transition-colors"
+                            >
+                              Bu Ayı Hesapla (Test)
+                            </button>
+                        </div>
+                        {gamificationMsg && (
+                          <div className="p-3 -mt-4 mb-4 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 text-sm rounded-lg font-medium border border-violet-100 dark:border-violet-800/50">
+                            {gamificationMsg}
+                          </div>
+                        )}
                         
                         <div className="flex items-start justify-between">
                             <div>

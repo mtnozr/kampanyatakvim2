@@ -15,6 +15,7 @@ interface EventDetailsModalProps {
   onClose: () => void;
   onEdit?: (eventId: string, updates: Partial<CalendarEvent>) => void;
   onDelete?: (eventId: string) => void;
+  monthlyChampionId?: string | null;
 }
 
 export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
@@ -26,7 +27,8 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   isKampanyaYapan,
   onClose,
   onEdit,
-  onDelete
+  onDelete,
+  monthlyChampionId
 }) => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editTitle, setEditTitle] = useState('');
@@ -246,7 +248,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   <option value="">Atama Yok</option>
                   {users.map(user => (
                     <option key={user.id} value={user.id}>
-                      {user.emoji} {user.name}
+                      {user.emoji} {user.name} {monthlyChampionId === user.id ? '🏆' : ''}
                     </option>
                   ))}
                 </select>
@@ -263,7 +265,9 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                       </div>
                     )}
                     <div>
-                      <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{assignee.name}</p>
+                      <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                        {assignee.name} {monthlyChampionId === assignee.id ? '🏆' : ''}
+                      </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">{assignee.email}</p>
                     </div>
                   </div>

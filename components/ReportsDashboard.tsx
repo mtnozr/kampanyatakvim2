@@ -23,11 +23,12 @@ interface ReportsDashboardProps {
   departments: Department[];
   users: User[];
   onRefresh?: () => Promise<void> | void;
+  monthlyChampionId?: string | null;
 }
 
 type DateRangePreset = 'thisYear' | 'lastYear' | 'thisMonth' | 'last3Months' | 'last30Days' | 'custom';
 
-export function ReportsDashboard({ isOpen, onClose, events, departments, users, onRefresh }: ReportsDashboardProps) {
+export function ReportsDashboard({ isOpen, onClose, events, departments, users, onRefresh, monthlyChampionId }: ReportsDashboardProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'departments' | 'users'>('overview');
   const [isRefreshing, setIsRefreshing] = useState(false);
   
@@ -492,7 +493,7 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users, 
                   {stats.sortedUsersByTotal.map(u => (
                     <SimpleBar 
                       key={u.name} 
-                      label={u.name} 
+                      label={`${u.name} ${users.find(user => user.name === u.name)?.id === monthlyChampionId ? '🏆' : ''}`}
                       value={u.active + u.completed} 
                       max={Math.max(...stats.sortedUsersByTotal.map(x => x.active + x.completed))} 
                       color="bg-indigo-500"
@@ -512,7 +513,7 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users, 
                   {stats.sortedUsersByTotal.map(u => (
                     <SimpleBar 
                       key={u.name} 
-                      label={u.name} 
+                      label={`${u.name} ${users.find(user => user.name === u.name)?.id === monthlyChampionId ? '🏆' : ''}`}
                       value={u.completed} 
                       max={Math.max(...stats.sortedUsersByTotal.map(x => x.completed), 1)} 
                       color="bg-teal-500"

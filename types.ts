@@ -96,3 +96,10 @@ export interface Announcement {
   visibleTo: 'admin' | 'kampanya' | 'all';
   readBy: string[];
 }
+
+export interface MonthlyChampion {
+  userId: string;
+  month: string; // Format: YYYY-MM
+  campaignCount: number;
+  calculatedAt: Date;
+}

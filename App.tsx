@@ -36,6 +36,7 @@ import { ReportsDashboard } from './components/ReportsDashboard';
 import { ThemeToggle } from './components/ThemeToggle';
 import { useTheme } from './hooks/useTheme';
 import { setCookie, getCookie, deleteCookie } from './utils/cookies';
+import { calculateMonthlyChampion } from './utils/gamification';
 
 // --- FIREBASE IMPORTS ---
 import { db } from './firebase';
@@ -90,6 +91,7 @@ function App() {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [requests, setRequests] = useState<WorkRequest[]>([]);
+  const [monthlyChampionId, setMonthlyChampionId] = useState<string | null>(null);
 
   // Local UI State
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -267,6 +269,29 @@ function App() {
     });
     return () => unsubscribe();
   }, []); // Run once on mount
+
+  // 10. Gamification Check (Monthly Champion)
+  useEffect(() => {
+    // Initial check/calculation
+    calculateMonthlyChampion();
+
+    // Listen for real-time updates
+    const unsubscribe = onSnapshot(doc(db, "system_settings", "monthly_champion"), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data(); // Type casting handled by usage or could be explicit
+        if (data && data.userId) {
+          console.log('🏆 App: Monthly champion updated:', data.userId);
+          setMonthlyChampionId(data.userId);
+        } else {
+          setMonthlyChampionId(null);
+        }
+      } else {
+        setMonthlyChampionId(null);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Check time every minute for auto theme switch
   useEffect(() => {
@@ -1356,7 +1381,9 @@ function App() {
                 >
                   <option value="">Tüm Personel</option>
                   {users.map(u => (
-                    <option key={u.id} value={u.id}>{u.name}</option>
+                    <option key={u.id} value={u.id}>
+                      {u.name} {monthlyChampionId === u.id ? '🏆' : ''}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -1536,6 +1563,7 @@ function App() {
                             onClick={(e) => setViewEventId(e.id)}
                             isBlurred={isBlurred}
                             isClickable={isClickable}
+                            monthlyChampionId={monthlyChampionId}
                           />
                         </div>
                       );
@@ -1627,6 +1655,7 @@ function App() {
           onDeleteAnnouncement={handleDeleteAnnouncement}
           autoThemeConfig={autoThemeConfig}
           onUpdateAutoThemeConfig={handleUpdateAutoThemeConfig}
+          monthlyChampionId={monthlyChampionId}
         />
 
         <ChangePasswordModal
@@ -1646,6 +1675,7 @@ function App() {
           isKampanyaYapan={isKampanyaYapan}
           onEdit={handleEditEvent}
           onDelete={handleDeleteEvent}
+          monthlyChampionId={monthlyChampionId}
         />
 
         <DepartmentLoginModal
@@ -1673,6 +1703,7 @@ function App() {
           departments={departments}
           users={users}
           onRefresh={handleDashboardRefresh}
+          monthlyChampionId={monthlyChampionId}
         />
 
         <AnnouncementPopup 

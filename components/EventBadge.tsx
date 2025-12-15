@@ -9,6 +9,7 @@ interface EventBadgeProps {
   onClick: (event: CalendarEvent) => void;
   isBlurred?: boolean;
   isClickable?: boolean;
+  monthlyChampionId?: string | null;
 }
 
 export const EventBadge: React.FC<EventBadgeProps> = ({
@@ -16,7 +17,8 @@ export const EventBadge: React.FC<EventBadgeProps> = ({
   user,
   onClick,
   isBlurred = false,
-  isClickable = true
+  isClickable = true,
+  monthlyChampionId
 }) => {
   // Eğer status varsa STATUS_STYLES, yoksa URGENCY_CONFIGS kullanılır
   const config = (event.status && STATUS_STYLES[event.status]) 
@@ -66,7 +68,7 @@ export const EventBadge: React.FC<EventBadgeProps> = ({
       <div className="flex items-center gap-1.5 px-1 min-w-0">
         {!isBlurred && renderAvatar()}
         <span className="text-[10px] text-gray-500 font-medium truncate leading-none">
-          {isBlurred ? '🔒 Dolu' : (user ? user.name : 'Atanmadı')}
+          {isBlurred ? '🔒 Dolu' : (user ? `${user.name} ${monthlyChampionId === user.id ? '🏆' : ''}` : 'Atanmadı')}
         </span>
       </div>
 

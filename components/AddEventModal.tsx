@@ -16,9 +16,19 @@ interface AddEventModalProps {
   };
   users: User[];
   departments: Department[];
+  monthlyChampionId?: string | null;
 }
 
-export const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onAdd, initialDate, initialData, users, departments }) => {
+export const AddEventModal: React.FC<AddEventModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onAdd, 
+  initialDate,
+  initialData,
+  users,
+  departments,
+  monthlyChampionId
+}) => {
   const [title, setTitle] = useState('');
   const [urgency, setUrgency] = useState<UrgencyLevel>('Medium');
   const [difficulty, setDifficulty] = useState<DifficultyLevel>('ORTA');
@@ -168,7 +178,9 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, o
                 >
                   <option value="">Seçiniz</option>
                   {users.map(user => (
-                    <option key={user.id} value={user.id}>{user.name}</option>
+                    <option key={user.id} value={user.id}>
+                      {user.name} {monthlyChampionId === user.id ? '🏆' : ''}
+                    </option>
                   ))}
                 </select>
                 <UserPlus className="absolute left-2.5 top-2.5 text-gray-400 dark:text-gray-500" size={16} />
