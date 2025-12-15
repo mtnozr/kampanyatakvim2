@@ -463,6 +463,30 @@ function App() {
     }
   }, [departmentUsers]);
 
+  // --- Presence Logic: Update lastSeen every minute ---
+  useEffect(() => {
+    if (!loggedInDeptUser) return;
+
+    const updatePresence = async () => {
+      try {
+        const userRef = doc(db, "departmentUsers", loggedInDeptUser.id);
+        await updateDoc(userRef, {
+          lastSeen: Timestamp.now()
+        });
+      } catch (error) {
+        console.error("Error updating presence:", error);
+      }
+    };
+
+    // Update immediately on mount/login
+    updatePresence();
+
+    // Update every minute
+    const intervalId = setInterval(updatePresence, 60 * 1000);
+
+    return () => clearInterval(intervalId);
+  }, [loggedInDeptUser?.id]); // Depend on ID to avoid unnecessary re-runs if other fields change
+
   // --- EmailJS Initialization ---
   useEffect(() => {
     try {
