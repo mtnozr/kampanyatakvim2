@@ -20,10 +20,10 @@ export const calculateMonthlyChampion = async (force: boolean = false, reference
       
       if (settingsSnap.exists()) {
         const data = settingsSnap.data() as MonthlyChampion;
-        // If the stored data matches the target month (last month), return it.
-        // This means we already calculated it.
-        if (data.month === targetMonthStr) {
-          console.log(`🏆 Gamification: Champion already exists: ${data.userId}`);
+        // If the stored data matches the target month (last month) OR is newer (e.g. test mode for current month), return it.
+        // This prevents overwriting a "future" test calculation with an "old" automatic calculation.
+        if (data.month >= targetMonthStr) {
+          console.log(`🏆 Gamification: Champion already exists or is newer (${data.month} >= ${targetMonthStr}): ${data.userId}`);
           return data;
         }
       }

@@ -5,8 +5,9 @@ import { calculateMonthlyChampion } from '../utils/gamification';
 import { AVAILABLE_EMOJIS, URGENCY_CONFIGS } from '../constants';
 import { format, addMonths } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 interface AdminModalProps {
   isOpen: boolean;
@@ -104,6 +105,35 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   // Delete All Confirmation State
   const [isDeleteConfirming, setIsDeleteConfirming] = useState(false);
   const [gamificationMsg, setGamificationMsg] = useState('');
+  const [gamificationEnabled, setGamificationEnabled] = useState(true);
+
+  // Fetch initial gamification config
+  useEffect(() => {
+    if (isOpen && activeTab === 'settings') {
+      const fetchConfig = async () => {
+        try {
+          const docRef = doc(db, "system_settings", "gamification_config");
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            setGamificationEnabled(docSnap.data().enabled);
+          }
+        } catch (e) {
+          console.error("Failed to fetch gamification config", e);
+        }
+      };
+      fetchConfig();
+    }
+  }, [isOpen, activeTab]);
+
+  const handleGamificationToggle = async (enabled: boolean) => {
+    setGamificationEnabled(enabled);
+    try {
+      await setDoc(doc(db, "system_settings", "gamification_config"), { enabled });
+    } catch (e) {
+      console.error("Failed to save gamification config", e);
+      setGamificationEnabled(!enabled); // Revert on error
+    }
+  };
 
   const handleForceCalculate = async () => {
     setGamificationMsg('Hesaplanıyor (Bu ayın verileriyle)...');
@@ -1026,15 +1056,32 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                                   Gamification / Rozet Sistemi
                                 </h4>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                  Test Modu: Bu butona bastığınızda, sistem <strong>içinde bulunduğumuz ayın</strong> verilerini kullanarak şampiyonu hesaplar. Normalde sistem otomatik olarak bir önceki ayı baz alır.
+                                  Sistemi aktif ederek en çok kampanya tamamlayan kullanıcıya aylık şampiyonluk rozeti (🏆) verilir.
+                                </p>
+                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 italic">
+                                  Not: Test butonu ile anlık hesaplama yapabilirsiniz.
                                 </p>
                             </div>
-                            <button
-                              onClick={handleForceCalculate}
-                              className="px-4 py-2 bg-violet-600 text-white text-xs font-bold rounded-lg hover:bg-violet-700 transition-colors"
-                            >
-                              Bu Ayı Hesapla (Test)
-                            </button>
+                            <div className="flex flex-col items-end gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                                  {gamificationEnabled ? 'Aktif' : 'Pasif'}
+                                </span>
+                                <input 
+                                  type="checkbox" 
+                                  checked={gamificationEnabled}
+                                  onChange={(e) => handleGamificationToggle(e.target.checked)}
+                                  className="w-5 h-5 text-violet-600 rounded focus:ring-violet-500 border-gray-300 dark:border-slate-600 dark:bg-slate-700"
+                                />
+                              </div>
+                              <button
+                                onClick={handleForceCalculate}
+                                disabled={!gamificationEnabled}
+                                className={`px-4 py-2 text-white text-xs font-bold rounded-lg transition-colors ${gamificationEnabled ? 'bg-violet-600 hover:bg-violet-700' : 'bg-gray-300 cursor-not-allowed dark:bg-slate-600'}`}
+                              >
+                                Bu Ayı Hesapla (Test)
+                              </button>
+                            </div>
                         </div>
                         {gamificationMsg && (
                           <div className="p-3 -mt-4 mb-4 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 text-sm rounded-lg font-medium border border-violet-100 dark:border-violet-800/50">

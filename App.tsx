@@ -272,13 +272,35 @@ function App() {
 
   // 10. Gamification Check (Monthly Champion)
   useEffect(() => {
-    // Initial check/calculation
-    calculateMonthlyChampion();
+    // 1. Listen for Gamification Config (Enable/Disable)
+    const unsubscribeConfig = onSnapshot(doc(db, "system_settings", "gamification_config"), (docSnap) => {
+      const isEnabled = docSnap.exists() ? docSnap.data().enabled : true; // Default to true if not set
+      
+      if (isEnabled) {
+        // Initial check/calculation only if enabled
+        calculateMonthlyChampion();
+      } else {
+        setMonthlyChampionId(null);
+      }
+    });
 
-    // Listen for real-time updates
-    const unsubscribe = onSnapshot(doc(db, "system_settings", "monthly_champion"), (docSnap) => {
+    // 2. Listen for Monthly Champion updates (only relevant if enabled, but we can listen always and filter locally)
+    const unsubscribeChampion = onSnapshot(doc(db, "system_settings", "monthly_champion"), async (docSnap) => {
+      // Check config again inside this callback or rely on a ref/state if complex.
+      // Simpler: Just fetch config or assume if we get an update, we might want to show it.
+      // BUT, if disabled, we should force null. 
+      // Let's check config one-off here or better, combine logic.
+      
+      const configSnap = await import('firebase/firestore').then(mod => mod.getDoc(doc(db, "system_settings", "gamification_config")));
+      const isEnabled = configSnap.exists() ? configSnap.data()?.enabled : true;
+
+      if (!isEnabled) {
+        setMonthlyChampionId(null);
+        return;
+      }
+
       if (docSnap.exists()) {
-        const data = docSnap.data(); // Type casting handled by usage or could be explicit
+        const data = docSnap.data();
         if (data && data.userId) {
           console.log('🏆 App: Monthly champion updated:', data.userId);
           setMonthlyChampionId(data.userId);
@@ -290,7 +312,10 @@ function App() {
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeConfig();
+      unsubscribeChampion();
+    };
   }, []);
 
   // Check time every minute for auto theme switch
