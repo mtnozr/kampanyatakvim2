@@ -1557,7 +1557,7 @@ function App() {
                   </button>
                 )}
 
-                {isDesigner && (
+                {/* {isDesigner && (
                   <button
                     onClick={() => setIsDesignerCampaignsModalOpen(true)}
                     className="relative text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 dark:border dark:border-blue-700/50 px-3 py-1.5 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors flex items-center gap-2 font-medium whitespace-nowrap"
@@ -1565,7 +1565,7 @@ function App() {
                     <CheckSquare size={14} />
                     <span className="hidden sm:inline">Kampanyalar</span>
                   </button>
-                )}
+                )} */}
 
                 {isDesigner && users.length === 0 && events.length === 0 && (
                   <button
@@ -2094,12 +2094,12 @@ function App() {
           onChangePassword={handleChangePassword}
         />
 
-        <DesignerCampaignsModal
+        {/* <DesignerCampaignsModal
           isOpen={isDesignerCampaignsModalOpen}
           onClose={() => setIsDesignerCampaignsModalOpen(false)}
           events={events}
           users={users}
-        />
+        /> */}
 
         <EventDetailsModal
           event={viewEvent}
