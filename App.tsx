@@ -781,28 +781,71 @@ function App() {
       container.style.top = '-9999px';
       container.style.left = '-9999px';
       container.style.backgroundColor = '#ffffff';
-      container.style.padding = '20px';
-      container.style.fontFamily = 'Inter, sans-serif';
+      container.style.padding = '40px';
+      container.style.fontFamily = 'Arial, Helvetica, sans-serif'; // Use system font for Turkish char support
 
-      // 3. Add Header Details directly to HTML (Fixes Turkish char issues in PDF Text)
-      const headerTitle = document.createElement('h2');
-      headerTitle.innerText = `Kampanya Yönetimi Takvimi (CRM) - ${format(currentDate, 'MMMM yyyy', { locale: tr })}`;
-      headerTitle.style.marginBottom = '10px';
-      headerTitle.style.textAlign = 'left';
-      headerTitle.style.fontSize = '24px';
-      headerTitle.style.color = '#333';
+      // 3. Add Corporate Header
+      const header = document.createElement('div');
+      header.style.display = 'flex';
+      header.style.justifyContent = 'space-between';
+      header.style.alignItems = 'flex-end';
+      header.style.marginBottom = '30px';
+      header.style.borderBottom = '2px solid #e5e7eb';
+      header.style.paddingBottom = '20px';
 
-      const headerDate = document.createElement('p');
-      headerDate.innerText = `Oluşturulma Tarihi: ${format(new Date(), 'dd.MM.yyyy HH:mm')}`;
-      headerDate.style.marginBottom = '20px';
-      headerDate.style.textAlign = 'right';
-      headerDate.style.fontSize = '12px';
-      headerDate.style.color = '#666';
+      // Left side: Title and Month
+      const headerLeft = document.createElement('div');
+      
+      const title = document.createElement('h1');
+      title.innerText = 'KAMPANYA YÖNETİMİ TAKVİMİ';
+      title.style.fontSize = '28px';
+      title.style.fontWeight = '800';
+      title.style.color = '#111827';
+      title.style.margin = '0';
+      title.style.lineHeight = '1.2';
+      
+      const subtitle = document.createElement('div');
+      subtitle.innerText = format(currentDate, 'MMMM yyyy', { locale: tr }).toLocaleUpperCase('tr-TR');
+      subtitle.style.fontSize = '20px';
+      subtitle.style.fontWeight = '600';
+      subtitle.style.color = '#374151';
+      subtitle.style.marginTop = '8px';
 
-      container.appendChild(headerTitle);
-      container.appendChild(headerDate);
+      headerLeft.appendChild(title);
+      headerLeft.appendChild(subtitle);
+
+      // Right side: Meta info
+      const headerRight = document.createElement('div');
+      headerRight.style.textAlign = 'right';
+
+      const createdDate = document.createElement('div');
+      createdDate.innerText = `Oluşturulma: ${format(new Date(), 'dd.MM.yyyy HH:mm')}`;
+      createdDate.style.fontSize = '14px';
+      createdDate.style.color = '#6b7280';
+      createdDate.style.marginBottom = '4px';
+
+      const confidential = document.createElement('div');
+      confidential.innerText = 'KURUMSAL / GİZLİ';
+      confidential.style.fontSize = '12px';
+      confidential.style.fontWeight = 'bold';
+      confidential.style.color = '#ef4444';
+      confidential.style.letterSpacing = '1px';
+
+      headerRight.appendChild(createdDate);
+      headerRight.appendChild(confidential);
+
+      header.appendChild(headerLeft);
+      header.appendChild(headerRight);
+
+      container.appendChild(header);
       container.appendChild(clone);
       document.body.appendChild(container);
+
+      // Force Arial font on all cloned elements to ensure Turkish chars render correctly
+      const allElements = clone.querySelectorAll('*');
+      allElements.forEach((el) => {
+        (el as HTMLElement).style.fontFamily = 'Arial, Helvetica, sans-serif';
+      });
 
       // 4. Force full height for all scrollable containers in the clone
       const scrollables = clone.querySelectorAll('.event-scroll');
