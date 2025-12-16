@@ -1471,7 +1471,12 @@ function App() {
              // 3. Send Email
              setIsSendingEmail(true);
 
+             // Find old assignee name
+             const oldAssignee = users.find(u => u.id === currentEvent.assigneeId);
+             const oldAssigneeName = oldAssignee ? oldAssignee.name : 'Bilinmeyen Kullanıcı';
+
              let emailMessage = `"${currentEvent.title}" kampanyası için görevlendirildiniz (Görev Devri).\n\n`;
+             emailMessage += `Görevi Devreden: ${oldAssigneeName}\n`;
              emailMessage += `Tarih: ${format(updates.date instanceof Date ? updates.date : (updates.date ? (updates.date as any).toDate() : (currentEvent.date as any).toDate()), 'd MMMM yyyy', { locale: tr })}\n`;
              emailMessage += `Aciliyet: ${URGENCY_CONFIGS[updates.urgency || currentEvent.urgency].label}`;
              
