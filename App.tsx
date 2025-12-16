@@ -874,7 +874,7 @@ function App() {
 
       // 6. Capture the container
       const canvas = await html2canvas(container, {
-        scale: 2,
+        scale: 1.5, // Reduced from 2 to 1.5 for smaller file size while maintaining readability
         backgroundColor: '#ffffff',
         useCORS: true,
         logging: false,
@@ -887,8 +887,15 @@ function App() {
       document.body.removeChild(container);
 
       // 7. Generate PDF
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('l', 'mm', 'a4');
+      // Optimize: Use JPEG with 0.8 quality instead of PNG
+      const imgData = canvas.toDataURL('image/jpeg', 0.8);
+      const pdf = new jsPDF({
+        orientation: 'l',
+        unit: 'mm',
+        format: 'a4',
+        compress: true // Enable internal PDF compression
+      });
+
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
 
@@ -899,7 +906,8 @@ function App() {
       const imgX = (pdfWidth - imgWidth * ratio) / 2;
       const imgY = 10; // Top margin
 
-      pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+      // Use JPEG compression alias 'FAST' (which corresponds to moderate compression) or just specify format
+      pdf.addImage(imgData, 'JPEG', imgX, imgY, imgWidth * ratio, imgHeight * ratio, undefined, 'FAST');
 
       pdf.save(`kampanya-takvimi-${format(currentDate, 'yyyy-MM')}.pdf`);
       addToast('PDF indirildi.', 'success');
