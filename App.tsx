@@ -17,7 +17,7 @@ import { Bell, ChevronLeft, ChevronRight, Plus, Users, ClipboardList, Loader2, S
 import emailjs from '@emailjs/browser';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { CalendarEvent, UrgencyLevel, User, AppNotification, ToastMessage, ActivityLog, Department, DepartmentUser, Announcement, DifficultyLevel, WorkRequest, CalendarNote } from './types';
+import { CalendarEvent, UrgencyLevel, User, AppNotification, ToastMessage, ActivityLog, Department, DepartmentUser, Announcement, DifficultyLevel, WorkRequest } from './types';
 import { INITIAL_EVENTS, DAYS_OF_WEEK, INITIAL_USERS, URGENCY_CONFIGS, TURKISH_HOLIDAYS, INITIAL_DEPARTMENTS, DIFFICULTY_CONFIGS } from './constants';
 import { EventBadge } from './components/EventBadge';
 import { AddEventModal } from './components/AddEventModal';
