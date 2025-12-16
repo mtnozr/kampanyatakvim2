@@ -38,6 +38,14 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
   const [description, setDescription] = useState('');
   const [holidayWarning, setHolidayWarning] = useState<string | null>(null);
 
+  // Helper function to convert text to Title Case with Turkish support
+  const toTitleCase = (str: string) => {
+    return str.split(' ').map(word => {
+      if (word.length === 0) return word;
+      return word.charAt(0).toLocaleUpperCase('tr-TR') + word.slice(1).toLocaleLowerCase('tr-TR');
+    }).join(' ');
+  };
+
   useEffect(() => {
     if (isOpen) {
       if (initialDate) {
@@ -144,7 +152,7 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
             <input
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => setTitle(toTitleCase(e.target.value))}
               placeholder="Kampanya adı girin..."
               className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-slate-600 focus:border-violet-500 focus:ring-2 focus:ring-violet-200 outline-none transition-all bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
               required

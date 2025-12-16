@@ -40,6 +40,14 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   const [editDepartmentId, setEditDepartmentId] = useState('');
   const [status, setStatus] = useState<CampaignStatus>('Planlandı');
 
+  // Helper function to convert text to Title Case with Turkish support
+  const toTitleCase = (str: string) => {
+    return str.split(' ').map(word => {
+      if (word.length === 0) return word;
+      return word.charAt(0).toLocaleUpperCase('tr-TR') + word.slice(1).toLocaleLowerCase('tr-TR');
+    }).join(' ');
+  };
+
   useEffect(() => {
     if (event) {
       setEditTitle(event.title);
@@ -164,7 +172,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               <input
                 type="text"
                 value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
+                onChange={(e) => setEditTitle(toTitleCase(e.target.value))}
                 className="text-xl font-bold text-gray-800 dark:text-white leading-tight w-full border-b-2 border-violet-300 dark:border-violet-600 focus:border-violet-600 dark:focus:border-violet-400 outline-none bg-transparent"
                 placeholder="Kampanya Başlığı"
               />
