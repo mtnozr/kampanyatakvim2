@@ -197,15 +197,25 @@ function App() {
         const data = doc.data();
         const urgency = normalizeUrgency(data.urgency);
 
+        // Map history to convert Timestamps to Dates
+        const history = data.history?.map((h: any) => ({
+          ...h,
+          date: h.date instanceof Timestamp ? h.date.toDate() : new Date(h.date)
+        })) || [];
+
         return {
+          ...data, // Spread other fields like createdAt, updatedAt
           id: doc.id,
           title: data.title,
           urgency,
           assigneeId: data.assigneeId,
           description: data.description,
           departmentId: data.departmentId,
-          status: data.status, // Add status field
-          date: data.date instanceof Timestamp ? data.date.toDate() : new Date(data.date)
+          status: data.status,
+          date: data.date instanceof Timestamp ? data.date.toDate() : new Date(data.date),
+          createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : undefined),
+          updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : (data.updatedAt ? new Date(data.updatedAt) : undefined),
+          history
         } as CalendarEvent;
       });
       setEvents(fetchedEvents);

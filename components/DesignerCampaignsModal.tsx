@@ -31,13 +31,10 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
   const calculateDuration = (event: CalendarEvent): string => {
     if (!event.createdAt) return '-';
 
-    const startDate = event.createdAt instanceof Date ? event.createdAt : (event.createdAt as any).toDate();
+    const startDate = event.createdAt;
     let endDate: Date | null = null;
 
     if (event.status === 'Planlandı') {
-      // For planned events, we might show elapsed time or nothing. 
-      // Requirement asks for "Completion Time", so maybe leave blank for planned?
-      // Let's show elapsed time for better UX.
       endDate = new Date(); 
     } else {
       // Find the status change event in history
@@ -46,14 +43,14 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
         const statusChange = [...event.history].reverse().find(
           h => h.newStatus === event.status
         );
-        if (statusChange) {
-            endDate = statusChange.date instanceof Date ? statusChange.date : (statusChange.date as any).toDate();
+        if (statusChange && statusChange.date) {
+            endDate = statusChange.date;
         }
       }
       
       // Fallback to updatedAt if history missing (legacy support)
       if (!endDate && event.updatedAt) {
-          endDate = event.updatedAt instanceof Date ? event.updatedAt : (event.updatedAt as any).toDate();
+          endDate = event.updatedAt;
       }
     }
 
@@ -90,19 +87,19 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
 
       switch (sortField) {
         case 'date':
-          valA = a.date instanceof Date ? a.date : (a.date as any).toDate();
-          valB = b.date instanceof Date ? b.date : (b.date as any).toDate();
+          valA = a.date;
+          valB = b.date;
           break;
         case 'createdAt':
-          valA = a.createdAt ? (a.createdAt instanceof Date ? a.createdAt : (a.createdAt as any).toDate()) : new Date(0);
-          valB = b.createdAt ? (b.createdAt instanceof Date ? b.createdAt : (b.createdAt as any).toDate()) : new Date(0);
+          valA = a.createdAt || new Date(0);
+          valB = b.createdAt || new Date(0);
           break;
         case 'duration':
              // Simplistic duration sort based on creation date for now as calculating all is expensive
              // Or we can memoize calculations. For now let's sort by createdAt as proxy or disable.
              // Actually, let's just sort by createdAt for duration proxy.
-             valA = a.createdAt ? (a.createdAt instanceof Date ? a.createdAt : (a.createdAt as any).toDate()) : new Date(0);
-             valB = b.createdAt ? (b.createdAt instanceof Date ? b.createdAt : (b.createdAt as any).toDate()) : new Date(0);
+             valA = a.createdAt || new Date(0);
+             valB = b.createdAt || new Date(0);
              break;
       }
 
@@ -224,15 +221,15 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
                 </tr>
               ) : (
                 filteredAndSortedEvents.map((event) => {
-                  const createdDate = event.createdAt instanceof Date ? event.createdAt : (event.createdAt as any)?.toDate();
-                  const calendarDate = event.date instanceof Date ? event.date : (event.date as any).toDate();
+                  const createdDate = event.createdAt;
+                  const calendarDate = event.date;
                   
                   // Find status change date
                   let statusChangeDate: Date | null = null;
                   if (activeTab !== 'Planlandı' && event.history) {
                       const change = [...event.history].reverse().find(h => h.newStatus === activeTab);
-                      if (change) {
-                          statusChangeDate = change.date instanceof Date ? change.date : (change.date as any).toDate();
+                      if (change && change.date) {
+                          statusChangeDate = change.date;
                       }
                   }
 
