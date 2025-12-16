@@ -1306,7 +1306,9 @@ function App() {
         }
 
         const footerIdText = `Ref ID: #${newEventId.substring(0, 6).toUpperCase()}`;
-        const emailSubject = `${title} - Kampanya Görev Ataması`;
+        const isVeryHigh = urgency === 'Very High';
+        const subjectPrefix = isVeryHigh ? 'ACİL: ' : '';
+        const emailSubject = `${subjectPrefix}${title} - Kampanya Görev Ataması`;
 
         const templateParams = {
           to_email: assignedUser.email,
@@ -1344,9 +1346,9 @@ function App() {
           addToast('Mail istemcisi açılıyor...', 'info');
           
           setTimeout(() => {
-            const subject = encodeURIComponent(`ACİL: Görev Ataması: ${title} - Kampanya Görev Ataması`);
+            const subject = encodeURIComponent(`${subjectPrefix}Görev Ataması: ${title} - Kampanya Görev Ataması`);
             const body = encodeURIComponent(`Merhaba ${assignedUser.name},\n\n${emailMessage}\n\n----------------\n${footerIdText}`);
-            window.location.href = `mailto:${assignedUser.email}?cc=kampanyayonetimi@vakifbank.com.tr&subject=${subject}&body=${body}&importance=High`;
+            window.location.href = `mailto:${assignedUser.email}?cc=kampanyayonetimi@vakifbank.com.tr&subject=${subject}&body=${body}&importance=${isVeryHigh ? 'High' : 'Normal'}`;
           }, 2000);
         } finally {
           setIsSendingEmail(false);
@@ -1493,7 +1495,11 @@ function App() {
              }
 
              const footerIdText = `Ref ID: #${eventId.substring(0, 6).toUpperCase()}`;
-             const emailSubject = `${currentEvent.title} - Görev Ataması (Güncelleme)`;
+             
+             const effectiveUrgency = updates.urgency || currentEvent.urgency;
+             const isVeryHigh = effectiveUrgency === 'Very High';
+             const subjectPrefix = isVeryHigh ? 'ACİL: ' : '';
+             const emailSubject = `${subjectPrefix}${currentEvent.title} - Görev Ataması (Güncelleme)`;
 
              const templateParams = {
                to_email: newAssignee.email,
@@ -1516,9 +1522,9 @@ function App() {
                
                // Fallback to mailto
                setTimeout(() => {
-                 const subject = encodeURIComponent(`ACİL: Görev Ataması: ${emailSubject}`);
+                 const subject = encodeURIComponent(`${subjectPrefix}Görev Ataması: ${currentEvent.title} - Görev Ataması (Güncelleme)`);
                  const body = encodeURIComponent(`Merhaba ${newAssignee.name},\n\n${emailMessage}\n\n----------------\n${footerIdText}`);
-                 window.location.href = `mailto:${newAssignee.email}?cc=kampanyayonetimi@vakifbank.com.tr&subject=${subject}&body=${body}&importance=High`;
+                 window.location.href = `mailto:${newAssignee.email}?cc=kampanyayonetimi@vakifbank.com.tr&subject=${subject}&body=${body}&importance=${isVeryHigh ? 'High' : 'Normal'}`;
                }, 1000);
              } finally {
                setIsSendingEmail(false);
