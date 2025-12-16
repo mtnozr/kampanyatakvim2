@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, Trash2, Plus, ShieldCheck, Lock, Users, Calendar, AlertTriangle, Building, UserPlus, LogOut, FileText, Download, Megaphone, Settings, Trophy, Activity } from 'lucide-react';
+import { X, Trash2, Plus, ShieldCheck, Lock, Users, Calendar, AlertTriangle, Building, UserPlus, LogOut, FileText, Download, Megaphone, Settings, Trophy, Activity, History } from 'lucide-react';
 import { User, CalendarEvent, Department, DepartmentUser, Announcement } from '../types';
 import { calculateMonthlyChampion } from '../utils/gamification';
 import { AVAILABLE_EMOJIS, URGENCY_CONFIGS } from '../constants';
+import { changelog } from '../changelog';
 import { format, addMonths } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { auth, db } from '../firebase';
@@ -72,7 +73,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [activeTab, setActiveTab] = useState<'users' | 'events' | 'departments' | 'dept-users' | 'import-export' | 'announcements' | 'settings' | 'active-users'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'events' | 'departments' | 'dept-users' | 'import-export' | 'announcements' | 'settings' | 'active-users' | 'changelog'>('users');
   const [importText, setImportText] = useState('');
 
   // Loading state for auth check
@@ -527,6 +528,12 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 className={`flex-1 py-3 px-2 text-xs md:text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === 'active-users' ? 'border-violet-600 text-violet-600 dark:text-violet-400 bg-violet-50/50 dark:bg-violet-900/20' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
               >
                 <Activity size={16} /> Aktif Kullanıcılar
+              </button>
+              <button
+                onClick={() => setActiveTab('changelog')}
+                className={`flex-1 py-3 px-2 text-xs md:text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === 'changelog' ? 'border-violet-600 text-violet-600 dark:text-violet-400 bg-violet-50/50 dark:bg-violet-900/20' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
+              >
+                <History size={16} /> Sürüm Notları
               </button>
               <button
                 onClick={() => setActiveTab('settings')}
@@ -1131,6 +1138,33 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         </div>
                       )}
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* --- CHANGELOG TAB --- */}
+              {activeTab === 'changelog' && (
+                <div className="p-6 h-full overflow-y-auto">
+                  <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">Sürüm Geçmişi</h3>
+                  <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-6 shadow-sm space-y-6">
+                    {changelog.map((version, index) => (
+                      <div key={version.version} className={`${index > 0 ? 'border-t border-gray-100 dark:border-slate-700 pt-6' : ''}`}>
+                        <div className="flex justify-between items-center mb-3">
+                          <h4 className="font-bold text-gray-800 dark:text-gray-200">{version.version}</h4>
+                          <span className="text-xs bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full">
+                            {version.date}
+                          </span>
+                        </div>
+                        <ul className="space-y-2 text-xs text-gray-500 dark:text-gray-400">
+                          {version.notes.map((note, noteIndex) => (
+                            <li key={noteIndex} className="flex items-start gap-2">
+                              <span className="text-violet-500 mt-1">•</span>
+                              <span>{note}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
