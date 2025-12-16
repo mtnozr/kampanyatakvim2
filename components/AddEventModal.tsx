@@ -267,8 +267,8 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
                     className={`
                       px-3 py-2 rounded-lg text-sm font-medium text-left border transition-all
                       ${isSelected
-                        ? `${config.colorBg} ${config.colorBorder} border ring-1 ring-offset-1 ring-gray-300`
-                        : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-600'}
+                        ? `${config.colorBg} ${config.colorBorder} border ring-1 ring-offset-1 ring-gray-300 dark:ring-slate-600 dark:ring-offset-slate-800`
+                        : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-600 dark:bg-slate-700 dark:border-slate-600 dark:hover:bg-slate-600 dark:text-gray-300'}
                     `}
                   >
                     <span className={isSelected ? config.colorText : ''}>{config.label}</span>

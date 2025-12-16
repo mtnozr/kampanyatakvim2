@@ -1290,9 +1290,13 @@ function App() {
       await deleteDoc(doc(db, "events", id));
       
       if (eventData) {
+         // Find assignee name
+         const assignee = users.find(u => u.id === eventData.assigneeId);
+         const assigneeName = assignee ? assignee.name : 'Bilinmeyen Kullanıcı';
+
          await addDoc(collection(db, "notifications"), {
           title: 'Kampanya Silindi',
-          message: `"${eventData.title}" kampanyası silindi.`,
+          message: `${assigneeName} kişisine atanan "${eventData.title}" kampanyası silindi.`,
           date: Timestamp.now(),
           isRead: false,
           type: 'alert' 
@@ -1335,7 +1339,7 @@ function App() {
           };
           updateData.history = arrayUnion(historyItem);
 
-          // Add Notification for Status Change (Tamamlandı / İptal Edildi)
+          // Add Notification for Status Change (ALL statuses)
           let notifTitle = '';
           let notifMsg = '';
           let notifType: 'info' | 'success' | 'alert' | 'warning' = 'info';
@@ -1348,6 +1352,15 @@ function App() {
              notifTitle = 'Kampanya İptal Edildi';
              notifMsg = `"${currentEvent.title}" kampanyası iptal edildi.`;
              notifType = 'alert';
+          } else if (updates.status === 'Planlandı') {
+             notifTitle = 'Kampanya Tekrar Planlandı';
+             notifMsg = `"${currentEvent.title}" kampanyası tekrar planlandı statüsüne alındı.`;
+             notifType = 'warning';
+          } else {
+             // Generic fallback for other statuses if any
+             notifTitle = 'Kampanya Durumu Değişti';
+             notifMsg = `"${currentEvent.title}" kampanyası durumu "${updates.status}" olarak güncellendi.`;
+             notifType = 'info';
           }
 
           if (notifTitle) {
