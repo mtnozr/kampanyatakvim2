@@ -75,14 +75,17 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
   const getAssigneeName = (id?: string) => {
     if (!id) return 'Atanmamış';
     const user = users.find(u => u.id === id);
-    return user ? user.name : 'Bilinmiyor';
+    return user?.name || 'Bilinmiyor';
   };
 
   const filteredAndSortedEvents = useMemo(() => {
     let result = events.filter(e => {
         const matchesTab = (e.status || 'Planlandı') === activeTab;
-        const matchesSearch = e.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                              getAssigneeName(e.assigneeId).toLowerCase().includes(searchTerm.toLowerCase());
+        const eventTitle = e.title || '';
+        const assigneeName = getAssigneeName(e.assigneeId);
+        
+        const matchesSearch = eventTitle.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                              assigneeName.toLowerCase().includes(searchTerm.toLowerCase());
         return matchesTab && matchesSearch;
     });
 
@@ -241,7 +244,7 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
                   return (
                     <tr key={event.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
                       <td className="px-6 py-4">
-                        <div className="font-semibold text-gray-900 dark:text-white">{event.title}</div>
+                        <div className="font-semibold text-gray-900 dark:text-white">{event.title || 'İsimsiz Kampanya'}</div>
                         {event.description && (
                             <div className="text-xs text-gray-400 truncate max-w-[200px]">{event.description}</div>
                         )}
