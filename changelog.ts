@@ -6,6 +6,15 @@ export interface Version {
 
 export const changelog: Version[] = [
   {
+    version: 'v1.2.0',
+    date: '16.12.2024',
+    notes: [
+      'feat: Takvim günlerine sağ tıklayarak not (sticky note) ekleme özelliği getirildi.',
+      'feat: Eklenen notların takvim üzerinde görsel olarak (ikon) görüntülenmesi sağlandı.',
+      'feat: Notların üzerine gelindiğinde detaylı içeriğin tooltip ile gösterilmesi sağlandı.'
+    ]
+  },
+  {
     version: 'v1.1.3',
     date: '16.12.2024',
     notes: [

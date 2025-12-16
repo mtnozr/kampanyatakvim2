@@ -100,6 +100,14 @@ export interface WorkRequest {
   rejectedReason?: string;
 }
 
+export interface CalendarNote {
+  id: string;
+  date: string; // YYYY-MM-DD format
+  content: string;
+  createdAt: Date;
+  createdBy?: string;
+}
+
 export interface Announcement {
   id: string;
   title: string;
