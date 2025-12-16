@@ -2190,34 +2190,6 @@ function App() {
                                     isClickable={isClickable}
                                     monthlyChampionId={monthlyChampionId}
                                 />
-                                {/* Note Icon */}
-                                {event.note && (
-                                    <div className="absolute -top-1 -right-1 z-30 group/note">
-                                        <div className="bg-yellow-100 border border-yellow-200 text-yellow-700 w-4 h-4 flex items-center justify-center rounded-full shadow-sm cursor-help">
-                                            <StickyNote size={10} />
-                                        </div>
-                                         {/* Tooltip */}
-                                        <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-gray-100 dark:border-slate-700 text-xs hidden group-hover/note:block z-[60]">
-                                            <div className="font-bold text-gray-800 dark:text-gray-200 mb-1 border-b pb-1 border-gray-100 dark:border-slate-700 flex items-center gap-1">
-                                                <StickyNote size={10} className="text-yellow-500" />
-                                                Not
-                                            </div>
-                                            <p className="text-gray-600 dark:text-gray-300 mb-2 whitespace-pre-wrap leading-relaxed text-[10px]">{event.note}</p>
-                                            <div className="flex justify-end pt-1 border-t border-gray-50 dark:border-slate-700">
-                                                <button 
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleDeleteNote(event.id);
-                                                }}
-                                                className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                                                title="Notu Sil"
-                                                >
-                                                <Trash2 size={10} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                           </div>
                         );

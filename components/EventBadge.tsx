@@ -1,7 +1,7 @@
 import React from 'react';
 import { CalendarEvent, User } from '../types';
 import { URGENCY_CONFIGS, STATUS_STYLES } from '../constants';
-import { User as UserIcon } from 'lucide-react';
+import { User as UserIcon, StickyNote } from 'lucide-react';
 
 interface EventBadgeProps {
   event: CalendarEvent;
@@ -59,11 +59,20 @@ export const EventBadge: React.FC<EventBadgeProps> = ({
         }
       }}
       className={`
-        flex flex-col gap-1 mb-2 group transition-opacity
+        relative flex flex-col gap-1 mb-2 group transition-opacity
         ${isClickable && !isBlurred ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}
         ${isBlurred ? 'opacity-70 grayscale' : ''}
       `}
     >
+      {/* Sticky Note Icon - Always visible if note exists */}
+      {event.note && !isBlurred && (
+        <div className="absolute -top-1 -right-1 z-10 group/note">
+           <div className="bg-yellow-100 border border-yellow-200 text-yellow-700 w-4 h-4 flex items-center justify-center rounded-full shadow-sm">
+             <StickyNote size={10} />
+           </div>
+        </div>
+      )}
+
       {/* Assigned User Info (Avatar + Name) */}
       <div className="flex items-center gap-1.5 px-1 min-w-0">
         {!isBlurred && renderAvatar()}

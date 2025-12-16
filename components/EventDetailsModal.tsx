@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, User as UserIcon, AlertCircle, AlignLeft, Building, Edit2, Save, XCircle, Trash2, CheckCircle2, XCircle as CancelIcon, Clock, Gauge } from 'lucide-react';
+import { X, Calendar, User as UserIcon, AlertCircle, AlignLeft, Building, Edit2, Save, XCircle, Trash2, CheckCircle2, XCircle as CancelIcon, Clock, Gauge, StickyNote } from 'lucide-react';
 import { CalendarEvent, User, Department, UrgencyLevel, CampaignStatus, DifficultyLevel } from '../types';
 import { URGENCY_CONFIGS, STATUS_STYLES, DIFFICULTY_CONFIGS } from '../constants';
 import { format } from 'date-fns';
@@ -387,6 +387,23 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               )}
             </div>
           </div>
+
+          {/* Sticky Note Section - Read Only */}
+          {event.note && (
+             <div className="flex items-start gap-3">
+              <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded-lg shrink-0">
+                <StickyNote size={20} />
+              </div>
+              <div className="w-full">
+                <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Not</p>
+                <div className="mt-1 bg-yellow-50 dark:bg-yellow-900/10 p-3 rounded-lg border border-yellow-200 dark:border-yellow-700/30 relative">
+                  <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-medium">
+                    {event.note}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
 
