@@ -1283,7 +1283,22 @@ function App() {
 
   const handleDeleteEvent = async (id: string) => {
     try {
+      // Fetch event first to get title for notification
+      const eventSnap = await getDoc(doc(db, "events", id));
+      const eventData = eventSnap.exists() ? eventSnap.data() : null;
+
       await deleteDoc(doc(db, "events", id));
+      
+      if (eventData) {
+         await addDoc(collection(db, "notifications"), {
+          title: 'Kampanya Silindi',
+          message: `"${eventData.title}" kampanyası silindi.`,
+          date: Timestamp.now(),
+          isRead: false,
+          type: 'alert' 
+        });
+      }
+
       addToast('Kampanya silindi.', 'info');
     } catch (e) {
       addToast('Silme hatası.', 'info');
@@ -1319,6 +1334,31 @@ function App() {
             changedBy: loggedInDeptUser?.username || 'System'
           };
           updateData.history = arrayUnion(historyItem);
+
+          // Add Notification for Status Change (Tamamlandı / İptal Edildi)
+          let notifTitle = '';
+          let notifMsg = '';
+          let notifType: 'info' | 'success' | 'alert' | 'warning' = 'info';
+
+          if (updates.status === 'Tamamlandı') {
+             notifTitle = 'Kampanya Tamamlandı';
+             notifMsg = `"${currentEvent.title}" kampanyası tamamlandı.`;
+             notifType = 'success';
+          } else if (updates.status === 'İptal Edildi') {
+             notifTitle = 'Kampanya İptal Edildi';
+             notifMsg = `"${currentEvent.title}" kampanyası iptal edildi.`;
+             notifType = 'alert';
+          }
+
+          if (notifTitle) {
+             await addDoc(collection(db, "notifications"), {
+              title: notifTitle,
+              message: notifMsg,
+              date: Timestamp.now(),
+              isRead: false,
+              type: notifType
+            });
+          }
         }
       }
 
