@@ -1447,6 +1447,79 @@ function App() {
             });
           }
         }
+
+        // Check if assignee changed (Send Email to New Assignee)
+        if (updates.assigneeId && updates.assigneeId !== currentEvent.assigneeId) {
+           const newAssignee = users.find(u => u.id === updates.assigneeId);
+           
+           if (newAssignee) {
+             // 1. Add Notification
+             await addDoc(collection(db, "notifications"), {
+               title: 'Görev Size Atandı (Devir)',
+               message: `"${currentEvent.title}" görevi size devredildi/atandı.`,
+               date: Timestamp.now(),
+               isRead: false,
+               type: 'email'
+             });
+
+             // 2. Add Log
+             await addDoc(collection(db, "logs"), {
+               message: `"${currentEvent.title}" görevi ${newAssignee.name} kişisine devredildi.`,
+               timestamp: Timestamp.now()
+             });
+
+             // 3. Send Email
+             setIsSendingEmail(true);
+
+             let emailMessage = `"${currentEvent.title}" kampanyası için görevlendirildiniz (Görev Devri).\n\n`;
+             emailMessage += `Tarih: ${format(updates.date instanceof Date ? updates.date : (updates.date ? (updates.date as any).toDate() : (currentEvent.date as any).toDate()), 'd MMMM yyyy', { locale: tr })}\n`;
+             emailMessage += `Aciliyet: ${URGENCY_CONFIGS[updates.urgency || currentEvent.urgency].label}`;
+             
+             const diff = updates.difficulty || currentEvent.difficulty;
+             if (diff) emailMessage += `\nZorluk Seviyesi: ${DIFFICULTY_CONFIGS[diff].label}`;
+             
+             const desc = updates.description || currentEvent.description;
+             if (desc) emailMessage += `\n\nAçıklama:\n${desc}`;
+
+             const deptId = updates.departmentId || currentEvent.departmentId;
+             if (deptId) {
+               const dept = departments.find(d => d.id === deptId);
+               if (dept) emailMessage += `\n\nTalep Eden Birim: ${dept.name}`;
+             }
+
+             const footerIdText = `Ref ID: #${eventId.substring(0, 6).toUpperCase()}`;
+             const emailSubject = `${currentEvent.title} - Görev Ataması (Güncelleme)`;
+
+             const templateParams = {
+               to_email: newAssignee.email,
+               cc: 'kampanyayonetimi@vakifbank.com.tr',
+               to_name: newAssignee.name,
+               name: newAssignee.name,
+               email: newAssignee.email,
+               title: emailSubject,
+               message: emailMessage,
+               ref_id: footerIdText,
+             };
+
+             try {
+               console.log('📧 (Edit) EmailJS Gönderiliyor...', templateParams);
+               await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY);
+               addToast(`✅ Yeni görevliye e-posta gönderildi: ${newAssignee.name}`, 'success');
+             } catch (error: any) {
+               console.error('❌ (Edit) EmailJS Hatası:', error);
+               addToast(`❌ E-posta hatası: ${error.text || 'Bilinmeyen'}`, 'info');
+               
+               // Fallback to mailto
+               setTimeout(() => {
+                 const subject = encodeURIComponent(`ACİL: Görev Ataması: ${emailSubject}`);
+                 const body = encodeURIComponent(`Merhaba ${newAssignee.name},\n\n${emailMessage}\n\n----------------\n${footerIdText}`);
+                 window.location.href = `mailto:${newAssignee.email}?cc=kampanyayonetimi@vakifbank.com.tr&subject=${subject}&body=${body}&importance=High`;
+               }, 1000);
+             } finally {
+               setIsSendingEmail(false);
+             }
+           }
+        }
       }
 
       await setDoc(doc(db, "events", eventId), updateData, { merge: true });
