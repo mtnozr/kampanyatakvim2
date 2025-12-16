@@ -33,6 +33,7 @@ import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { AnnouncementBoard } from './components/AnnouncementBoard';
 import { AnnouncementPopup } from './components/AnnouncementPopup';
 import { ReportsDashboard } from './components/ReportsDashboard';
+import { DesignerCampaignsModal } from './components/DesignerCampaignsModal';
 import { MyTasksModal } from './components/MyTasksModal';
 import { ThemeToggle } from './components/ThemeToggle';
 import { useTheme } from './hooks/useTheme';
@@ -118,6 +119,7 @@ function App() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [isIncomingRequestsModalOpen, setIsIncomingRequestsModalOpen] = useState(false);
+  const [isDesignerCampaignsModalOpen, setIsDesignerCampaignsModalOpen] = useState(false);
   const [requestModalDate, setRequestModalDate] = useState<Date | undefined>(undefined);
   const [convertingRequest, setConvertingRequest] = useState<WorkRequest | null>(null);
 
@@ -1545,6 +1547,16 @@ function App() {
                   </button>
                 )}
 
+                {isDesigner && (
+                  <button
+                    onClick={() => setIsDesignerCampaignsModalOpen(true)}
+                    className="relative text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 dark:border dark:border-blue-700/50 px-3 py-1.5 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors flex items-center gap-2 font-medium whitespace-nowrap"
+                  >
+                    <CheckSquare size={14} />
+                    <span className="hidden sm:inline">Kampanyalar</span>
+                  </button>
+                )}
+
                 {isDesigner && users.length === 0 && events.length === 0 && (
                   <button
                     onClick={seedDatabase}
@@ -2070,6 +2082,13 @@ function App() {
           onClose={() => setIsChangePasswordOpen(false)}
           currentUser={loggedInDeptUser}
           onChangePassword={handleChangePassword}
+        />
+
+        <DesignerCampaignsModal
+          isOpen={isDesignerCampaignsModalOpen}
+          onClose={() => setIsDesignerCampaignsModalOpen(false)}
+          events={events}
+          users={users}
         />
 
         <EventDetailsModal
