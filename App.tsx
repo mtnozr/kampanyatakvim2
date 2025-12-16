@@ -136,9 +136,8 @@ function App() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Notes State
-  const [calendarNotes, setCalendarNotes] = useState<CalendarNote[]>([]);
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
-  const [noteModalDate, setNoteModalDate] = useState<Date | null>(null);
+  const [selectedEventIdForNote, setSelectedEventIdForNote] = useState<string | null>(null);
   const [noteContent, setNoteContent] = useState('');
 
   // Derived state for viewEvent
@@ -194,20 +193,6 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  // 1.5 Sync Notes
-  useEffect(() => {
-    const q = query(collection(db, "calendar_notes"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedNotes: CalendarNote[] = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt instanceof Timestamp ? doc.data().createdAt.toDate() : new Date()
-      })) as CalendarNote[];
-      setCalendarNotes(fetchedNotes);
-    });
-    return () => unsubscribe();
-  }, []);
-
   // 1. Sync Events
   useEffect(() => {
     if (refreshKey === 0) setIsEventsLoading(true);
@@ -235,6 +220,7 @@ function App() {
           date: data.date instanceof Timestamp ? data.date.toDate() : new Date(data.date),
           createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : undefined),
           updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : (data.updatedAt ? new Date(data.updatedAt) : undefined),
+          note: data.note,
           history
         } as CalendarEvent;
       });
@@ -1232,31 +1218,33 @@ function App() {
   };
 
   const handleAddNote = async () => {
-    if (!noteModalDate || !noteContent.trim()) return;
+    if (!selectedEventIdForNote || !noteContent.trim()) return;
 
     try {
-      const dateStr = format(noteModalDate, 'yyyy-MM-dd');
-      await addDoc(collection(db, "calendar_notes"), {
-        date: dateStr,
-        content: noteContent,
-        createdAt: Timestamp.now(),
-        createdBy: loggedInDeptUser?.username || 'System'
+      const eventRef = doc(db, "events", selectedEventIdForNote);
+      await updateDoc(eventRef, {
+        note: noteContent,
+        updatedAt: Timestamp.now()
       });
       
       addToast('Not eklendi.', 'success');
       setIsNoteModalOpen(false);
       setNoteContent('');
-      setNoteModalDate(null);
+      setSelectedEventIdForNote(null);
     } catch (e) {
       console.error(e);
       addToast('Not eklenemedi.', 'info');
     }
   };
 
-  const handleDeleteNote = async (noteId: string) => {
+  const handleDeleteNote = async (eventId: string) => {
     if (!confirm('Notu silmek istediğinize emin misiniz?')) return;
     try {
-      await deleteDoc(doc(db, "calendar_notes", noteId));
+      const eventRef = doc(db, "events", eventId);
+      await updateDoc(eventRef, {
+        note: '',
+        updatedAt: Timestamp.now()
+      });
       addToast('Not silindi.', 'success');
     } catch (e) {
       addToast('Silme işlemi başarısız.', 'info');
@@ -2082,20 +2070,11 @@ function App() {
               const dayEvents = getEventsForDay(day);
               const holidayName = getHolidayName(day);
               const isHoliday = !!holidayName;
-              const dayNotes = calendarNotes.filter(n => n.date === format(day, 'yyyy-MM-dd'));
 
               return (
                 <div
                   key={day.toString()}
                   onClick={() => openAddModal(day)}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    if (loggedInDeptUser || isDesigner) {
-                        setNoteModalDate(day);
-                        setNoteContent('');
-                        setIsNoteModalOpen(true);
-                    }
-                  }}
                   onDragOver={(e) => {
                     if (isDesigner) {
                       e.preventDefault();
@@ -2129,45 +2108,6 @@ function App() {
                         {holidayName}
                       </span>
                     ) : <div></div>}
-
-                    {/* Notes Display */}
-                    {dayNotes.length > 0 && (
-                      <div className="absolute top-2 right-12 flex gap-1 z-20">
-                        {dayNotes.map(note => (
-                           <div 
-                            key={note.id} 
-                            className="group/note relative"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <div className="bg-yellow-100 border border-yellow-200 text-yellow-700 w-6 h-6 flex items-center justify-center rounded-md shadow-sm hover:shadow-md transition-all cursor-help hover:scale-110">
-                              <StickyNote size={14} />
-                            </div>
-                            
-                            {/* Tooltip */}
-                            <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-slate-800 p-3 rounded-xl shadow-xl border border-gray-100 dark:border-slate-700 text-xs hidden group-hover/note:block z-[60]">
-                              <div className="font-bold text-gray-800 dark:text-gray-200 mb-1 border-b pb-1 border-gray-100 dark:border-slate-700 flex items-center gap-1">
-                                <StickyNote size={12} className="text-yellow-500" />
-                                Not
-                              </div>
-                              <p className="text-gray-600 dark:text-gray-300 mb-2 whitespace-pre-wrap leading-relaxed">{note.content}</p>
-                              <div className="flex justify-between items-center text-[10px] text-gray-400 pt-1 border-t border-gray-50 dark:border-slate-700">
-                                <span className="truncate max-w-[100px]">{note.createdBy}</span>
-                                <button 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteNote(note.id);
-                                  }}
-                                  className="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                  title="Notu Sil"
-                                >
-                                  <Trash2 size={12} />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
 
                     <span className={`
                     text-sm font-bold w-8 h-8 flex items-center justify-center rounded-full leading-none
@@ -2219,30 +2159,69 @@ function App() {
                       }
 
                       return (
-                        <div
-                          key={event.id}
-                          draggable={isDesigner}
-                          onDragStart={(e) => {
-                            if (isDesigner) {
-                              setDraggedEvent(event);
-                              e.dataTransfer.effectAllowed = "move";
-                              // Optional: Set drag image or data if needed
-                              e.dataTransfer.setData("text/plain", event.id);
-                            }
-                          }}
-                          className={isDesigner ? 'cursor-grab active:cursor-grabbing' : ''}
-                        >
-                          <EventBadge
-                            event={event}
-                            user={users.find(u => u.id === event.assigneeId)}
-                            onClick={(e) => setViewEventId(e.id)}
-                            isBlurred={isBlurred}
-                            isClickable={isClickable}
-                            monthlyChampionId={monthlyChampionId}
-                          />
-                        </div>
-                      );
-                    })}
+                          <div
+                            key={event.id}
+                            draggable={isDesigner}
+                            onContextMenu={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (loggedInDeptUser || isDesigner) {
+                                    setSelectedEventIdForNote(event.id);
+                                    setNoteContent(event.note || '');
+                                    setIsNoteModalOpen(true);
+                                }
+                            }}
+                            onDragStart={(e) => {
+                              if (isDesigner) {
+                                setDraggedEvent(event);
+                                e.dataTransfer.effectAllowed = "move";
+                                // Optional: Set drag image or data if needed
+                                e.dataTransfer.setData("text/plain", event.id);
+                              }
+                            }}
+                            className={isDesigner ? 'cursor-grab active:cursor-grabbing' : ''}
+                          >
+                            <div className="relative">
+                                <EventBadge
+                                    event={event}
+                                    user={users.find(u => u.id === event.assigneeId)}
+                                    onClick={(e) => setViewEventId(e.id)}
+                                    isBlurred={isBlurred}
+                                    isClickable={isClickable}
+                                    monthlyChampionId={monthlyChampionId}
+                                />
+                                {/* Note Icon */}
+                                {event.note && (
+                                    <div className="absolute -top-1 -right-1 z-30 group/note">
+                                        <div className="bg-yellow-100 border border-yellow-200 text-yellow-700 w-4 h-4 flex items-center justify-center rounded-full shadow-sm cursor-help">
+                                            <StickyNote size={10} />
+                                        </div>
+                                         {/* Tooltip */}
+                                        <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-gray-100 dark:border-slate-700 text-xs hidden group-hover/note:block z-[60]">
+                                            <div className="font-bold text-gray-800 dark:text-gray-200 mb-1 border-b pb-1 border-gray-100 dark:border-slate-700 flex items-center gap-1">
+                                                <StickyNote size={10} className="text-yellow-500" />
+                                                Not
+                                            </div>
+                                            <p className="text-gray-600 dark:text-gray-300 mb-2 whitespace-pre-wrap leading-relaxed text-[10px]">{event.note}</p>
+                                            <div className="flex justify-end pt-1 border-t border-gray-50 dark:border-slate-700">
+                                                <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteNote(event.id);
+                                                }}
+                                                className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                                title="Notu Sil"
+                                                >
+                                                <Trash2 size={10} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                          </div>
+                        );
+                      })}
                   </div>
 
                   {(isDesigner || loggedInDeptUser?.isBusinessUnit) && (
@@ -2379,13 +2358,13 @@ function App() {
         />
 
         {/* Note Add Modal */}
-        {isNoteModalOpen && noteModalDate && (
+        {isNoteModalOpen && selectedEventIdForNote && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
             <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-gray-100 dark:border-slate-700 animate-in fade-in zoom-in duration-200">
               <div className="p-4 border-b border-gray-100 dark:border-slate-700 flex justify-between items-center bg-gray-50/50 dark:bg-slate-900/50">
                 <h3 className="font-bold text-gray-800 dark:text-white flex items-center gap-2">
                   <StickyNote size={18} className="text-yellow-500" />
-                  Not Ekle ({format(noteModalDate, 'd MMMM yyyy', { locale: tr })})
+                  Not Ekle / Düzenle
                 </h3>
                 <button 
                   onClick={() => setIsNoteModalOpen(false)}
@@ -2403,7 +2382,7 @@ function App() {
                   <textarea
                     value={noteContent}
                     onChange={(e) => setNoteContent(e.target.value)}
-                    placeholder="Kampanya gecikme nedeni veya günlük not..."
+                    placeholder="Kampanya gecikme nedeni veya not..."
                     className="w-full h-32 px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 focus:border-violet-500 focus:ring-2 focus:ring-violet-200 outline-none transition-all resize-none bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-white text-sm"
                     autoFocus
                   />
@@ -2422,7 +2401,7 @@ function App() {
                     className="px-4 py-2 rounded-xl text-sm font-medium bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg shadow-violet-200 dark:shadow-none flex items-center gap-2"
                   >
                     <Plus size={16} />
-                    Ekle
+                    Kaydet
                   </button>
                 </div>
               </div>

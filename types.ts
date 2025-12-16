@@ -37,6 +37,7 @@ export interface CalendarEvent {
   createdAt?: Date;
   updatedAt?: Date;
   history?: EventHistoryItem[];
+  note?: string; // Campaign delay note or sticky note
 }
 
 export interface UrgencyConfig {
@@ -98,14 +99,6 @@ export interface WorkRequest {
   status: 'pending' | 'approved' | 'rejected';
   createdAt: Date;
   rejectedReason?: string;
-}
-
-export interface CalendarNote {
-  id: string;
-  date: string; // YYYY-MM-DD format
-  content: string;
-  createdAt: Date;
-  createdBy?: string;
 }
 
 export interface Announcement {
