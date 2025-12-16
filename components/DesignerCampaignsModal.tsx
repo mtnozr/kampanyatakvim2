@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { X, Calendar, Clock, User, CheckCircle2, AlertCircle, Timer, Filter, ArrowUpDown } from 'lucide-react';
 import { CalendarEvent, User as UserType, CampaignStatus } from '../types';
-import { format, differenceInHours, differenceInDays } from 'date-fns';
+import { format, differenceInHours, differenceInDays, isValid } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
 interface DesignerCampaignsModalProps {
@@ -29,7 +29,7 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
 
   // Helper to format duration
   const calculateDuration = (event: CalendarEvent): string => {
-    if (!event.createdAt) return '-';
+    if (!event.createdAt || !isValid(event.createdAt)) return '-';
 
     const startDate = event.createdAt;
     let endDate: Date | null = null;
@@ -43,28 +43,33 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
         const statusChange = [...event.history].reverse().find(
           h => h.newStatus === event.status
         );
-        if (statusChange && statusChange.date) {
+        if (statusChange && statusChange.date && isValid(statusChange.date)) {
             endDate = statusChange.date;
         }
       }
       
       // Fallback to updatedAt if history missing (legacy support)
-      if (!endDate && event.updatedAt) {
+      if (!endDate && event.updatedAt && isValid(event.updatedAt)) {
           endDate = event.updatedAt;
       }
     }
 
-    if (!endDate) return '-';
+    if (!endDate || !isValid(endDate)) return '-';
 
-    const totalHours = differenceInHours(endDate, startDate);
-    const days = Math.floor(totalHours / 24);
-    const hours = totalHours % 24;
+    try {
+      const totalHours = differenceInHours(endDate, startDate);
+      const days = Math.floor(totalHours / 24);
+      const hours = totalHours % 24;
 
-    if (event.status === 'Planlandı') {
-        return `${days}g ${hours}s (Geçen)`;
+      if (event.status === 'Planlandı') {
+          return `${days}g ${hours}s (Geçen)`;
+      }
+
+      return `${days}g ${hours}s`;
+    } catch (error) {
+      console.error("Duration calculation error:", error);
+      return '-';
     }
-
-    return `${days}g ${hours}s`;
   };
 
   const getAssigneeName = (id?: string) => {
@@ -87,19 +92,19 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
 
       switch (sortField) {
         case 'date':
-          valA = a.date;
-          valB = b.date;
+          valA = (a.date && isValid(a.date)) ? a.date : new Date(0);
+          valB = (b.date && isValid(b.date)) ? b.date : new Date(0);
           break;
         case 'createdAt':
-          valA = a.createdAt || new Date(0);
-          valB = b.createdAt || new Date(0);
+          valA = (a.createdAt && isValid(a.createdAt)) ? a.createdAt : new Date(0);
+          valB = (b.createdAt && isValid(b.createdAt)) ? b.createdAt : new Date(0);
           break;
         case 'duration':
              // Simplistic duration sort based on creation date for now as calculating all is expensive
              // Or we can memoize calculations. For now let's sort by createdAt as proxy or disable.
              // Actually, let's just sort by createdAt for duration proxy.
-             valA = a.createdAt || new Date(0);
-             valB = b.createdAt || new Date(0);
+             valA = (a.createdAt && isValid(a.createdAt)) ? a.createdAt : new Date(0);
+             valB = (b.createdAt && isValid(b.createdAt)) ? b.createdAt : new Date(0);
              break;
       }
 
@@ -252,13 +257,13 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                           <Calendar size={14} />
-                          {format(calendarDate, 'd MMMM yyyy', { locale: tr })}
+                          {calendarDate && isValid(calendarDate) ? format(calendarDate, 'd MMMM yyyy', { locale: tr }) : 'Geçersiz Tarih'}
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col text-sm text-gray-600 dark:text-gray-400">
-                            <span>{createdDate ? format(createdDate, 'd MMM yyyy', { locale: tr }) : '-'}</span>
-                            <span className="text-xs text-gray-400">{createdDate ? format(createdDate, 'HH:mm') : ''}</span>
+                            <span>{createdDate && isValid(createdDate) ? format(createdDate, 'd MMM yyyy', { locale: tr }) : '-'}</span>
+                            <span className="text-xs text-gray-400">{createdDate && isValid(createdDate) ? format(createdDate, 'HH:mm') : ''}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -268,8 +273,8 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
                              </span>
                          ) : (
                             <div className="flex flex-col text-sm text-gray-600 dark:text-gray-400">
-                                <span>{statusChangeDate ? format(statusChangeDate, 'd MMM yyyy', { locale: tr }) : '-'}</span>
-                                <span className="text-xs text-gray-400">{statusChangeDate ? format(statusChangeDate, 'HH:mm') : ''}</span>
+                                <span>{statusChangeDate && isValid(statusChangeDate) ? format(statusChangeDate, 'd MMM yyyy', { locale: tr }) : '-'}</span>
+                                <span className="text-xs text-gray-400">{statusChangeDate && isValid(statusChangeDate) ? format(statusChangeDate, 'HH:mm') : ''}</span>
                             </div>
                          )}
                       </td>
