@@ -207,7 +207,9 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
                   required
                 >
                   <option value="">Seçiniz</option>
-                  {departments.map(dept => (
+                  {[...departments]
+                    .sort((a, b) => a.name.localeCompare(b.name, 'tr'))
+                    .map(dept => (
                     <option key={dept.id} value={dept.id}>{dept.name}</option>
                   ))}
                 </select>

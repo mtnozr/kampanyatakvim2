@@ -6,6 +6,13 @@ export interface Version {
 
 export const changelog: Version[] = [
   {
+    version: 'v1.1.3',
+    date: '16.12.2024',
+    notes: [
+      'feat: Kampanya ekleme/düzenleme ekranlarında birim listesi alfabetik olarak sıralandı.'
+    ]
+  },
+  {
     version: 'v1.1.2',
     date: '16.12.2024',
     notes: [
