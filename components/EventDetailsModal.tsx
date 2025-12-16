@@ -395,7 +395,23 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 <StickyNote size={20} />
               </div>
               <div className="w-full">
-                <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Not</p>
+                <div className="flex justify-between items-center mb-1">
+                    <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Not</p>
+                    {/* Delete Note Button (Only for Designers or Kampanya Yapan) */}
+                    {(isDesigner || isKampanyaYapan) && onEdit && (
+                        <button
+                            onClick={() => {
+                                if (window.confirm('Bu notu silmek istediğinize emin misiniz?')) {
+                                    onEdit(event.id, { note: '' });
+                                }
+                            }}
+                            className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700"
+                            title="Notu Sil"
+                        >
+                            <Trash2 size={14} />
+                        </button>
+                    )}
+                </div>
                 <div className="mt-1 bg-yellow-50 dark:bg-yellow-900/10 p-3 rounded-lg border border-yellow-200 dark:border-yellow-700/30 relative">
                   <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-medium">
                     {event.note}
