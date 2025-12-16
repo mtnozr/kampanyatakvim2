@@ -777,9 +777,12 @@ function App() {
       //    and white background.
       const container = document.createElement('div');
       container.style.width = '1600px';
-      container.style.position = 'absolute';
-      container.style.top = '-9999px';
-      container.style.left = '-9999px';
+      // Chrome Fix: Use fixed position at top-left but behind everything (z-index) 
+      // instead of 'top: -9999px' which causes rendering optimization issues in Chrome
+      container.style.position = 'fixed';
+      container.style.top = '0';
+      container.style.left = '0';
+      container.style.zIndex = '-9999'; 
       container.style.backgroundColor = '#ffffff';
       container.style.padding = '40px';
       container.style.fontFamily = 'Arial, Helvetica, sans-serif'; // Use system font for Turkish char support
@@ -865,11 +868,19 @@ function App() {
         (el as HTMLElement).style.whiteSpace = 'normal'; // Allow wrapping
       });
 
+      // Chrome Fix: Wait for fonts to load and give layout engine time to settle
+      await document.fonts.ready;
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // 6. Capture the container
       const canvas = await html2canvas(container, {
         scale: 2,
         backgroundColor: '#ffffff',
-        useCORS: true
+        useCORS: true,
+        logging: false,
+        windowWidth: 1600, // Force specific window width context
+        scrollY: 0, // Reset scroll position for capture
+        scrollX: 0
       });
 
       // 6. Clean up
