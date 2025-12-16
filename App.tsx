@@ -784,7 +784,7 @@ function App() {
       container.style.left = '0';
       container.style.zIndex = '-9999'; 
       container.style.backgroundColor = '#ffffff';
-      container.style.padding = '40px';
+      container.style.padding = '20px';
       container.style.fontFamily = 'Arial, Helvetica, sans-serif'; // Use system font for Turkish char support
 
       // 3. Add Corporate Header
@@ -901,8 +901,13 @@ function App() {
 
       const imgWidth = canvas.width;
       const imgHeight = canvas.height;
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      
+      // Calculate ratio to fit width with minimal margins (5mm each side)
+      const marginX = 5;
+      const availableWidth = pdfWidth - (2 * marginX);
+      const ratio = Math.min(availableWidth / imgWidth, pdfHeight / imgHeight);
 
+      // Center it horizontally if height is the limiting factor, otherwise use marginX
       const imgX = (pdfWidth - imgWidth * ratio) / 2;
       const imgY = 10; // Top margin
 
@@ -2065,7 +2070,7 @@ function App() {
                     ) : <div></div>}
 
                     <span className={`
-                    text-sm font-bold w-8 h-8 flex items-center justify-center rounded-full
+                    text-sm font-bold w-8 h-8 flex items-center justify-center rounded-full leading-none
                     ${isTodayDate
                         ? 'bg-violet-600 text-white'
                         : isHoliday && isCurrentMonth ? 'text-red-600'

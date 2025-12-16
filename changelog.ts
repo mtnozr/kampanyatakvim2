@@ -6,6 +6,14 @@ export interface Version {
 
 export const changelog: Version[] = [
   {
+    version: 'v1.1.2',
+    date: '16.12.2024',
+    notes: [
+      'fix: PDF dışa aktarımında kenar boşlukları azaltılarak takvim alanı genişletildi.',
+      'fix: Takvimdeki gün gösterge (mor daire) hizalaması düzeltildi.'
+    ]
+  },
+  {
     version: 'v1.1.1',
     date: '16.12.2024',
     notes: [
