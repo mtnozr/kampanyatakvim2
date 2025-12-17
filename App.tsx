@@ -35,7 +35,6 @@ import { AnnouncementPopup } from './components/AnnouncementPopup';
 import { ReportsDashboard } from './components/ReportsDashboard';
 import { DesignerCampaignsModal } from './components/DesignerCampaignsModal';
 import { MyTasksModal } from './components/MyTasksModal';
-import DayEventsModal from './components/DayEventsModal';
 import { ThemeToggle } from './components/ThemeToggle';
 import { useTheme } from './hooks/useTheme';
 import { setCookie, getCookie, deleteCookie } from './utils/cookies';
@@ -131,7 +130,6 @@ function App() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   // Refactor: Store ID instead of object to ensure reactivity
   const [viewEventId, setViewEventId] = useState<string | null>(null);
-  const [viewDayEventsDate, setViewDayEventsDate] = useState<Date | null>(null);
   const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null);
   
   // Refresh Key for manual data reload
@@ -2084,7 +2082,7 @@ function App() {
           </div>
 
           {/* Calendar Grid Body */}
-          <div className="grid grid-cols-7 gap-4 flex-1 auto-rows-fr">
+          <div className="grid grid-cols-7 gap-4 flex-1">
             {calendarDays.map((day) => {
               const isCurrentMonth = isSameMonth(day, currentDate);
               const isTodayDate = isToday(day);
@@ -2142,8 +2140,8 @@ function App() {
                     </span>
                   </div>
 
-                  <div className="flex-1 overflow-hidden">
-                    {dayEvents.slice(0, 3).map(event => {
+                  <div className="flex-1 overflow-y-auto event-scroll">
+                    {dayEvents.map(event => {
                       // Visibility Logic
                       const isMyDeptInfo = currentDepartmentId && event.departmentId === currentDepartmentId;
 
@@ -2216,17 +2214,6 @@ function App() {
                           </div>
                         );
                       })}
-                      {dayEvents.length > 3 && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setViewDayEventsDate(day);
-                          }}
-                          className="text-xs text-gray-500 hover:text-violet-600 font-medium px-1 mt-1 w-full text-left"
-                        >
-                          +{dayEvents.length - 3} daha
-                        </button>
-                      )}
                   </div>
 
                   {(isDesigner || loggedInDeptUser?.isBusinessUnit) && (
@@ -2256,25 +2243,6 @@ function App() {
             </button>
           )}
         </div>
-
-        <DayEventsModal
-          isOpen={!!viewDayEventsDate}
-          onClose={() => setViewDayEventsDate(null)}
-          date={viewDayEventsDate}
-          events={viewDayEventsDate ? getEventsForDay(viewDayEventsDate) : []}
-          users={users}
-          currentDepartmentId={currentDepartmentId}
-          loggedInDeptUser={loggedInDeptUser}
-          isDesigner={isDesigner}
-          isKampanyaYapan={isKampanyaYapan}
-          monthlyChampionId={monthlyChampionId}
-          onEventClick={setViewEventId}
-          onNoteClick={(eventId, note) => {
-            setSelectedEventIdForNote(eventId);
-            setNoteContent(note);
-            setIsNoteModalOpen(true);
-          }}
-        />
 
         <AddEventModal
           isOpen={isAddModalOpen}
