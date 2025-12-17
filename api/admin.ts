@@ -82,7 +82,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           email: email,
           password: password,
         });
-        return res.status(200).json({ uid: userRecord.uid, message: 'User created successfully' });
+        
+        // Return project ID for client-side verification
+        // Extract project ID from service account if possible, or app options
+        let projectId = 'unknown';
+        try {
+            const cert = (admin.app().options.credential as any)?.certificate;
+            if (cert && cert.projectId) {
+                projectId = cert.projectId;
+            } else if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+                 const sa = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+                 projectId = sa.project_id;
+            }
+        } catch (e) {
+            console.error("Could not determine project ID", e);
+        }
+        
+        return res.status(200).json({ 
+            uid: userRecord.uid, 
+            message: 'User created successfully',
+            projectId: projectId
+        });
       } catch (error: any) {
         // If user already exists, we might want to return that info or handle it
         if (error.code === 'auth/email-already-exists') {

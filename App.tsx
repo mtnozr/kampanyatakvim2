@@ -1045,11 +1045,18 @@ function App() {
         // Create user via Server-Side API (Reliable)
         // This avoids client-side auth conflicts
         const result = await callAdminApi({
-            action: 'createUser',
-            email: userEmail,
-            password: password
-        });
-        uid = result.uid;
+             action: 'createUser',
+             email: userEmail,
+             password: password
+         });
+         
+         // Verify Project ID
+         if (result.projectId && result.projectId !== 'unknown' && result.projectId !== firebaseConfig.projectId) {
+             alert(`KRİTİK HATA: Yönetici API'si farklı bir Firebase projesine bağlı!\n\nClient Projesi: ${firebaseConfig.projectId}\nAPI Projesi: ${result.projectId}\n\nLütfen Vercel ayarlarındaki FIREBASE_SERVICE_ACCOUNT değişkenini kontrol edin.`);
+             throw new Error(`Project ID mismatch: Client=${firebaseConfig.projectId}, API=${result.projectId}`);
+         }
+         
+         uid = result.uid;
       } catch (authError: any) {
          // Check if error message contains "already in use" or similar code passed from API
          const errStr = authError.message || authError.toString();
