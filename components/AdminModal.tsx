@@ -759,10 +759,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             checked={newDeptUserIsDesigner}
                             onChange={(e) => {
                               setNewDeptUserIsDesigner(e.target.checked);
-                              if (e.target.checked) {
-                                setNewDeptUserIsKampanyaYapan(false);
-                                setNewDeptUserIsBusinessUnit(false);
-                              }
                             }}
                             className="w-4 h-4 rounded border-gray-300 dark:border-slate-600 text-violet-600 focus:ring-violet-500 bg-white dark:bg-slate-700"
                           />
@@ -775,10 +771,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             checked={newDeptUserIsKampanyaYapan}
                             onChange={(e) => {
                               setNewDeptUserIsKampanyaYapan(e.target.checked);
-                              if (e.target.checked) {
-                                setNewDeptUserIsDesigner(false);
-                                setNewDeptUserIsBusinessUnit(false);
-                              }
                             }}
                             className="w-4 h-4 rounded border-gray-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 bg-white dark:bg-slate-700"
                           />
@@ -791,10 +783,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             checked={newDeptUserIsBusinessUnit}
                             onChange={(e) => {
                               setNewDeptUserIsBusinessUnit(e.target.checked);
-                              if (e.target.checked) {
-                                setNewDeptUserIsDesigner(false);
-                                setNewDeptUserIsKampanyaYapan(false);
-                              }
                             }}
                             className="w-4 h-4 rounded border-gray-300 dark:border-slate-600 text-orange-600 focus:ring-orange-500 bg-white dark:bg-slate-700"
                           />
