@@ -1039,6 +1039,7 @@ function App() {
     try {
       // Enforce email
       const userEmail = email || `${username.toLowerCase().replace(/\s+/g, '')}@kampanyatakvim.com`;
+      const cleanPassword = password.trim();
 
       let uid = "";
       let serverProjectId = "unknown";
@@ -1047,10 +1048,10 @@ function App() {
         // Create user via Server-Side API (Reliable)
         // This avoids client-side auth conflicts
         const result = await callAdminApi({
-             action: 'createUser',
-             email: userEmail,
-             password: password
-         });
+            action: 'createUser',
+            email: userEmail,
+            password: cleanPassword
+        });
          
          // Verify Project ID
          serverProjectId = result.projectId;
@@ -1080,7 +1081,7 @@ function App() {
                    const result = await callAdminApi({
                         action: 'createUser',
                         email: userEmail,
-                        password: password
+                        password: cleanPassword
                     });
                    uid = result.uid;
                  } catch (retryError: any) {

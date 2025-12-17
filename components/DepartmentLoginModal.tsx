@@ -54,7 +54,7 @@ export const DepartmentLoginModal: React.FC<DepartmentLoginModalProps> = ({
         );
 
         try {
-            await signInWithEmailAndPassword(auth, email, password);
+            await signInWithEmailAndPassword(auth, email, password.trim());
             // Login successful
             setUsername('');
             setPassword('');
