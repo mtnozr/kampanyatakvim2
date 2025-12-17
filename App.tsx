@@ -876,6 +876,23 @@ function App() {
         (el as HTMLElement).style.whiteSpace = 'normal'; // Allow wrapping
       });
 
+      // 6. Fix Emoji Alignment for PDF Export
+      // html2canvas sometimes misaligns flex items with text/emojis.
+      // We force explicit flex centering and line-height.
+      const emojiAvatars = clone.querySelectorAll('[role="img"][aria-label="avatar"]');
+      emojiAvatars.forEach((el) => {
+        const element = el as HTMLElement;
+        element.style.display = 'flex';
+        element.style.alignItems = 'center';
+        element.style.justifyContent = 'center';
+        element.style.textAlign = 'center';
+        element.style.lineHeight = '20px'; // Match height (w-5 h-5 = 20px)
+        element.style.height = '20px';
+        element.style.width = '20px';
+        // Small vertical adjustment for emojis in Arial/System font context
+        element.style.paddingTop = '2px'; 
+      });
+
       // Chrome Fix: Wait for fonts to load and give layout engine time to settle
       await document.fonts.ready;
       await new Promise(resolve => setTimeout(resolve, 500));
