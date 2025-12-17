@@ -42,6 +42,12 @@ export const DepartmentLoginModal: React.FC<DepartmentLoginModalProps> = ({
             email = `${email.toLowerCase().replace(/\s+/g, '')}@kampanyatakvim.com`;
         }
 
+        // Check if user exists in Firestore (for better error messages)
+        const targetUser = departmentUsers.find(u => 
+            u.username.toLowerCase() === username.trim().toLowerCase() || 
+            (u.email && u.email.toLowerCase() === email.toLowerCase())
+        );
+
         try {
             await signInWithEmailAndPassword(auth, email, password);
             // Login successful
@@ -49,8 +55,28 @@ export const DepartmentLoginModal: React.FC<DepartmentLoginModalProps> = ({
             setPassword('');
             onClose();
         } catch (err: any) {
-            console.error(err);
-            setError('Giriş başarısız. Kullanıcı adı veya şifre hatalı.');
+            console.error("Login error:", err);
+            
+            if (err.code === 'auth/user-not-found') {
+                if (targetUser) {
+                     setError('Kullanıcı veritabanında var fakat giriş yetkisi (Auth) bulunamadı. Lütfen yönetici panelinden kullanıcıyı silip tekrar oluşturun.');
+                } else {
+                     setError('Kullanıcı bulunamadı.');
+                }
+            } else if (err.code === 'auth/wrong-password') {
+                setError('Şifre hatalı.');
+            } else if (err.code === 'auth/invalid-credential') {
+                // This could be either wrong password or user not found in some configs
+                if (targetUser) {
+                    setError('Giriş başarısız. Şifre hatalı olabilir veya kullanıcı kaydı bozuk (silip tekrar oluşturmayı deneyin).');
+                } else {
+                    setError('Kullanıcı adı veya şifre hatalı.');
+                }
+            } else if (err.code === 'auth/too-many-requests') {
+                setError('Çok fazla başarısız deneme. Lütfen biraz bekleyin.');
+            } else {
+                setError('Giriş başarısız: ' + err.message);
+            }
         } finally {
             setIsLoading(false);
         }
