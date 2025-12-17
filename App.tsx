@@ -2082,7 +2082,7 @@ function App() {
           </div>
 
           {/* Calendar Grid Body */}
-          <div className="grid grid-cols-7 gap-4 flex-1 auto-rows-fr">
+          <div className="grid grid-cols-7 gap-4 flex-1">
             {calendarDays.map((day) => {
               const isCurrentMonth = isSameMonth(day, currentDate);
               const isTodayDate = isToday(day);
