@@ -882,15 +882,28 @@ function App() {
       const emojiAvatars = clone.querySelectorAll('[role="img"][aria-label="avatar"]');
       emojiAvatars.forEach((el) => {
         const element = el as HTMLElement;
+        
+        // Reset layout to ensure clean centering
         element.style.display = 'flex';
         element.style.alignItems = 'center';
         element.style.justifyContent = 'center';
         element.style.textAlign = 'center';
-        element.style.lineHeight = '20px'; // Match height (w-5 h-5 = 20px)
-        element.style.height = '20px';
+        
+        // Force dimensions
         element.style.width = '20px';
-        // Small vertical adjustment for emojis in Arial/System font context
-        element.style.paddingTop = '2px'; 
+        element.style.height = '20px';
+        element.style.minWidth = '20px';
+        element.style.minHeight = '20px';
+        
+        // Typography adjustments for html2canvas
+        element.style.fontSize = '12px'; 
+        element.style.lineHeight = '1'; 
+        element.style.padding = '0';
+        element.style.margin = '0';
+        
+        // Ensure circular clipping
+        element.style.overflow = 'hidden';
+        element.style.borderRadius = '50%';
       });
 
       // Chrome Fix: Wait for fonts to load and give layout engine time to settle
