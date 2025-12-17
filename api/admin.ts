@@ -84,15 +84,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
         
         // Return project ID for client-side verification
-        // Extract project ID from service account if possible, or app options
         let projectId = 'unknown';
         try {
-            const cert = (admin.app().options.credential as any)?.certificate;
-            if (cert && cert.projectId) {
-                projectId = cert.projectId;
-            } else if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+            // Strategy 1: Check Environment Variable (Source of Truth)
+            if (process.env.FIREBASE_SERVICE_ACCOUNT) {
                  const sa = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-                 projectId = sa.project_id;
+                 if (sa.project_id) projectId = sa.project_id;
+            }
+            
+            // Strategy 2: Check Active Admin App Credential if Strategy 1 failed or wasn't available
+            if (projectId === 'unknown' && admin.apps.length > 0) {
+                const cert = (admin.app().options.credential as any)?.certificate;
+                if (cert && cert.projectId) {
+                    projectId = cert.projectId;
+                } else if (admin.app().options.projectId) {
+                    projectId = admin.app().options.projectId;
+                }
             }
         } catch (e) {
             console.error("Could not determine project ID", e);

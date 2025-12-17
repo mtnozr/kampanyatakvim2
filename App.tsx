@@ -1051,9 +1051,14 @@ function App() {
          });
          
          // Verify Project ID
-         if (result.projectId && result.projectId !== 'unknown' && result.projectId !== firebaseConfig.projectId) {
-             alert(`KRİTİK HATA: Yönetici API'si farklı bir Firebase projesine bağlı!\n\nClient Projesi: ${firebaseConfig.projectId}\nAPI Projesi: ${result.projectId}\n\nLütfen Vercel ayarlarındaki FIREBASE_SERVICE_ACCOUNT değişkenini kontrol edin.`);
-             throw new Error(`Project ID mismatch: Client=${firebaseConfig.projectId}, API=${result.projectId}`);
+         const serverProjectId = result.projectId;
+         const clientProjectId = firebaseConfig.projectId;
+         
+         if (serverProjectId === 'unknown') {
+             alert(`UYARI: Sunucu tarafındaki Firebase Proje ID'si doğrulanamadı.\n\nClient: ${clientProjectId}\nServer: Bilinmiyor\n\nKullanıcı oluşturulmuş olabilir ancak yanlış projede olabilir.`);
+         } else if (serverProjectId !== clientProjectId) {
+             alert(`KRİTİK HATA: Proje Uyuşmazlığı!\n\nClient (Tarayıcı): ${clientProjectId}\nServer (API): ${serverProjectId}\n\nBu durum, Vercel'deki 'FIREBASE_SERVICE_ACCOUNT' değişkeninin yanlış projeye ait olduğunu gösterir. Lütfen Vercel ayarlarını düzeltin.`);
+             throw new Error(`Project ID mismatch: Client=${clientProjectId}, API=${serverProjectId}`);
          }
          
          uid = result.uid;
