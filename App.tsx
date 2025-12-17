@@ -2082,7 +2082,7 @@ function App() {
           </div>
 
           {/* Calendar Grid Body */}
-          <div className="grid grid-cols-7 gap-4 flex-1 auto-rows-fr">
+          <div className="grid grid-cols-7 gap-4 flex-1">
             {calendarDays.map((day) => {
               const isCurrentMonth = isSameMonth(day, currentDate);
               const isTodayDate = isToday(day);
@@ -2109,7 +2109,7 @@ function App() {
                     }
                   }}
                   className={`
-                  relative h-[160px] p-2 rounded-2xl border transition-colors transition-shadow duration-200 group
+                  relative min-h-[120px] p-2 rounded-2xl border transition-colors transition-shadow duration-200 group
                   flex flex-col
                   ${isCurrentMonth
                       ? (isHoliday
