@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, LogIn, User as UserIcon, Lock, Eye, EyeOff } from 'lucide-react';
 import { DepartmentUser, Department } from '../types';
 import { auth } from '../firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, fetchSignInMethodsForEmail } from 'firebase/auth';
 
 interface DepartmentLoginModalProps {
     isOpen: boolean;
@@ -25,6 +25,15 @@ export const DepartmentLoginModal: React.FC<DepartmentLoginModalProps> = ({
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
+    // Helper to get constructed email
+    const getConstructedEmail = () => {
+        let email = username.trim();
+        if (email && !email.includes('@')) {
+            email = `${email.toLowerCase().replace(/\s+/g, '')}@kampanyatakvim.com`;
+        }
+        return email;
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
@@ -36,11 +45,7 @@ export const DepartmentLoginModal: React.FC<DepartmentLoginModalProps> = ({
 
         setIsLoading(true);
 
-        // Try to construct email if not provided as email
-        let email = username.trim();
-        if (!email.includes('@')) {
-            email = `${email.toLowerCase().replace(/\s+/g, '')}@kampanyatakvim.com`;
-        }
+        const email = getConstructedEmail();
 
         // Check if user exists in Firestore (for better error messages)
         const targetUser = departmentUsers.find(u => 
@@ -57,25 +62,35 @@ export const DepartmentLoginModal: React.FC<DepartmentLoginModalProps> = ({
         } catch (err: any) {
             console.error("Login error:", err);
             
-            if (err.code === 'auth/user-not-found') {
-                if (targetUser) {
-                     setError('Kullanıcı veritabanında var fakat giriş yetkisi (Auth) bulunamadı. Lütfen yönetici panelinden kullanıcıyı silip tekrar oluşturun.');
+            // Diagnostics
+            let diagnosticMsg = '';
+            try {
+                // Check if user exists in Auth
+                const methods = await fetchSignInMethodsForEmail(auth, email);
+                if (methods.length === 0) {
+                    diagnosticMsg = ` (Auth kontrolü: Bu e-posta (${email}) ile kayıtlı kullanıcı bulunamadı!)`;
                 } else {
-                     setError('Kullanıcı bulunamadı.');
+                    diagnosticMsg = ` (Auth kontrolü: Kullanıcı mevcut, yöntemler: ${methods.join(', ')})`;
+                }
+            } catch (diagErr: any) {
+                console.warn("Diagnostic check failed:", diagErr);
+                if (diagErr.code === 'auth/invalid-email') {
+                    diagnosticMsg = ` (Geçersiz e-posta formatı: ${email})`;
+                }
+            }
+
+            if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+                if (targetUser) {
+                     setError(`Giriş başarısız. Veritabanında kullanıcı var ancak şifre yanlış veya Auth kaydı eksik.${diagnosticMsg}`);
+                } else {
+                     setError(`Kullanıcı bulunamadı.${diagnosticMsg}`);
                 }
             } else if (err.code === 'auth/wrong-password') {
-                setError('Şifre hatalı.');
-            } else if (err.code === 'auth/invalid-credential') {
-                // This could be either wrong password or user not found in some configs
-                if (targetUser) {
-                    setError('Giriş başarısız. Şifre hatalı olabilir veya kullanıcı kaydı bozuk (silip tekrar oluşturmayı deneyin).');
-                } else {
-                    setError('Kullanıcı adı veya şifre hatalı.');
-                }
+                setError(`Şifre hatalı.${diagnosticMsg}`);
             } else if (err.code === 'auth/too-many-requests') {
                 setError('Çok fazla başarısız deneme. Lütfen biraz bekleyin.');
             } else {
-                setError('Giriş başarısız: ' + err.message);
+                setError(`Giriş başarısız: ${err.message}${diagnosticMsg}`);
             }
         } finally {
             setIsLoading(false);
