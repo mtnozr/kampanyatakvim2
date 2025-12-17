@@ -70,7 +70,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { action, uid, email } = req.body;
+    const { action, uid, email, password } = req.body;
+
+    if (action === 'createUser') {
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password required for creation' });
+      }
+
+      try {
+        const userRecord = await admin.auth().createUser({
+          email: email,
+          password: password,
+        });
+        return res.status(200).json({ uid: userRecord.uid, message: 'User created successfully' });
+      } catch (error: any) {
+        // If user already exists, we might want to return that info or handle it
+        if (error.code === 'auth/email-already-exists') {
+             // Optional: Update the password if it already exists?
+             // For now, let's just fail or return the existing user if we wanted to be idempotent
+             // But standard behavior is to error.
+             return res.status(400).json({ error: 'Bu e-posta adresi zaten kullanımda.', code: error.code });
+        }
+        throw error;
+      }
+    }
 
     if (action === 'deleteUser') {
       if (uid) {

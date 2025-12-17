@@ -60,8 +60,8 @@ import {
   getDoc
 } from 'firebase/firestore';
 import { auth } from './firebase';
-import { createUserWithEmailAndPassword, getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence, inMemoryPersistence } from 'firebase/auth';
-import { initializeApp, getApps, getApp, deleteApp } from 'firebase/app';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+
 
 // --- EMAILJS CONFIGURATION ---
 const EMAILJS_SERVICE_ID = 'service_q4mufkj';
@@ -1040,28 +1040,20 @@ function App() {
       // Enforce email
       const userEmail = email || `${username.toLowerCase().replace(/\s+/g, '')}@kampanyatakvim.com`;
 
-      // Create user in Firebase Auth using a secondary app instance to avoid logging out the current admin
-      // This is a client-side workaround since we don't have Cloud Functions
-      
-      // Check if SecondaryApp is already initialized to avoid "App named 'SecondaryApp' already exists" error
-      let secondaryApp = getApps().find(app => app.name === "SecondaryApp");
-      if (!secondaryApp) {
-        secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
-      }
-      
-      const secondaryAuth = getAuth(secondaryApp);
-      
-      // IMPORTANT: Set persistence to NONE (inMemory) so that signing in this new user 
-      // on the secondary app doesn't affect the main app's session (Admin's session).
-      await setPersistence(secondaryAuth, inMemoryPersistence);
-      
       let uid = "";
       try {
-        const userCredential = await createUserWithEmailAndPassword(secondaryAuth, userEmail, password);
-        uid = userCredential.user.uid;
-        await signOut(secondaryAuth); // Sign out from secondary app immediately
+        // Create user via Server-Side API (Reliable)
+        // This avoids client-side auth conflicts
+        const result = await callAdminApi({
+            action: 'createUser',
+            email: userEmail,
+            password: password
+        });
+        uid = result.uid;
       } catch (authError: any) {
-         if (authError.code === 'auth/email-already-in-use') {
+         // Check if error message contains "already in use" or similar code passed from API
+         const errStr = authError.message || authError.toString();
+         if (errStr.includes('auth/email-already-in-use') || errStr.includes('already in use') || errStr.includes('zaten kullanımda')) {
              // Ask admin if they want to overwrite the old auth user
              if (confirm('Bu e-posta adresi (' + userEmail + ') ile kayıtlı eski bir kullanıcı (Auth) bulundu. Veritabanı kaydı yoksa bu "hayalet" bir kayıt olabilir.\n\nEski Auth kaydını silip yenisini oluşturmak ister misiniz?')) {
                 try {
@@ -1070,11 +1062,13 @@ function App() {
                    
                    // Retry creation
                    addToast('Kullanıcı yeniden oluşturuluyor...', 'info');
-                   const userCredential = await createUserWithEmailAndPassword(secondaryAuth, userEmail, password);
-                   uid = userCredential.user.uid;
-                   await signOut(secondaryAuth);
+                   const result = await callAdminApi({
+                        action: 'createUser',
+                        email: userEmail,
+                        password: password
+                    });
+                   uid = result.uid;
                  } catch (retryError: any) {
-                    // Extract exact error message
                     const msg = retryError.message || retryError.toString();
                     throw new Error('Temizleme ve yeniden oluşturma başarısız: ' + msg);
                  }
