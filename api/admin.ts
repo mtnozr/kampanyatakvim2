@@ -83,32 +83,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           password: password,
         });
         
-        // Return project ID for client-side verification
+        // Return project ID and service account email for verification
         let projectId = 'unknown';
+        let serviceAccountEmail = 'unknown';
+
         try {
             // Strategy 1: Check Environment Variable (Source of Truth)
             if (process.env.FIREBASE_SERVICE_ACCOUNT) {
                  const sa = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
                  if (sa.project_id) projectId = sa.project_id;
+                 if (sa.client_email) serviceAccountEmail = sa.client_email;
             }
             
-            // Strategy 2: Check Active Admin App Credential if Strategy 1 failed or wasn't available
+            // Strategy 2: Check Active Admin App Credential
             if (projectId === 'unknown' && admin.apps.length > 0) {
                 const cert = (admin.app().options.credential as any)?.certificate;
-                if (cert && cert.projectId) {
-                    projectId = cert.projectId;
+                if (cert) {
+                    if (cert.projectId) projectId = cert.projectId;
+                    if (cert.clientEmail) serviceAccountEmail = cert.clientEmail;
                 } else if (admin.app().options.projectId) {
                     projectId = admin.app().options.projectId;
                 }
             }
         } catch (e) {
-            console.error("Could not determine project ID", e);
+            console.error('Error extracting project ID:', e);
         }
-        
+
         return res.status(200).json({ 
             uid: userRecord.uid, 
             message: 'User created successfully',
-            projectId: projectId
+            projectId,
+            serviceAccountEmail
         });
       } catch (error: any) {
         // If user already exists, we might want to return that info or handle it

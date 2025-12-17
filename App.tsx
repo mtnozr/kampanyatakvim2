@@ -1041,6 +1041,8 @@ function App() {
       const userEmail = email || `${username.toLowerCase().replace(/\s+/g, '')}@kampanyatakvim.com`;
 
       let uid = "";
+      let serverProjectId = "unknown";
+
       try {
         // Create user via Server-Side API (Reliable)
         // This avoids client-side auth conflicts
@@ -1051,13 +1053,14 @@ function App() {
          });
          
          // Verify Project ID
-         const serverProjectId = result.projectId;
+         serverProjectId = result.projectId;
+         const serverEmail = result.serviceAccountEmail;
          const clientProjectId = firebaseConfig.projectId;
          
          if (serverProjectId === 'unknown') {
              alert(`UYARI: Sunucu tarafındaki Firebase Proje ID'si doğrulanamadı.\n\nClient: ${clientProjectId}\nServer: Bilinmiyor\n\nKullanıcı oluşturulmuş olabilir ancak yanlış projede olabilir.`);
          } else if (serverProjectId !== clientProjectId) {
-             alert(`KRİTİK HATA: Proje Uyuşmazlığı!\n\nClient (Tarayıcı): ${clientProjectId}\nServer (API): ${serverProjectId}\n\nBu durum, Vercel'deki 'FIREBASE_SERVICE_ACCOUNT' değişkeninin yanlış projeye ait olduğunu gösterir. Lütfen Vercel ayarlarını düzeltin.`);
+             alert(`KRİTİK HATA: Proje Uyuşmazlığı!\n\nClient (Tarayıcı): ${clientProjectId}\nServer (API): ${serverProjectId}\nServer Email: ${serverEmail}\n\nBu durum, Vercel'deki 'FIREBASE_SERVICE_ACCOUNT' değişkeninin yanlış projeye ait olduğunu gösterir. Lütfen Vercel ayarlarını düzeltin.`);
              throw new Error(`Project ID mismatch: Client=${clientProjectId}, API=${serverProjectId}`);
          }
          
@@ -1103,7 +1106,7 @@ function App() {
         email: userEmail,
         createdAt: Timestamp.now()
       });
-      addToast(`${username} kullanıcısı eklendi.`, 'success');
+      addToast(`${username} kullanıcısı eklendi. (Server: ${serverProjectId})`, 'success');
     } catch (e: any) {
       console.error(e);
       addToast(`Kullanıcı eklenemedi: ${e.message}`, 'info');

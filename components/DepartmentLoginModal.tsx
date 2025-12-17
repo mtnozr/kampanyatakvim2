@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, LogIn, User as UserIcon, Lock, Eye, EyeOff } from 'lucide-react';
 import { DepartmentUser, Department } from '../types';
-import { auth } from '../firebase';
+import { auth, firebaseConfig } from '../firebase';
 import { signInWithEmailAndPassword, fetchSignInMethodsForEmail } from 'firebase/auth';
 
 interface DepartmentLoginModalProps {
@@ -68,14 +68,16 @@ export const DepartmentLoginModal: React.FC<DepartmentLoginModalProps> = ({
                 // Check if user exists in Auth
                 const methods = await fetchSignInMethodsForEmail(auth, email);
                 if (methods.length === 0) {
-                    diagnosticMsg = ` (Auth kontrolü: Bu e-posta (${email}) ile kayıtlı kullanıcı bulunamadı!)`;
+                    diagnosticMsg = ` (Auth kontrolü: Bu e-posta (${email}) ile kayıtlı kullanıcı bulunamadı! Proje: ${firebaseConfig.projectId})`;
                 } else {
-                    diagnosticMsg = ` (Auth kontrolü: Kullanıcı mevcut, yöntemler: ${methods.join(', ')})`;
+                    diagnosticMsg = ` (Auth kontrolü: Kullanıcı mevcut, yöntemler: ${methods.join(', ')}. Proje: ${firebaseConfig.projectId})`;
                 }
             } catch (diagErr: any) {
                 console.warn("Diagnostic check failed:", diagErr);
                 if (diagErr.code === 'auth/invalid-email') {
                     diagnosticMsg = ` (Geçersiz e-posta formatı: ${email})`;
+                } else {
+                    diagnosticMsg = ` (Auth kontrol hatası: ${diagErr.message}. Proje: ${firebaseConfig.projectId})`;
                 }
             }
 
