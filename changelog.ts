@@ -6,6 +6,15 @@ export interface Version {
 
 export const changelog: Version[] = [
   {
+    version: 'v1.3.0',
+    date: '17.12.2025',
+    notes: [
+      'feat: Designer ekranına birim bazlı filtreleme (Tüm Birimler seçeneği ile) özelliği eklendi.',
+      'fix: Yönetici panelinde kullanıcı düzenleme ve iptal işlemleri için butonlar eklendi.',
+      'fix: Yönetici panelinde şifre alanı placeholder metni güncellendi.'
+    ]
+  },
+  {
     version: 'v1.2.0',
     date: '16.12.2024',
     notes: [
