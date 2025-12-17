@@ -41,7 +41,6 @@ import { setCookie, getCookie, deleteCookie } from './utils/cookies';
 import { calculateMonthlyChampion } from './utils/gamification';
 
 // --- FIREBASE IMPORTS ---
-import { initializeApp } from 'firebase/app';
 import { db, firebaseConfig } from './firebase';
 import {
   collection,
@@ -61,7 +60,8 @@ import {
   getDoc
 } from 'firebase/firestore';
 import { auth } from './firebase';
-import { createUserWithEmailAndPassword, getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import { createUserWithEmailAndPassword, getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence, inMemoryPersistence } from 'firebase/auth';
+import { initializeApp, getApps, getApp, deleteApp } from 'firebase/app';
 
 // --- EMAILJS CONFIGURATION ---
 const EMAILJS_SERVICE_ID = 'service_q4mufkj';
@@ -1042,8 +1042,18 @@ function App() {
 
       // Create user in Firebase Auth using a secondary app instance to avoid logging out the current admin
       // This is a client-side workaround since we don't have Cloud Functions
-      const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
+      
+      // Check if SecondaryApp is already initialized to avoid "App named 'SecondaryApp' already exists" error
+      let secondaryApp = getApps().find(app => app.name === "SecondaryApp");
+      if (!secondaryApp) {
+        secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
+      }
+      
       const secondaryAuth = getAuth(secondaryApp);
+      
+      // IMPORTANT: Set persistence to NONE (inMemory) so that signing in this new user 
+      // on the secondary app doesn't affect the main app's session (Admin's session).
+      await setPersistence(secondaryAuth, inMemoryPersistence);
       
       let uid = "";
       try {
