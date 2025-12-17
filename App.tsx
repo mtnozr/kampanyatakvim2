@@ -13,7 +13,7 @@ import {
   startOfWeek
 } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Bell, ChevronLeft, ChevronRight, Plus, Users, ClipboardList, Loader2, Search, Filter, X, LogIn, LogOut, Database, Download, Lock, Megaphone, PieChart, CheckSquare, StickyNote, Trash2 } from 'lucide-react';
+import { Bell, ChevronLeft, ChevronRight, Plus, Users, ClipboardList, Loader2, Search, Filter, X, LogIn, LogOut, Database, Download, Lock, Megaphone, PieChart, CheckSquare, StickyNote, Trash2, Timer } from 'lucide-react';
 import emailjs from '@emailjs/browser';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -34,6 +34,7 @@ import { AnnouncementBoard } from './components/AnnouncementBoard';
 import { AnnouncementPopup } from './components/AnnouncementPopup';
 import { ReportsDashboard } from './components/ReportsDashboard';
 import { DesignerCampaignsModal } from './components/DesignerCampaignsModal';
+import { CampaignMonitoringModal } from './components/CampaignMonitoringModal';
 import { MyTasksModal } from './components/MyTasksModal';
 import { ThemeToggle } from './components/ThemeToggle';
 import { useTheme } from './hooks/useTheme';
@@ -120,6 +121,7 @@ function App() {
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [isIncomingRequestsModalOpen, setIsIncomingRequestsModalOpen] = useState(false);
   const [isDesignerCampaignsModalOpen, setIsDesignerCampaignsModalOpen] = useState(false);
+  const [isCampaignMonitoringModalOpen, setIsCampaignMonitoringModalOpen] = useState(false);
   const [requestModalDate, setRequestModalDate] = useState<Date | undefined>(undefined);
   const [convertingRequest, setConvertingRequest] = useState<WorkRequest | null>(null);
 
@@ -131,7 +133,7 @@ function App() {
   // Refactor: Store ID instead of object to ensure reactivity
   const [viewEventId, setViewEventId] = useState<string | null>(null);
   const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null);
-  
+
   // Refresh Key for manual data reload
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -162,21 +164,21 @@ function App() {
         const q = query(collection(db, "departmentUsers"), where("uid", "==", user.uid));
         try {
           const querySnapshot = await getDocs(q);
-          
+
           if (!querySnapshot.empty) {
             // It IS a Department User
             const deptUserDoc = querySnapshot.docs[0];
             const deptUserData = { ...deptUserDoc.data(), id: deptUserDoc.id } as DepartmentUser;
-            
+
             setLoggedInDeptUser(deptUserData);
             setIsDesigner(!!deptUserData.isDesigner);
             setIsKampanyaYapan(!!deptUserData.isKampanyaYapan);
-            
+
             // Only show welcome toast if not recently shown (optional, but simple toast is fine)
             // addToast(`Hoşgeldiniz, ${deptUserData.username}`, 'success');
           } else {
             // It is NOT a Department User (It's a Super Admin)
-            setLoggedInDeptUser(null); 
+            setLoggedInDeptUser(null);
             setIsDesigner(true); // Super admins are designers by default
             setIsKampanyaYapan(false);
           }
@@ -329,7 +331,7 @@ function App() {
       if (doc.exists()) {
         const data = doc.data() as { enabled: boolean; time: string };
         setAutoThemeConfig(data);
-        
+
         // Check if we should switch theme right now
         if (data.enabled && data.time) {
           const now = new Date();
@@ -348,7 +350,7 @@ function App() {
     // 1. Listen for Gamification Config (Enable/Disable)
     const unsubscribeConfig = onSnapshot(doc(db, "system_settings", "gamification_config"), (docSnap) => {
       const isEnabled = docSnap.exists() ? docSnap.data().enabled : true; // Default to true if not set
-      
+
       if (isEnabled) {
         // Initial check/calculation only if enabled
         calculateMonthlyChampion();
@@ -363,7 +365,7 @@ function App() {
       // Simpler: Just fetch config or assume if we get an update, we might want to show it.
       // BUT, if disabled, we should force null. 
       // Let's check config one-off here or better, combine logic.
-      
+
       const configSnap = await import('firebase/firestore').then(mod => mod.getDoc(doc(db, "system_settings", "gamification_config")));
       const isEnabled = configSnap.exists() ? configSnap.data()?.enabled : true;
 
@@ -439,7 +441,7 @@ function App() {
       // Parse configured time
       const [configHours, configMinutes] = autoThemeConfig.time.split(':').map(Number);
       const configTimeInMinutes = configHours * 60 + configMinutes;
-      
+
       // Default end time is 09:00
       const endTimeInMinutes = 9 * 60; // 09:00
 
@@ -471,12 +473,12 @@ function App() {
         // If currently it's early morning (e.g. 01:00) and start time was 20:00, 
         // then the start point was yesterday.
         if (isNightShift && currentTimeInMinutes < endTimeInMinutes) {
-             lastStartPoint.setDate(lastStartPoint.getDate() - 1);
+          lastStartPoint.setDate(lastStartPoint.getDate() - 1);
         }
 
         // If user manually changed it AFTER the start point, respect it.
         if (manualOverrideTime > lastStartPoint.getTime()) {
-           return;
+          return;
         }
 
         if (theme === 'light') {
@@ -487,27 +489,27 @@ function App() {
           }
         }
       } else if (!shouldBeDark && theme === 'dark') {
-         // Should be light.
-         // Check if user manually set it to Dark recently.
-         
-         // Calculate the start time of the current "light session" (which starts at 09:00)
-         let lastLightStart = new Date(now);
-         lastLightStart.setHours(9, 0, 0, 0);
-         
-         // If we are before 09:00, but !shouldBeDark (meaning config time is later),
-         // actually this block executes when we are NOT in the dark window.
-         
-         // If we are before 09:00, we normally WOULD be in dark window (if night shift).
-         // So usually this runs after 09:00.
-         
-         // If manual override happened after 09:00 today, respect it.
-         // If manual override happened yesterday, ignore it (new day, new light).
-         
-         if (manualOverrideTime > lastLightStart.getTime()) {
-             return;
-         }
-         
-         setTheme('light');
+        // Should be light.
+        // Check if user manually set it to Dark recently.
+
+        // Calculate the start time of the current "light session" (which starts at 09:00)
+        let lastLightStart = new Date(now);
+        lastLightStart.setHours(9, 0, 0, 0);
+
+        // If we are before 09:00, but !shouldBeDark (meaning config time is later),
+        // actually this block executes when we are NOT in the dark window.
+
+        // If we are before 09:00, we normally WOULD be in dark window (if night shift).
+        // So usually this runs after 09:00.
+
+        // If manual override happened after 09:00 today, respect it.
+        // If manual override happened yesterday, ignore it (new day, new light).
+
+        if (manualOverrideTime > lastLightStart.getTime()) {
+          return;
+        }
+
+        setTheme('light');
       }
     };
 
@@ -627,15 +629,15 @@ function App() {
     return announcements.filter(ann => {
       // 1. Admin (Firebase Auth) sees all
       if (!loggedInDeptUser && auth.currentUser) return true;
-      
+
       // 2. Designer (Department User with role) sees all
-      if (isDesigner) return true; 
-      
+      if (isDesigner) return true;
+
       // 3. Kampanya Yapan (Department User with role) sees 'all' and 'kampanya'
       if (isKampanyaYapan) {
         return ann.visibleTo === 'all' || ann.visibleTo === 'kampanya';
       }
-      
+
       // 4. Business Unit (Department User without above roles) sees only 'all'
       // Note: If you want Business Units to see 'kampanya' announcements, add logic here.
       // Currently strictly following the label "Kampanya Yapan ve Admin"
@@ -655,7 +657,7 @@ function App() {
     if (!loggedInDeptUser && auth.currentUser) {
       userId = auth.currentUser.uid;
     }
-    
+
     if (userId === 'guest') return 0; // Don't show badge for guests
 
     return filteredAnnouncements.filter(ann => !ann.readBy || !ann.readBy.includes(userId)).length;
@@ -788,7 +790,7 @@ function App() {
       container.style.position = 'fixed';
       container.style.top = '0';
       container.style.left = '0';
-      container.style.zIndex = '-9999'; 
+      container.style.zIndex = '-9999';
       container.style.backgroundColor = '#ffffff';
       container.style.padding = '20px';
       container.style.fontFamily = 'Arial, Helvetica, sans-serif'; // Use system font for Turkish char support
@@ -804,7 +806,7 @@ function App() {
 
       // Left side: Title and Month
       const headerLeft = document.createElement('div');
-      
+
       const title = document.createElement('h1');
       title.innerText = 'KAMPANYA YÖNETİMİ TAKVİMİ';
       title.style.fontSize = '28px';
@@ -812,7 +814,7 @@ function App() {
       title.style.color = '#111827';
       title.style.margin = '0';
       title.style.lineHeight = '1.2';
-      
+
       const subtitle = document.createElement('div');
       subtitle.innerText = format(currentDate, 'MMMM yyyy', { locale: tr }).toLocaleUpperCase('tr-TR');
       subtitle.style.fontSize = '20px';
@@ -907,7 +909,7 @@ function App() {
 
       const imgWidth = canvas.width;
       const imgHeight = canvas.height;
-      
+
       // Calculate ratio to fit width with minimal margins (5mm each side)
       const marginX = 5;
       const availableWidth = pdfWidth - (2 * marginX);
@@ -939,10 +941,10 @@ function App() {
         createdBy: user,
         readBy: []
       });
-      
+
       // Prevent popup for the creator
       localStorage.setItem('dismissed_announcement_id', docRef.id);
-      
+
       // Log action
       await addDoc(collection(db, "logs"), {
         message: `${user} yeni bir duyuru yayınladı: "${title}"`,
@@ -962,13 +964,13 @@ function App() {
     if (!loggedInDeptUser && auth.currentUser) {
       userId = auth.currentUser.uid;
     }
-    
+
     if (userId === 'guest') return; // Don't track guests in Firestore
 
     // Filter only those not already read by this user
     const unreadIds = ids.filter(id => {
-       const ann = announcements.find(a => a.id === id);
-       return ann && (!ann.readBy || !ann.readBy.includes(userId));
+      const ann = announcements.find(a => a.id === id);
+      return ann && (!ann.readBy || !ann.readBy.includes(userId));
     });
 
     if (unreadIds.length === 0) return;
@@ -976,10 +978,10 @@ function App() {
     // Batch update
     const batch = writeBatch(db);
     unreadIds.forEach(id => {
-       const ref = doc(db, "announcements", id);
-       batch.update(ref, {
-          readBy: arrayUnion(userId)
-       });
+      const ref = doc(db, "announcements", id);
+      batch.update(ref, {
+        readBy: arrayUnion(userId)
+      });
     });
 
     try {
@@ -993,7 +995,7 @@ function App() {
     try {
       const user = loggedInDeptUser ? loggedInDeptUser.username : 'Admin';
       await deleteDoc(doc(db, "announcements", id));
-      
+
       // Log action
       await addDoc(collection(db, "logs"), {
         message: `${user} bir duyuruyu sildi.`,
@@ -1013,19 +1015,19 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      
+
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'API işlemi başarısız');
       }
-      
+
       return result;
     } catch (error: any) {
       console.error("API Call Error:", error);
       if (error instanceof SyntaxError && error.message.includes('JSON')) {
-          // This usually happens when Vercel returns an HTML 500 page instead of JSON
-          throw new Error("Sunucu hatası (API): Geçersiz yanıt formatı. (Environment variable sorunu olabilir)");
+        // This usually happens when Vercel returns an HTML 500 page instead of JSON
+        throw new Error("Sunucu hatası (API): Geçersiz yanıt formatı. (Environment variable sorunu olabilir)");
       }
       // Check if we are on localhost
       if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -1044,36 +1046,36 @@ function App() {
       // This is a client-side workaround since we don't have Cloud Functions
       const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
       const secondaryAuth = getAuth(secondaryApp);
-      
+
       let uid = "";
       try {
         const userCredential = await createUserWithEmailAndPassword(secondaryAuth, userEmail, password);
         uid = userCredential.user.uid;
         await signOut(secondaryAuth); // Sign out from secondary app immediately
       } catch (authError: any) {
-         if (authError.code === 'auth/email-already-in-use') {
-             // Ask admin if they want to overwrite the old auth user
-             if (confirm('Bu e-posta adresi (' + userEmail + ') ile kayıtlı eski bir kullanıcı (Auth) bulundu. Veritabanı kaydı yoksa bu "hayalet" bir kayıt olabilir.\n\nEski Auth kaydını silip yenisini oluşturmak ister misiniz?')) {
-                try {
-                   addToast('Eski Auth kaydı temizleniyor...', 'info');
-                   await callAdminApi({ action: 'deleteUser', email: userEmail });
-                   
-                   // Retry creation
-                   addToast('Kullanıcı yeniden oluşturuluyor...', 'info');
-                   const userCredential = await createUserWithEmailAndPassword(secondaryAuth, userEmail, password);
-                   uid = userCredential.user.uid;
-                   await signOut(secondaryAuth);
-                 } catch (retryError: any) {
-                    // Extract exact error message
-                    const msg = retryError.message || retryError.toString();
-                    throw new Error('Temizleme ve yeniden oluşturma başarısız: ' + msg);
-                 }
-             } else {
-                throw new Error('Bu e-posta adresi zaten kullanımda.');
-             }
-         } else {
-             throw authError;
-         }
+        if (authError.code === 'auth/email-already-in-use') {
+          // Ask admin if they want to overwrite the old auth user
+          if (confirm('Bu e-posta adresi (' + userEmail + ') ile kayıtlı eski bir kullanıcı (Auth) bulundu. Veritabanı kaydı yoksa bu "hayalet" bir kayıt olabilir.\n\nEski Auth kaydını silip yenisini oluşturmak ister misiniz?')) {
+            try {
+              addToast('Eski Auth kaydı temizleniyor...', 'info');
+              await callAdminApi({ action: 'deleteUser', email: userEmail });
+
+              // Retry creation
+              addToast('Kullanıcı yeniden oluşturuluyor...', 'info');
+              const userCredential = await createUserWithEmailAndPassword(secondaryAuth, userEmail, password);
+              uid = userCredential.user.uid;
+              await signOut(secondaryAuth);
+            } catch (retryError: any) {
+              // Extract exact error message
+              const msg = retryError.message || retryError.toString();
+              throw new Error('Temizleme ve yeniden oluşturma başarısız: ' + msg);
+            }
+          } else {
+            throw new Error('Bu e-posta adresi zaten kullanımda.');
+          }
+        } else {
+          throw authError;
+        }
       }
 
       await addDoc(collection(db, "departmentUsers"), {
@@ -1100,17 +1102,17 @@ function App() {
 
       // 1. Try to delete from Auth via API
       if (userToDelete?.uid || userToDelete?.email) {
-          try {
-              await callAdminApi({ 
-                  action: 'deleteUser', 
-                  uid: userToDelete.uid,
-                  email: userToDelete.email 
-              });
-              addToast('Auth kaydı silindi.', 'success');
-          } catch (apiErr: any) {
-              console.warn("Auth deletion failed:", apiErr);
-              addToast('Auth silinemedi (API hatası). Sadece veritabanından siliniyor.', 'info');
-          }
+        try {
+          await callAdminApi({
+            action: 'deleteUser',
+            uid: userToDelete.uid,
+            email: userToDelete.email
+          });
+          addToast('Auth kaydı silindi.', 'success');
+        } catch (apiErr: any) {
+          console.warn("Auth deletion failed:", apiErr);
+          addToast('Auth silinemedi (API hatası). Sadece veritabanından siliniyor.', 'info');
+        }
       }
 
       await deleteDoc(doc(db, "departmentUsers", id));
@@ -1121,9 +1123,9 @@ function App() {
   };
 
   const handleDepartmentLogin = (user: DepartmentUser) => {
-     // Legacy handler - logic moved to onAuthStateChanged but keeping for now if needed by modal
-     // But modal should now do auth login.
-     // We'll update this to just do nothing or be deprecated.
+    // Legacy handler - logic moved to onAuthStateChanged but keeping for now if needed by modal
+    // But modal should now do auth login.
+    // We'll update this to just do nothing or be deprecated.
   };
 
   const handleDepartmentLogout = async () => {
@@ -1146,22 +1148,22 @@ function App() {
     try {
       // Update in Firebase Auth
       const { updatePassword, EmailAuthProvider, reauthenticateWithCredential } = await import('firebase/auth');
-      
+
       // Re-authenticate user before changing password
       const credential = EmailAuthProvider.credential(auth.currentUser.email, currentPassword);
       await reauthenticateWithCredential(auth.currentUser, credential);
 
       await updatePassword(auth.currentUser, newPassword);
-      
+
       addToast('Şifreniz başarıyla güncellendi.', 'success');
     } catch (error: any) {
       console.error("Error updating password:", error);
       if (error.code === 'auth/wrong-password') {
-          throw new Error('Mevcut şifre hatalı.');
+        throw new Error('Mevcut şifre hatalı.');
       } else if (error.code === 'auth/requires-recent-login') {
-          throw new Error('Güvenlik nedeniyle yeniden giriş yapmalısınız.');
+        throw new Error('Güvenlik nedeniyle yeniden giriş yapmalısınız.');
       } else {
-          throw new Error('Şifre güncellenemedi.');
+        throw new Error('Şifre güncellenemedi.');
       }
     }
   };
@@ -1226,7 +1228,7 @@ function App() {
         note: noteContent,
         updatedAt: Timestamp.now()
       });
-      
+
       addToast('Not eklendi.', 'success');
       setIsNoteModalOpen(false);
       setNoteContent('');
@@ -1290,12 +1292,12 @@ function App() {
       if (convertingRequest) {
         const reqRef = doc(db, "work_requests", convertingRequest.id);
         await updateDoc(reqRef, { status: 'approved' });
-        
+
         // If assigned and there's a requester email, send notification to requester
         if (assigneeId && convertingRequest.requesterEmail) {
           const formattedRequestDate = format(convertingRequest.createdAt instanceof Timestamp ? convertingRequest.createdAt.toDate() : convertingRequest.createdAt, 'd MMMM yyyy HH:mm', { locale: tr });
           const requesterEmailMessage = `${formattedRequestDate} tarihinde talep ettiğiniz "${title}" kampanya/bilgilendirme için iş planlaması yapılmıştır.`;
-          
+
           const requesterParams = {
             to_email: convertingRequest.requesterEmail,
             cc: 'kampanyayonetimi@vakifbank.com.tr',
@@ -1373,9 +1375,9 @@ function App() {
             publicKey: EMAILJS_PUBLIC_KEY,
             params: templateParams
           });
-          
+
           const response = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY);
-          
+
           console.log('✅ EmailJS Başarılı:', response);
           addToast(`✅ E-posta gönderildi: ${assignedUser.email}`, 'success');
         } catch (error: any) {
@@ -1385,11 +1387,11 @@ function App() {
             text: error.text,
             status: error.status
           });
-          
+
           const errorMsg = error.text || error.message || 'Bilinmeyen hata';
           addToast(`❌ E-posta hatası: ${errorMsg}`, 'info');
           addToast('Mail istemcisi açılıyor...', 'info');
-          
+
           setTimeout(() => {
             const subject = encodeURIComponent(`${subjectPrefix}Görev Ataması: ${title} - Kampanya Görev Ataması`);
             const body = encodeURIComponent(`Merhaba ${assignedUser.name},\n\n${emailMessage}\n\n----------------\n${footerIdText}`);
@@ -1409,18 +1411,18 @@ function App() {
       const eventData = eventSnap.exists() ? eventSnap.data() : null;
 
       await deleteDoc(doc(db, "events", id));
-      
-      if (eventData) {
-         // Find assignee name
-         const assignee = users.find(u => u.id === eventData.assigneeId);
-         const assigneeName = assignee ? assignee.name : 'Bilinmeyen Kullanıcı';
 
-         await addDoc(collection(db, "notifications"), {
+      if (eventData) {
+        // Find assignee name
+        const assignee = users.find(u => u.id === eventData.assigneeId);
+        const assigneeName = assignee ? assignee.name : 'Bilinmeyen Kullanıcı';
+
+        await addDoc(collection(db, "notifications"), {
           title: 'Kampanya Silindi',
           message: `${assigneeName} kişisine atanan "${eventData.title}" kampanyası silindi.`,
           date: Timestamp.now(),
           isRead: false,
-          type: 'alert' 
+          type: 'alert'
         });
       }
 
@@ -1442,10 +1444,10 @@ function App() {
       // 1. Fetch current document to check status change
       const eventRef = doc(db, "events", eventId);
       const eventSnap = await getDoc(eventRef);
-      
+
       if (eventSnap.exists()) {
         const currentEvent = eventSnap.data() as CalendarEvent;
-        
+
         // Add Updated At
         updateData.updatedAt = Timestamp.now();
 
@@ -1466,26 +1468,26 @@ function App() {
           let notifType: 'info' | 'success' | 'alert' | 'warning' = 'info';
 
           if (updates.status === 'Tamamlandı') {
-             notifTitle = 'Kampanya Tamamlandı';
-             notifMsg = `"${currentEvent.title}" kampanyası tamamlandı.`;
-             notifType = 'success';
+            notifTitle = 'Kampanya Tamamlandı';
+            notifMsg = `"${currentEvent.title}" kampanyası tamamlandı.`;
+            notifType = 'success';
           } else if (updates.status === 'İptal Edildi') {
-             notifTitle = 'Kampanya İptal Edildi';
-             notifMsg = `"${currentEvent.title}" kampanyası iptal edildi.`;
-             notifType = 'alert';
+            notifTitle = 'Kampanya İptal Edildi';
+            notifMsg = `"${currentEvent.title}" kampanyası iptal edildi.`;
+            notifType = 'alert';
           } else if (updates.status === 'Planlandı') {
-             notifTitle = 'Kampanya Tekrar Planlandı';
-             notifMsg = `"${currentEvent.title}" kampanyası tekrar planlandı statüsüne alındı.`;
-             notifType = 'warning';
+            notifTitle = 'Kampanya Tekrar Planlandı';
+            notifMsg = `"${currentEvent.title}" kampanyası tekrar planlandı statüsüne alındı.`;
+            notifType = 'warning';
           } else {
-             // Generic fallback for other statuses if any
-             notifTitle = 'Kampanya Durumu Değişti';
-             notifMsg = `"${currentEvent.title}" kampanyası durumu "${updates.status}" olarak güncellendi.`;
-             notifType = 'info';
+            // Generic fallback for other statuses if any
+            notifTitle = 'Kampanya Durumu Değişti';
+            notifMsg = `"${currentEvent.title}" kampanyası durumu "${updates.status}" olarak güncellendi.`;
+            notifType = 'info';
           }
 
           if (notifTitle) {
-             await addDoc(collection(db, "notifications"), {
+            await addDoc(collection(db, "notifications"), {
               title: notifTitle,
               message: notifMsg,
               date: Timestamp.now(),
@@ -1497,84 +1499,84 @@ function App() {
 
         // Check if assignee changed (Send Email to New Assignee)
         if (updates.assigneeId && updates.assigneeId !== currentEvent.assigneeId) {
-           const newAssignee = users.find(u => u.id === updates.assigneeId);
-           
-           if (newAssignee) {
-             // 1. Add Notification
-             await addDoc(collection(db, "notifications"), {
-               title: 'Görev Size Atandı (Devir)',
-               message: `"${currentEvent.title}" görevi size devredildi/atandı.`,
-               date: Timestamp.now(),
-               isRead: false,
-               type: 'email'
-             });
+          const newAssignee = users.find(u => u.id === updates.assigneeId);
 
-             // 2. Add Log
-             await addDoc(collection(db, "logs"), {
-               message: `"${currentEvent.title}" görevi ${newAssignee.name} kişisine devredildi.`,
-               timestamp: Timestamp.now()
-             });
+          if (newAssignee) {
+            // 1. Add Notification
+            await addDoc(collection(db, "notifications"), {
+              title: 'Görev Size Atandı (Devir)',
+              message: `"${currentEvent.title}" görevi size devredildi/atandı.`,
+              date: Timestamp.now(),
+              isRead: false,
+              type: 'email'
+            });
 
-             // 3. Send Email
-             setIsSendingEmail(true);
+            // 2. Add Log
+            await addDoc(collection(db, "logs"), {
+              message: `"${currentEvent.title}" görevi ${newAssignee.name} kişisine devredildi.`,
+              timestamp: Timestamp.now()
+            });
 
-             // Find old assignee name
-             const oldAssignee = users.find(u => u.id === currentEvent.assigneeId);
-             const oldAssigneeName = oldAssignee ? oldAssignee.name : 'Bilinmeyen Kullanıcı';
+            // 3. Send Email
+            setIsSendingEmail(true);
 
-             let emailMessage = `"${currentEvent.title}" kampanyası için görevlendirildiniz (Görev Devri).\n\n`;
-             emailMessage += `Görevi Devreden: ${oldAssigneeName}\n`;
-             emailMessage += `Tarih: ${format(updates.date instanceof Date ? updates.date : (updates.date ? (updates.date as any).toDate() : (currentEvent.date as any).toDate()), 'd MMMM yyyy', { locale: tr })}\n`;
-             emailMessage += `Aciliyet: ${URGENCY_CONFIGS[updates.urgency || currentEvent.urgency].label}`;
-             
-             const diff = updates.difficulty || currentEvent.difficulty;
-             if (diff) emailMessage += `\nZorluk Seviyesi: ${DIFFICULTY_CONFIGS[diff].label}`;
-             
-             const desc = updates.description || currentEvent.description;
-             if (desc) emailMessage += `\n\nAçıklama:\n${desc}`;
+            // Find old assignee name
+            const oldAssignee = users.find(u => u.id === currentEvent.assigneeId);
+            const oldAssigneeName = oldAssignee ? oldAssignee.name : 'Bilinmeyen Kullanıcı';
 
-             const deptId = updates.departmentId || currentEvent.departmentId;
-             if (deptId) {
-               const dept = departments.find(d => d.id === deptId);
-               if (dept) emailMessage += `\n\nTalep Eden Birim: ${dept.name}`;
-             }
+            let emailMessage = `"${currentEvent.title}" kampanyası için görevlendirildiniz (Görev Devri).\n\n`;
+            emailMessage += `Görevi Devreden: ${oldAssigneeName}\n`;
+            emailMessage += `Tarih: ${format(updates.date instanceof Date ? updates.date : (updates.date ? (updates.date as any).toDate() : (currentEvent.date as any).toDate()), 'd MMMM yyyy', { locale: tr })}\n`;
+            emailMessage += `Aciliyet: ${URGENCY_CONFIGS[updates.urgency || currentEvent.urgency].label}`;
 
-             const footerIdText = `Ref ID: #${eventId.substring(0, 6).toUpperCase()}`;
-             
-             const effectiveUrgency = updates.urgency || currentEvent.urgency;
-             const isVeryHigh = effectiveUrgency === 'Very High';
-             const subjectPrefix = isVeryHigh ? 'ACİL: ' : '';
-             const emailSubject = `${subjectPrefix}${currentEvent.title} - Görev Ataması (Güncelleme)`;
+            const diff = updates.difficulty || currentEvent.difficulty;
+            if (diff) emailMessage += `\nZorluk Seviyesi: ${DIFFICULTY_CONFIGS[diff].label}`;
 
-             const templateParams = {
-               to_email: newAssignee.email,
-               cc: 'kampanyayonetimi@vakifbank.com.tr',
-               to_name: newAssignee.name,
-               name: newAssignee.name,
-               email: newAssignee.email,
-               title: emailSubject,
-               message: emailMessage,
-               ref_id: footerIdText,
-             };
+            const desc = updates.description || currentEvent.description;
+            if (desc) emailMessage += `\n\nAçıklama:\n${desc}`;
 
-             try {
-               console.log('📧 (Edit) EmailJS Gönderiliyor...', templateParams);
-               await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY);
-               addToast(`✅ Yeni görevliye e-posta gönderildi: ${newAssignee.name}`, 'success');
-             } catch (error: any) {
-               console.error('❌ (Edit) EmailJS Hatası:', error);
-               addToast(`❌ E-posta hatası: ${error.text || 'Bilinmeyen'}`, 'info');
-               
-               // Fallback to mailto
-               setTimeout(() => {
-                 const subject = encodeURIComponent(`${subjectPrefix}Görev Ataması: ${currentEvent.title} - Görev Ataması (Güncelleme)`);
-                 const body = encodeURIComponent(`Merhaba ${newAssignee.name},\n\n${emailMessage}\n\n----------------\n${footerIdText}`);
-                 window.location.href = `mailto:${newAssignee.email}?cc=kampanyayonetimi@vakifbank.com.tr&subject=${subject}&body=${body}&importance=${isVeryHigh ? 'High' : 'Normal'}`;
-               }, 1000);
-             } finally {
-               setIsSendingEmail(false);
-             }
-           }
+            const deptId = updates.departmentId || currentEvent.departmentId;
+            if (deptId) {
+              const dept = departments.find(d => d.id === deptId);
+              if (dept) emailMessage += `\n\nTalep Eden Birim: ${dept.name}`;
+            }
+
+            const footerIdText = `Ref ID: #${eventId.substring(0, 6).toUpperCase()}`;
+
+            const effectiveUrgency = updates.urgency || currentEvent.urgency;
+            const isVeryHigh = effectiveUrgency === 'Very High';
+            const subjectPrefix = isVeryHigh ? 'ACİL: ' : '';
+            const emailSubject = `${subjectPrefix}${currentEvent.title} - Görev Ataması (Güncelleme)`;
+
+            const templateParams = {
+              to_email: newAssignee.email,
+              cc: 'kampanyayonetimi@vakifbank.com.tr',
+              to_name: newAssignee.name,
+              name: newAssignee.name,
+              email: newAssignee.email,
+              title: emailSubject,
+              message: emailMessage,
+              ref_id: footerIdText,
+            };
+
+            try {
+              console.log('📧 (Edit) EmailJS Gönderiliyor...', templateParams);
+              await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY);
+              addToast(`✅ Yeni görevliye e-posta gönderildi: ${newAssignee.name}`, 'success');
+            } catch (error: any) {
+              console.error('❌ (Edit) EmailJS Hatası:', error);
+              addToast(`❌ E-posta hatası: ${error.text || 'Bilinmeyen'}`, 'info');
+
+              // Fallback to mailto
+              setTimeout(() => {
+                const subject = encodeURIComponent(`${subjectPrefix}Görev Ataması: ${currentEvent.title} - Görev Ataması (Güncelleme)`);
+                const body = encodeURIComponent(`Merhaba ${newAssignee.name},\n\n${emailMessage}\n\n----------------\n${footerIdText}`);
+                window.location.href = `mailto:${newAssignee.email}?cc=kampanyayonetimi@vakifbank.com.tr&subject=${subject}&body=${body}&importance=${isVeryHigh ? 'High' : 'Normal'}`;
+              }, 1000);
+            } finally {
+              setIsSendingEmail(false);
+            }
+          }
         }
       }
 
@@ -1703,7 +1705,7 @@ function App() {
 
         {/* Header Section */}
         <div className="mb-6 flex flex-col xl:flex-row xl:items-start justify-between gap-4">
-          
+
           {/* Left Column: Title & Primary Actions */}
           <div className="flex flex-col gap-3 shrink-0">
             <div className="flex flex-wrap items-center gap-3">
@@ -1722,7 +1724,7 @@ function App() {
                   </span>
                 )}
               </h1>
-              
+
               {/* Badges */}
               {!isDesigner && !isKampanyaYapan && (
                 <span className="text-xs bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-400 px-2 py-0.5 rounded-md font-normal lowercase whitespace-nowrap">salt okunur</span>
@@ -1748,15 +1750,15 @@ function App() {
                   </button>
                 )}
 
-                {/* {isDesigner && (
+                {isDesigner && (
                   <button
-                    onClick={() => setIsDesignerCampaignsModalOpen(true)}
-                    className="relative text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 dark:border dark:border-blue-700/50 px-3 py-1.5 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors flex items-center gap-2 font-medium whitespace-nowrap"
+                    onClick={() => setIsCampaignMonitoringModalOpen(true)}
+                    className="relative text-xs bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border dark:border-indigo-700/50 px-3 py-1.5 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors flex items-center gap-2 font-medium whitespace-nowrap"
                   >
-                    <CheckSquare size={14} />
-                    <span className="hidden sm:inline">Kampanyalar</span>
+                    <Timer size={14} />
+                    <span className="hidden sm:inline">Kampanya İzleme</span>
                   </button>
-                )} */}
+                )}
 
                 {isDesigner && users.length === 0 && events.length === 0 && (
                   <button
@@ -1783,7 +1785,7 @@ function App() {
             {/* Sub-header: Login Info */}
             {loggedInDeptUser && (
               <div className="flex items-center flex-wrap gap-2 text-xs text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-transparent px-2 py-1 rounded w-fit border border-transparent dark:border-teal-800/50">
-                <LogIn size={12} /> 
+                <LogIn size={12} />
                 <span className="font-medium">
                   {currentDepartmentName} <span className="opacity-75">| {loggedInDeptUser.username}</span>
                 </span>
@@ -1804,7 +1806,7 @@ function App() {
                 </div>
               </div>
             )}
-            
+
             {isSendingEmail && (
               <div className="flex items-center gap-2 text-violet-600 text-xs font-bold animate-pulse">
                 <Loader2 size={12} className="animate-spin" />
@@ -1815,239 +1817,238 @@ function App() {
 
           {/* Right Column: Toolbar */}
           <div className="flex items-center gap-1 bg-white/50 dark:bg-slate-800/50 p-1 rounded-2xl backdrop-blur-sm shadow-sm flex-wrap relative z-20 transition-colors justify-end">
-              <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
-              <button onClick={resetToToday} className="bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 dark:border dark:border-violet-700/50 px-3 py-1.5 rounded-lg text-sm font-semibold hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors">
-                Bugün
+            <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
+            <button onClick={resetToToday} className="bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 dark:border dark:border-violet-700/50 px-3 py-1.5 rounded-lg text-sm font-semibold hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors">
+              Bugün
+            </button>
+
+            <div className="flex items-center gap-1">
+              <button onClick={prevMonth} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-full transition-colors text-gray-600 dark:text-gray-300">
+                <ChevronLeft size={20} />
               </button>
-
-              <div className="flex items-center gap-1">
-                <button onClick={prevMonth} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-full transition-colors text-gray-600 dark:text-gray-300">
-                  <ChevronLeft size={20} />
-                </button>
-                <h2 className="text-lg md:text-xl font-bold min-w-[140px] text-center tabular-nums capitalize text-gray-800 dark:text-gray-100">
-                  {format(currentDate, 'MMMM yyyy', { locale: tr })}
-                </h2>
-                <button onClick={nextMonth} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-full transition-colors text-gray-600 dark:text-gray-300">
-                  <ChevronRight size={20} />
-                </button>
-              </div>
-
-              <div className="h-6 w-px bg-gray-300 dark:bg-slate-600 mx-2 hidden md:block"></div>
-
-              <button
-                onClick={() => setIsSearchOpen(!isSearchOpen)}
-                className={`p-1.5 transition-colors rounded-lg shadow-sm border ${
-                  isSearchOpen || hasActiveFilters 
-                    ? 'text-violet-600 bg-violet-50 border-violet-100 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-700/50' 
-                    : 'bg-white border-gray-100 text-gray-500 hover:text-violet-600 dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-slate-700'
-                }`}
-                title="Arama ve Filtrele"
-              >
-                <Search size={20} />
-                {hasActiveFilters && (
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-violet-500 rounded-full animate-pulse"></span>
-                )}
+              <h2 className="text-lg md:text-xl font-bold min-w-[140px] text-center tabular-nums capitalize text-gray-800 dark:text-gray-100">
+                {format(currentDate, 'MMMM yyyy', { locale: tr })}
+              </h2>
+              <button onClick={nextMonth} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-full transition-colors text-gray-600 dark:text-gray-300">
+                <ChevronRight size={20} />
               </button>
-
-              <button
-                onClick={handleExportPdf}
-                className="p-1.5 text-gray-500 hover:text-pink-600 hover:bg-pink-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-pink-300 dark:hover:bg-pink-900/30"
-                title="PDF Olarak İndir"
-              >
-                <Download size={20} />
-              </button>
-
-              {isDesigner && (
-                <button
-                  onClick={() => setIsReportsOpen(true)}
-                  className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-900/30"
-                  title="Raporlar ve Dashboard"
-                >
-                  <PieChart size={20} />
-                </button>
-              )}
-
-              {/* User info moved to left header */}
-
-              <button
-                onClick={() => setIsAnnBoardOpen(true)}
-                className="p-1.5 text-gray-500 hover:text-violet-600 hover:bg-violet-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm relative dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-violet-900/30"
-                title="Duyurular"
-              >
-                <Megaphone size={20} />
-                {unreadAnnouncementCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800">
-                    {unreadAnnouncementCount}
-                  </span>
-                )}
-              </button>
-
-              {loggedInDeptUser && (
-                <button
-                  onClick={() => setIsMyTasksOpen(true)}
-                  className="p-1.5 text-gray-500 hover:text-violet-600 hover:bg-violet-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-violet-900/30"
-                  title="İşlerim"
-                >
-                  <CheckSquare size={20} />
-                </button>
-              )}
-
-              <button
-                onClick={() => setIsAdminOpen(true)}
-                className="p-1.5 text-gray-500 hover:text-violet-600 hover:bg-violet-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-violet-900/30"
-                title="Yönetici Paneli"
-              >
-                <Users size={20} />
-              </button>
-
-              {isDesigner && (
-                <>
-                  <div className="relative">
-                    <button
-                      onClick={() => {
-                        setIsLogOpen(!isLogOpen);
-                        setIsNotifOpen(false);
-                      }}
-                      className={`
-                                    p-1.5 transition-colors rounded-lg shadow-sm border
-                                    ${isLogOpen 
-                                      ? 'text-orange-600 bg-orange-50 border-orange-100 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700/50' 
-                                      : 'bg-white border-gray-100 text-gray-400 hover:text-orange-600 dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-orange-300 dark:hover:bg-orange-900/30'}
-                                `}
-                      title="İşlem Kütüğü"
-                    >
-                      <ClipboardList size={20} />
-                    </button>
-
-                    <LogPopover
-                      isOpen={isLogOpen}
-                      logs={logs}
-                      onClose={() => setIsLogOpen(false)}
-                      onClear={() => {
-                        logs.forEach(l => deleteDoc(doc(db, "logs", l.id)));
-                      }}
-                    />
-                  </div>
-
-                  <div className="relative">
-                    <button
-                      onClick={() => {
-                        setIsNotifOpen(!isNotifOpen);
-                        setIsLogOpen(false);
-                      }}
-                      className={`
-                                    p-1.5 transition-colors rounded-lg shadow-sm border
-                                    ${isNotifOpen 
-                                      ? 'text-violet-600 bg-violet-50 border-violet-100 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-700/50' 
-                                      : 'bg-white border-gray-100 text-gray-400 hover:text-violet-600 dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-violet-900/30'}
-                                `}
-                    >
-                      <Bell size={20} />
-                      {notifications.length > 0 && (
-                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800">
-                          {notifications.length}
-                        </span>
-                      )}
-                    </button>
-
-                    <NotificationPopover
-                      isOpen={isNotifOpen}
-                      notifications={notifications}
-                      onClose={() => setIsNotifOpen(false)}
-                      onMarkAllRead={() => {
-                        notifications.forEach(n => deleteDoc(doc(db, "notifications", n.id)));
-                      }}
-                    />
-                  </div>
-
-                  <button
-                    onClick={() => openAddModal()}
-                    className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg shadow-violet-200 dark:shadow-none hover:bg-violet-700 transition-transform active:scale-95"
-                  >
-                    <Plus size={18} />
-                    <span>Ekle</span>
-                  </button>
-                </>
-              )}
-
-
             </div>
-          </div>
 
-          {/* Search Bar Panel */}
-          {isSearchOpen && (
-            <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-lg border border-violet-100 dark:border-slate-700 grid grid-cols-1 md:grid-cols-4 gap-4 animate-in fade-in slide-in-from-top-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
-                <input
-                  type="text"
-                  placeholder="Başlık veya Ref ID ile ara..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-200 focus:border-violet-500 outline-none transition-all text-sm"
-                />
-              </div>
+            <div className="h-6 w-px bg-gray-300 dark:bg-slate-600 mx-2 hidden md:block"></div>
 
-              <div className="relative">
-                <Filter className="absolute left-3 top-2.5 text-gray-400" size={18} />
-                <select
-                  value={filterAssignee}
-                  onChange={(e) => setFilterAssignee(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-200 focus:border-violet-500 outline-none transition-all text-sm appearance-none"
-                >
-                  <option value="">Tüm Personel</option>
-                  {users.map(u => (
-                    <option key={u.id} value={u.id}>
-                      {u.name} {monthlyChampionId === u.id ? '🏆' : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <button
+              onClick={() => setIsSearchOpen(!isSearchOpen)}
+              className={`p-1.5 transition-colors rounded-lg shadow-sm border ${isSearchOpen || hasActiveFilters
+                ? 'text-violet-600 bg-violet-50 border-violet-100 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-700/50'
+                : 'bg-white border-gray-100 text-gray-500 hover:text-violet-600 dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-slate-700'
+                }`}
+              title="Arama ve Filtrele"
+            >
+              <Search size={20} />
+              {hasActiveFilters && (
+                <span className="absolute -top-1 -right-1 w-3 h-3 bg-violet-500 rounded-full animate-pulse"></span>
+              )}
+            </button>
 
-              <div className="relative">
-                <div className="absolute left-3 top-2.5 w-4 h-4 rounded-full border-2 border-gray-300"></div>
-                <select
-                  value={filterUrgency}
-                  onChange={(e) => setFilterUrgency(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-200 focus:border-violet-500 outline-none transition-all text-sm appearance-none"
-                >
-                  <option value="">Tüm Öncelikler</option>
-                  {(Object.keys(URGENCY_CONFIGS) as UrgencyLevel[]).map(level => (
-                    <option key={level} value={level}>{URGENCY_CONFIGS[level].label}</option>
-                  ))}
-                </select>
-              </div>
+            <button
+              onClick={handleExportPdf}
+              className="p-1.5 text-gray-500 hover:text-pink-600 hover:bg-pink-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-pink-300 dark:hover:bg-pink-900/30"
+              title="PDF Olarak İndir"
+            >
+              <Download size={20} />
+            </button>
 
-              <div className="relative">
-                <div className="absolute left-3 top-2.5 w-4 h-4 flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full bg-gray-400"></div>
-                </div>
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-200 focus:border-violet-500 outline-none transition-all text-sm appearance-none"
-                >
-                  <option value="">Tüm Durumlar</option>
-                  <option value="Planlandı">Planlandı</option>
-                  <option value="Tamamlandı">Tamamlandı</option>
-                  <option value="İptal Edildi">İptal Edildi</option>
-                </select>
-              </div>
-
+            {isDesigner && (
               <button
-                onClick={clearFilters}
-                disabled={!hasActiveFilters}
-                className={`
+                onClick={() => setIsReportsOpen(true)}
+                className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-900/30"
+                title="Raporlar ve Dashboard"
+              >
+                <PieChart size={20} />
+              </button>
+            )}
+
+            {/* User info moved to left header */}
+
+            <button
+              onClick={() => setIsAnnBoardOpen(true)}
+              className="p-1.5 text-gray-500 hover:text-violet-600 hover:bg-violet-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm relative dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-violet-900/30"
+              title="Duyurular"
+            >
+              <Megaphone size={20} />
+              {unreadAnnouncementCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800">
+                  {unreadAnnouncementCount}
+                </span>
+              )}
+            </button>
+
+            {loggedInDeptUser && (
+              <button
+                onClick={() => setIsMyTasksOpen(true)}
+                className="p-1.5 text-gray-500 hover:text-violet-600 hover:bg-violet-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-violet-900/30"
+                title="İşlerim"
+              >
+                <CheckSquare size={20} />
+              </button>
+            )}
+
+            <button
+              onClick={() => setIsAdminOpen(true)}
+              className="p-1.5 text-gray-500 hover:text-violet-600 hover:bg-violet-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-violet-900/30"
+              title="Yönetici Paneli"
+            >
+              <Users size={20} />
+            </button>
+
+            {isDesigner && (
+              <>
+                <div className="relative">
+                  <button
+                    onClick={() => {
+                      setIsLogOpen(!isLogOpen);
+                      setIsNotifOpen(false);
+                    }}
+                    className={`
+                                    p-1.5 transition-colors rounded-lg shadow-sm border
+                                    ${isLogOpen
+                        ? 'text-orange-600 bg-orange-50 border-orange-100 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700/50'
+                        : 'bg-white border-gray-100 text-gray-400 hover:text-orange-600 dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-orange-300 dark:hover:bg-orange-900/30'}
+                                `}
+                    title="İşlem Kütüğü"
+                  >
+                    <ClipboardList size={20} />
+                  </button>
+
+                  <LogPopover
+                    isOpen={isLogOpen}
+                    logs={logs}
+                    onClose={() => setIsLogOpen(false)}
+                    onClear={() => {
+                      logs.forEach(l => deleteDoc(doc(db, "logs", l.id)));
+                    }}
+                  />
+                </div>
+
+                <div className="relative">
+                  <button
+                    onClick={() => {
+                      setIsNotifOpen(!isNotifOpen);
+                      setIsLogOpen(false);
+                    }}
+                    className={`
+                                    p-1.5 transition-colors rounded-lg shadow-sm border
+                                    ${isNotifOpen
+                        ? 'text-violet-600 bg-violet-50 border-violet-100 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-700/50'
+                        : 'bg-white border-gray-100 text-gray-400 hover:text-violet-600 dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-violet-900/30'}
+                                `}
+                  >
+                    <Bell size={20} />
+                    {notifications.length > 0 && (
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800">
+                        {notifications.length}
+                      </span>
+                    )}
+                  </button>
+
+                  <NotificationPopover
+                    isOpen={isNotifOpen}
+                    notifications={notifications}
+                    onClose={() => setIsNotifOpen(false)}
+                    onMarkAllRead={() => {
+                      notifications.forEach(n => deleteDoc(doc(db, "notifications", n.id)));
+                    }}
+                  />
+                </div>
+
+                <button
+                  onClick={() => openAddModal()}
+                  className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg shadow-violet-200 dark:shadow-none hover:bg-violet-700 transition-transform active:scale-95"
+                >
+                  <Plus size={18} />
+                  <span>Ekle</span>
+                </button>
+              </>
+            )}
+
+
+          </div>
+        </div>
+
+        {/* Search Bar Panel */}
+        {isSearchOpen && (
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-lg border border-violet-100 dark:border-slate-700 grid grid-cols-1 md:grid-cols-4 gap-4 animate-in fade-in slide-in-from-top-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+              <input
+                type="text"
+                placeholder="Başlık veya Ref ID ile ara..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-200 focus:border-violet-500 outline-none transition-all text-sm"
+              />
+            </div>
+
+            <div className="relative">
+              <Filter className="absolute left-3 top-2.5 text-gray-400" size={18} />
+              <select
+                value={filterAssignee}
+                onChange={(e) => setFilterAssignee(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-200 focus:border-violet-500 outline-none transition-all text-sm appearance-none"
+              >
+                <option value="">Tüm Personel</option>
+                {users.map(u => (
+                  <option key={u.id} value={u.id}>
+                    {u.name} {monthlyChampionId === u.id ? '🏆' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="relative">
+              <div className="absolute left-3 top-2.5 w-4 h-4 rounded-full border-2 border-gray-300"></div>
+              <select
+                value={filterUrgency}
+                onChange={(e) => setFilterUrgency(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-200 focus:border-violet-500 outline-none transition-all text-sm appearance-none"
+              >
+                <option value="">Tüm Öncelikler</option>
+                {(Object.keys(URGENCY_CONFIGS) as UrgencyLevel[]).map(level => (
+                  <option key={level} value={level}>{URGENCY_CONFIGS[level].label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="relative">
+              <div className="absolute left-3 top-2.5 w-4 h-4 flex items-center justify-center">
+                <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+              </div>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-200 focus:border-violet-500 outline-none transition-all text-sm appearance-none"
+              >
+                <option value="">Tüm Durumlar</option>
+                <option value="Planlandı">Planlandı</option>
+                <option value="Tamamlandı">Tamamlandı</option>
+                <option value="İptal Edildi">İptal Edildi</option>
+              </select>
+            </div>
+
+            <button
+              onClick={clearFilters}
+              disabled={!hasActiveFilters}
+              className={`
                             flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors
                             ${hasActiveFilters
-                    ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'}
+                  ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'}
                         `}
-              >
-                <X size={16} /> Filtreleri Temizle
-              </button>
-            </div>
-          )}
+            >
+              <X size={16} /> Filtreleri Temizle
+            </button>
+          </div>
+        )}
 
         {/* Printable Area Wrapper */}
         <div id="printable-calendar" className="p-1">
@@ -2159,41 +2160,41 @@ function App() {
                       }
 
                       return (
-                          <div
-                            key={event.id}
-                            draggable={isDesigner}
-                            onContextMenu={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                if (loggedInDeptUser || isDesigner || isKampanyaYapan) {
-                                    setSelectedEventIdForNote(event.id);
-                                    setNoteContent(event.note || '');
-                                    setIsNoteModalOpen(true);
-                                }
-                            }}
-                            onDragStart={(e) => {
-                              if (isDesigner) {
-                                setDraggedEvent(event);
-                                e.dataTransfer.effectAllowed = "move";
-                                // Optional: Set drag image or data if needed
-                                e.dataTransfer.setData("text/plain", event.id);
-                              }
-                            }}
-                            className={isDesigner ? 'cursor-grab active:cursor-grabbing' : ''}
-                          >
-                            <div className="relative">
-                                <EventBadge
-                                    event={event}
-                                    user={users.find(u => u.id === event.assigneeId)}
-                                    onClick={(e) => setViewEventId(e.id)}
-                                    isBlurred={isBlurred}
-                                    isClickable={isClickable}
-                                    monthlyChampionId={monthlyChampionId}
-                                />
-                            </div>
+                        <div
+                          key={event.id}
+                          draggable={isDesigner}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (loggedInDeptUser || isDesigner || isKampanyaYapan) {
+                              setSelectedEventIdForNote(event.id);
+                              setNoteContent(event.note || '');
+                              setIsNoteModalOpen(true);
+                            }
+                          }}
+                          onDragStart={(e) => {
+                            if (isDesigner) {
+                              setDraggedEvent(event);
+                              e.dataTransfer.effectAllowed = "move";
+                              // Optional: Set drag image or data if needed
+                              e.dataTransfer.setData("text/plain", event.id);
+                            }
+                          }}
+                          className={isDesigner ? 'cursor-grab active:cursor-grabbing' : ''}
+                        >
+                          <div className="relative">
+                            <EventBadge
+                              event={event}
+                              user={users.find(u => u.id === event.assigneeId)}
+                              onClick={(e) => setViewEventId(e.id)}
+                              isBlurred={isBlurred}
+                              isClickable={isClickable}
+                              monthlyChampionId={monthlyChampionId}
+                            />
                           </div>
-                        );
-                      })}
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {(isDesigner || loggedInDeptUser?.isBusinessUnit) && (
@@ -2227,8 +2228,8 @@ function App() {
         <AddEventModal
           isOpen={isAddModalOpen}
           onClose={() => {
-             setIsAddModalOpen(false);
-             setConvertingRequest(null);
+            setIsAddModalOpen(false);
+            setConvertingRequest(null);
           }}
           onAdd={handleAddEvent}
           initialDate={selectedDate}
@@ -2298,6 +2299,13 @@ function App() {
           users={users}
         /> */}
 
+        <CampaignMonitoringModal
+          isOpen={isCampaignMonitoringModalOpen}
+          onClose={() => setIsCampaignMonitoringModalOpen(false)}
+          events={events}
+          users={users}
+        />
+
         <EventDetailsModal
           event={viewEvent}
           onClose={() => setViewEventId(null)}
@@ -2338,14 +2346,14 @@ function App() {
                   <StickyNote size={18} className="text-yellow-500" />
                   Not Ekle / Düzenle
                 </h3>
-                <button 
+                <button
                   onClick={() => setIsNoteModalOpen(false)}
                   className="p-1 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-lg transition-colors text-gray-500"
                 >
                   <X size={18} />
                 </button>
               </div>
-              
+
               <div className="p-6">
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -2359,7 +2367,7 @@ function App() {
                     autoFocus
                   />
                 </div>
-                
+
                 <div className="flex justify-end gap-3">
                   <button
                     onClick={() => setIsNoteModalOpen(false)}
@@ -2370,16 +2378,16 @@ function App() {
                   {/* Delete Button - Only if there is content */}
                   {noteContent.trim() && (
                     <button
-                        onClick={() => {
-                            if (selectedEventIdForNote) {
-                                handleDeleteNote(selectedEventIdForNote);
-                                setIsNoteModalOpen(false);
-                            }
-                        }}
-                        className="px-4 py-2 rounded-xl text-sm font-medium bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 transition-colors flex items-center gap-2"
+                      onClick={() => {
+                        if (selectedEventIdForNote) {
+                          handleDeleteNote(selectedEventIdForNote);
+                          setIsNoteModalOpen(false);
+                        }
+                      }}
+                      className="px-4 py-2 rounded-xl text-sm font-medium bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 transition-colors flex items-center gap-2"
                     >
-                        <Trash2 size={16} />
-                        Sil
+                      <Trash2 size={16} />
+                      Sil
                     </button>
                   )}
                   <button
@@ -2406,8 +2414,8 @@ function App() {
           monthlyChampionId={monthlyChampionId}
         />
 
-        <AnnouncementPopup 
-          latestAnnouncement={filteredAnnouncements[0]} 
+        <AnnouncementPopup
+          latestAnnouncement={filteredAnnouncements[0]}
           currentUsername={currentUsername}
           currentUserId={loggedInDeptUser?.id || auth.currentUser?.uid || 'guest'}
         />
