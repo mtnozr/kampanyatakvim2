@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { X, Calendar, Clock, User, CheckCircle2, AlertCircle, Timer, Filter, ArrowUpDown } from 'lucide-react';
-import { CalendarEvent, User as UserType, CampaignStatus } from '../types';
+import { CalendarEvent, User as UserType, CampaignStatus, Department } from '../types';
 import { format, differenceInHours, differenceInDays, isValid } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
@@ -9,6 +9,7 @@ interface DesignerCampaignsModalProps {
   onClose: () => void;
   events: CalendarEvent[];
   users: UserType[];
+  departments: Department[];
 }
 
 type SortField = 'date' | 'createdAt' | 'duration';
@@ -18,12 +19,14 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
   isOpen,
   onClose,
   events,
-  users
+  users,
+  departments
 }) => {
   const [activeTab, setActiveTab] = useState<CampaignStatus>('Planlandı');
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterDepartment, setFilterDepartment] = useState<string>('');
 
   if (!isOpen) return null;
 
@@ -86,7 +89,9 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
         
         const matchesSearch = eventTitle.toLowerCase().includes(searchTerm.toLowerCase()) || 
                               assigneeName.toLowerCase().includes(searchTerm.toLowerCase());
-        return matchesTab && matchesSearch;
+        const matchesDepartment = filterDepartment ? e.departmentId === filterDepartment : true;
+        
+        return matchesTab && matchesSearch && matchesDepartment;
     });
 
     return result.sort((a, b) => {
@@ -117,7 +122,7 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
         return valA < valB ? 1 : -1;
       }
     });
-  }, [events, activeTab, sortField, sortDirection, searchTerm, users]);
+  }, [events, activeTab, sortField, sortDirection, searchTerm, users, filterDepartment]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -173,6 +178,20 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
                 {status}
               </button>
             ))}
+          </div>
+
+          <div className="relative w-full md:w-48">
+            <Filter className="absolute left-3 top-2.5 text-gray-400" size={16} />
+            <select
+              value={filterDepartment}
+              onChange={(e) => setFilterDepartment(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all appearance-none"
+            >
+              <option value="">Tüm Birimler</option>
+              {departments.map(d => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
           </div>
 
           <div className="relative w-full md:w-64">

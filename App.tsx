@@ -114,6 +114,7 @@ function App() {
   const [filterAssignee, setFilterAssignee] = useState<string>('');
   const [filterUrgency, setFilterUrgency] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
+  const [filterDepartment, setFilterDepartment] = useState<string>('');
 
   // Modals State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -613,15 +614,16 @@ function App() {
       const matchesAssignee = filterAssignee ? event.assigneeId === filterAssignee : true;
       const matchesUrgency = filterUrgency ? event.urgency === filterUrgency : true;
       const matchesStatus = filterStatus ? (event.status || 'Planlandı') === filterStatus : true;
+      const matchesDepartment = filterDepartment ? event.departmentId === filterDepartment : true;
 
       // If a department user searches, they shouldn't find blurred events by content content,
       // but we still need them in the list to render them as "blurred".
       // So if search is active, we might need to filter strict. 
       // BUT for now, let's allow basic filtering and handle "blur" logic in rendering loop.
 
-      return matchesSearch && matchesAssignee && matchesUrgency && matchesStatus;
+      return matchesSearch && matchesAssignee && matchesUrgency && matchesStatus && matchesDepartment;
     });
-  }, [events, searchQuery, filterAssignee, filterUrgency, filterStatus]);
+  }, [events, searchQuery, filterAssignee, filterUrgency, filterStatus, filterDepartment]);
 
   const filteredAnnouncements = useMemo(() => {
     return announcements.filter(ann => {
@@ -1137,6 +1139,39 @@ function App() {
       addToast('Kullanıcı veritabanından silindi.', 'info');
     } catch (e) {
       addToast('Silme hatası.', 'info');
+    }
+  };
+
+  const handleUpdateDepartmentUser = async (id: string, updates: Partial<DepartmentUser> & { password?: string }) => {
+    try {
+      const userToUpdate = departmentUsers.find(u => u.id === id);
+      if (!userToUpdate) throw new Error("Kullanıcı bulunamadı");
+
+      // 1. Update Auth if needed (email or password)
+      if (updates.email || updates.password) {
+        if (!userToUpdate.uid) {
+           throw new Error("Bu kullanıcının UID değeri eksik, Auth güncellemesi yapılamaz.");
+        }
+        await callAdminApi({
+          action: 'updateUser',
+          uid: userToUpdate.uid,
+          email: updates.email,
+          password: updates.password
+        });
+        addToast('Kullanıcı Auth bilgileri güncellendi.', 'success');
+      }
+
+      // 2. Update Firestore
+      // Extract password so it doesn't go to Firestore
+      const { password, ...firestoreUpdates } = updates;
+      
+      if (Object.keys(firestoreUpdates).length > 0) {
+        await updateDoc(doc(db, "departmentUsers", id), firestoreUpdates);
+        addToast('Kullanıcı bilgileri güncellendi.', 'success');
+      }
+    } catch (e: any) {
+      console.error(e);
+      addToast(`Güncelleme hatası: ${e.message}`, 'info'); // Using 'info' for consistency with other errors in this file or 'error' if available
     }
   };
 
@@ -2294,6 +2329,7 @@ function App() {
           departmentUsers={departmentUsers}
           onAddDepartmentUser={handleAddDepartmentUser}
           onDeleteDepartmentUser={handleDeleteDepartmentUser}
+          onUpdateDepartmentUser={handleUpdateDepartmentUser}
           onBulkAddEvents={handleBulkAddEvents}
           onSetIsDesigner={setIsDesigner}
           announcements={announcements}
@@ -2311,12 +2347,13 @@ function App() {
           onChangePassword={handleChangePassword}
         />
 
-        {/* <DesignerCampaignsModal
+        <DesignerCampaignsModal
           isOpen={isDesignerCampaignsModalOpen}
           onClose={() => setIsDesignerCampaignsModalOpen(false)}
           events={events}
           users={users}
-        /> */}
+          departments={departments}
+        />
 
         <EventDetailsModal
           event={viewEvent}

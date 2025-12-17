@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Trash2, Plus, ShieldCheck, Lock, Users, Calendar, AlertTriangle, Building, UserPlus, LogOut, FileText, Download, Megaphone, Settings, Trophy, Activity, History } from 'lucide-react';
+import { X, Trash2, Plus, ShieldCheck, Lock, Users, Calendar, AlertTriangle, Building, UserPlus, LogOut, FileText, Download, Megaphone, Settings, Trophy, Activity, History, Edit2 } from 'lucide-react';
 import { User, CalendarEvent, Department, DepartmentUser, Announcement } from '../types';
 import { calculateMonthlyChampion } from '../utils/gamification';
 import { AVAILABLE_EMOJIS, URGENCY_CONFIGS } from '../constants';
@@ -25,6 +25,7 @@ interface AdminModalProps {
   departmentUsers: DepartmentUser[];
   onAddDepartmentUser: (username: string, password: string, departmentId: string, isDesigner: boolean, isKampanyaYapan: boolean, isBusinessUnit: boolean, email?: string) => void;
   onDeleteDepartmentUser: (id: string) => void;
+  onUpdateDepartmentUser?: (id: string, updates: Partial<DepartmentUser> & { password?: string }) => void;
   onBulkAddEvents: (events: Partial<CalendarEvent>[]) => Promise<void>;
   onSetIsDesigner: (value: boolean) => void;
   announcements: Announcement[];
@@ -50,6 +51,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   departmentUsers,
   onAddDepartmentUser,
   onDeleteDepartmentUser,
+  onUpdateDepartmentUser,
   onBulkAddEvents,
   onSetIsDesigner,
   announcements,
@@ -100,6 +102,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [newDeptUserIsDesigner, setNewDeptUserIsDesigner] = useState(false);
   const [newDeptUserIsKampanyaYapan, setNewDeptUserIsKampanyaYapan] = useState(false);
   const [newDeptUserIsBusinessUnit, setNewDeptUserIsBusinessUnit] = useState(false);
+  
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
 
   const [error, setError] = useState('');
 
@@ -280,24 +284,20 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     setError('');
   };
 
-  // --- Department User Management Handler ---
-  const handleAddDeptUser = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newDeptUsername.trim() || !newDeptPassword.trim() || !newDeptUserDeptId) {
-      setError('Tüm alanları doldurunuz.');
-      return;
-    }
+  const handleEditDeptUser = (user: DepartmentUser) => {
+    setEditingUserId(user.id);
+    setNewDeptUsername(user.username);
+    setNewDeptEmail(user.email || '');
+    setNewDeptUserDeptId(user.departmentId);
+    setNewDeptUserIsDesigner(!!user.isDesigner);
+    setNewDeptUserIsKampanyaYapan(!!user.isKampanyaYapan);
+    setNewDeptUserIsBusinessUnit(!!user.isBusinessUnit);
+    setNewDeptPassword(''); // Clear password field
+    setError('');
+  };
 
-    // Check if username already exists
-    const existingUser = departmentUsers.find(
-      u => u.username.toLowerCase() === newDeptUsername.toLowerCase()
-    );
-    if (existingUser) {
-      setError('Bu kullanıcı adı zaten kullanılıyor.');
-      return;
-    }
-
-    onAddDepartmentUser(newDeptUsername, newDeptPassword, newDeptUserDeptId, newDeptUserIsDesigner, newDeptUserIsKampanyaYapan, newDeptUserIsBusinessUnit, newDeptEmail);
+  const handleCancelEdit = () => {
+    setEditingUserId(null);
     setNewDeptUsername('');
     setNewDeptPassword('');
     setNewDeptEmail('');
@@ -306,6 +306,62 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     setNewDeptUserIsKampanyaYapan(false);
     setNewDeptUserIsBusinessUnit(false);
     setError('');
+  };
+
+  // --- Department User Management Handler ---
+  const handleAddDeptUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newDeptUsername.trim()) {
+      setError('Kullanıcı adı gereklidir.');
+      return;
+    }
+    // Password validation only for new users or if password is provided
+    if (!editingUserId && !newDeptPassword.trim()) {
+      setError('Şifre gereklidir.');
+      return;
+    }
+    if (!newDeptUserDeptId) {
+      setError('Birim seçimi gereklidir.');
+      return;
+    }
+
+    if (editingUserId) {
+        if (onUpdateDepartmentUser) {
+             const updates: any = {
+                username: newDeptUsername,
+                departmentId: newDeptUserDeptId,
+                isDesigner: newDeptUserIsDesigner,
+                isKampanyaYapan: newDeptUserIsKampanyaYapan,
+                isBusinessUnit: newDeptUserIsBusinessUnit,
+                email: newDeptEmail
+             };
+             if (newDeptPassword.trim()) {
+                 updates.password = newDeptPassword.trim();
+             }
+             onUpdateDepartmentUser(editingUserId, updates);
+             handleCancelEdit(); // Reset form
+        }
+    } else {
+        // Check if username already exists
+        const existingUser = departmentUsers.find(
+          u => u.username.toLowerCase() === newDeptUsername.toLowerCase()
+        );
+        if (existingUser) {
+          setError('Bu kullanıcı adı zaten kullanılıyor.');
+          return;
+        }
+
+        onAddDepartmentUser(newDeptUsername, newDeptPassword, newDeptUserDeptId, newDeptUserIsDesigner, newDeptUserIsKampanyaYapan, newDeptUserIsBusinessUnit, newDeptEmail);
+        // Reset form
+        setNewDeptUsername('');
+        setNewDeptPassword('');
+        setNewDeptEmail('');
+        setNewDeptUserDeptId('');
+        setNewDeptUserIsDesigner(false);
+        setNewDeptUserIsKampanyaYapan(false);
+        setNewDeptUserIsBusinessUnit(false);
+        setError('');
+    }
   };
 
   // --- Import / Export Handlers ---
@@ -702,8 +758,16 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 <div className="flex flex-col h-full">
                   {/* Add Department User Form */}
                   <div className="p-6 bg-white dark:bg-slate-800 border-b dark:border-slate-700 space-y-4 shrink-0 transition-colors">
-                    <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide flex items-center gap-2">
-                      <UserPlus size={14} /> Yeni Birim Kullanıcısı Ekle
+                  <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                      {editingUserId ? (
+                        <>
+                           <Edit2 size={14} /> Kullanıcı Düzenle
+                        </>
+                      ) : (
+                        <>
+                           <UserPlus size={14} /> Yeni Birim Kullanıcısı Ekle
+                        </>
+                      )}
                     </h3>
 
                     <form onSubmit={handleAddDeptUser} className="space-y-3">
@@ -719,12 +783,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                           />
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Şifre</label>
+                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">
+                              Şifre {editingUserId && <span className="font-normal text-gray-400">(Değişmeyecekse boş bırakın)</span>}
+                          </label>
                           <input
                             type="text"
                             value={newDeptPassword}
                             onChange={(e) => setNewDeptPassword(e.target.value)}
-                            placeholder="sifre123"
+                            placeholder={editingUserId ? "Değiştirmek için yeni şifre girin" : "sifre123"}
                             className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-colors"
                           />
                         </div>
@@ -792,12 +858,27 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       </div>
                       <div className="flex justify-between items-center">
                         <p className="text-red-500 text-xs h-4">{error}</p>
-                        <button
-                          type="submit"
-                          className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 text-sm flex items-center gap-2 shadow-lg shadow-violet-200 dark:shadow-none transition-colors"
-                        >
-                          <Plus size={16} /> Ekle
-                        </button>
+                        <div className="flex gap-2">
+                             {editingUserId && (
+                                <button
+                                  type="button"
+                                  onClick={handleCancelEdit}
+                                  className="px-4 py-2 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600 text-sm flex items-center gap-2 transition-colors"
+                                >
+                                  <X size={16} /> İptal
+                                </button>
+                             )}
+                             <button
+                               type="submit"
+                               className={`px-4 py-2 rounded-lg text-white text-sm flex items-center gap-2 shadow-lg dark:shadow-none transition-colors ${
+                                 editingUserId 
+                                   ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-200' 
+                                   : 'bg-violet-600 hover:bg-violet-700 shadow-violet-200'
+                               }`}
+                             >
+                               {editingUserId ? <><Edit2 size={16} /> Güncelle</> : <><Plus size={16} /> Ekle</>}
+                             </button>
+                          </div>
                       </div>
                     </form>
                   </div>
@@ -840,13 +921,22 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                                 <p className="text-xs text-gray-500 dark:text-gray-400">{dept ? dept.name : 'Silinmiş Birim'} • {user.email || 'E-posta yok'}</p>
                               </div>
                             </div>
-                            <button
-                              onClick={() => onDeleteDepartmentUser(user.id)}
-                              className="p-2 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                              title="Kullanıcıyı Sil"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                            <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => handleEditDeptUser(user)}
+                                  className="p-2 text-gray-300 dark:text-gray-600 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                  title="Düzenle"
+                                >
+                                  <Edit2 size={16} />
+                                </button>
+                                <button
+                                  onClick={() => onDeleteDepartmentUser(user.id)}
+                                  className="p-2 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                  title="Kullanıcıyı Sil"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                            </div>
                           </div>
                         );
                       })}

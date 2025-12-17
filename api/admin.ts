@@ -127,6 +127,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    if (action === 'updateUser') {
+      if (!uid) {
+        return res.status(400).json({ error: 'UID required for update' });
+      }
+
+      const updates: any = {};
+      if (email) updates.email = email;
+      if (password) updates.password = password;
+
+      if (Object.keys(updates).length === 0) {
+        return res.status(200).json({ message: 'No updates provided' });
+      }
+
+      try {
+        await admin.auth().updateUser(uid, updates);
+        return res.status(200).json({ message: 'User updated successfully' });
+      } catch (error: any) {
+        return res.status(400).json({ error: error.message || 'Update failed' });
+      }
+    }
+
     if (action === 'deleteUser') {
       if (uid) {
         try {
