@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, User as UserIcon, AlertCircle, AlignLeft, Building, Edit2, Save, XCircle, Trash2, CheckCircle2, XCircle as CancelIcon, Clock, Gauge, StickyNote } from 'lucide-react';
+import { X, Calendar, User as UserIcon, AlertCircle, AlignLeft, Building, Edit2, Save, XCircle, Trash2, CheckCircle2, XCircle as CancelIcon, Clock, Gauge, StickyNote, Mail } from 'lucide-react';
 import { CalendarEvent, User, Department, UrgencyLevel, CampaignStatus, DifficultyLevel } from '../types';
 import { URGENCY_CONFIGS, STATUS_STYLES, DIFFICULTY_CONFIGS } from '../constants';
 import { format } from 'date-fns';
@@ -117,6 +117,18 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
       onDelete(event.id);
       onClose();
     }
+  };
+
+  const handleRequestInfo = () => {
+    if (!assignee?.email) {
+      alert('Bu kampanya için görevli personel atanmamış veya e-posta adresi bulunmuyor.');
+      return;
+    }
+
+    const subject = `[Kampanya Bilgi Talebi] - ${event.title}`;
+    const body = `Merhaba ${assignee.name},\n\n"${event.title}" başlıklı kampanya hakkında güncel durum ve ilerleme bilgisini paylaşmanızı rica ederim.\n\nTeşekkürler.`;
+
+    window.location.href = `mailto:${assignee.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
   return (
@@ -428,20 +440,27 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
           {isDesigner && !isEditMode ? (
             <div className="flex gap-3">
               <button
+                onClick={handleRequestInfo}
+                className="px-4 h-12 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm flex items-center justify-center gap-2 transition-colors min-w-[48px]"
+                title="Bilgi İste"
+              >
+                <Mail size={18} /> <span className="hidden sm:inline">Bilgi İste</span>
+              </button>
+              <button
                 onClick={() => setIsEditMode(true)}
-                className="flex-1 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium text-sm flex items-center justify-center gap-2 transition-colors"
+                className="flex-1 px-4 h-12 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium text-sm flex items-center justify-center gap-2 transition-colors"
               >
                 <Edit2 size={16} /> Düzenle
               </button>
               <button
                 onClick={handleDelete}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm flex items-center justify-center gap-2 transition-colors"
+                className="px-4 h-12 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm flex items-center justify-center gap-2 transition-colors"
               >
                 <Trash2 size={16} /> Sil
               </button>
               <button
                 onClick={onClose}
-                className="px-4 py-2 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white font-medium text-sm transition-colors"
+                className="px-4 h-12 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white font-medium text-sm transition-colors"
               >
                 Kapat
               </button>
