@@ -2173,7 +2173,7 @@ function App() {
                     ) : <div></div>}
 
                     <span className={`
-                    text-xl font-extrabold w-10 h-10 flex items-center justify-center rounded-full leading-none
+                    text-xl font-normal w-10 h-10 flex items-center justify-center rounded-full leading-none
                     ${isTodayDate
                         ? 'bg-red-600 text-white shadow-lg shadow-red-200'
                         : isHoliday && isCurrentMonth ? 'text-red-700'
