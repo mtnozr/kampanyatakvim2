@@ -2158,7 +2158,7 @@ function App() {
                       ? (isHoliday
                         ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-800/50 shadow-sm'
                         : isDayWeekend
-                          ? 'bg-[#E2E8F0] dark:bg-[#1E293B] border-slate-400 dark:border-slate-600 shadow-md'
+                          ? 'bg-[#E2E8F0] dark:bg-[#0f172a] border-slate-400 dark:border-slate-700/50 shadow-md'
                           : 'bg-white dark:bg-slate-800 border-zinc-300 dark:border-slate-600 shadow-sm hover:bg-violet-50 dark:hover:bg-slate-700 hover:border-violet-400')
                       : 'bg-gray-200/50 dark:bg-slate-900/50 border-transparent opacity-40'}
                   ${isTodayDate ? 'ring-2 ring-red-500 ring-offset-2 dark:ring-offset-slate-900 z-10' : 'border-solid'}
