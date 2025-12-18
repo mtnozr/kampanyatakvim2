@@ -287,7 +287,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const handleEditDeptUser = (user: DepartmentUser) => {
     setEditingUserId(user.id);
     setNewDeptUsername(user.username);
-    setNewDeptEmail(user.email || '');
+    const email = user.email || '';
+    setNewDeptEmail(email.endsWith('@kampanyatakvim.com') ? email.replace('@kampanyatakvim.com', '') : email);
     setNewDeptUserDeptId(user.departmentId);
     setNewDeptUserIsDesigner(!!user.isDesigner);
     setNewDeptUserIsKampanyaYapan(!!user.isKampanyaYapan);
@@ -312,6 +313,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const handleAddDeptUser = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newDeptUsername.trim()) {
+      setError('Ad Soyad gereklidir.');
+      return;
+    }
+    if (!newDeptEmail.trim()) {
       setError('Kullanıcı adı gereklidir.');
       return;
     }
@@ -325,6 +330,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       return;
     }
 
+    const finalEmail = newDeptEmail.includes('@') ? newDeptEmail : `${newDeptEmail.trim().toLowerCase().replace(/\s+/g, '')}@kampanyatakvim.com`;
+
     if (editingUserId) {
         if (onUpdateDepartmentUser) {
              const updates: any = {
@@ -333,7 +340,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 isDesigner: newDeptUserIsDesigner,
                 isKampanyaYapan: newDeptUserIsKampanyaYapan,
                 isBusinessUnit: newDeptUserIsBusinessUnit,
-                email: newDeptEmail
+                email: finalEmail
              };
              if (newDeptPassword.trim()) {
                  updates.password = newDeptPassword.trim();
@@ -342,16 +349,16 @@ export const AdminModal: React.FC<AdminModalProps> = ({
              handleCancelEdit(); // Reset form
         }
     } else {
-        // Check if username already exists
+        // Check if email already exists
         const existingUser = departmentUsers.find(
-          u => u.username.toLowerCase() === newDeptUsername.toLowerCase()
+          u => u.email && u.email.toLowerCase() === finalEmail.toLowerCase()
         );
         if (existingUser) {
           setError('Bu kullanıcı adı zaten kullanılıyor.');
           return;
         }
 
-        onAddDepartmentUser(newDeptUsername, newDeptPassword, newDeptUserDeptId, newDeptUserIsDesigner, newDeptUserIsKampanyaYapan, newDeptUserIsBusinessUnit, newDeptEmail);
+        onAddDepartmentUser(newDeptUsername, newDeptPassword, newDeptUserDeptId, newDeptUserIsDesigner, newDeptUserIsKampanyaYapan, newDeptUserIsBusinessUnit, finalEmail);
         // Reset form
         setNewDeptUsername('');
         setNewDeptPassword('');
@@ -773,12 +780,12 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     <form onSubmit={handleAddDeptUser} className="space-y-3">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
-                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Kullanıcı Adı</label>
+                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Ad Soyad</label>
                           <input
                             type="text"
                             value={newDeptUsername}
                             onChange={(e) => setNewDeptUsername(e.target.value)}
-                            placeholder="ornek_kullanici"
+                            placeholder="Örn: Ali Yılmaz"
                             className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-colors"
                           />
                         </div>
@@ -795,12 +802,12 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                           />
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">E-posta</label>
+                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Kullanıcı Adı</label>
                           <input
-                            type="email"
+                            type="text"
                             value={newDeptEmail}
                             onChange={(e) => setNewDeptEmail(e.target.value)}
-                            placeholder="birim@sirket.com"
+                            placeholder="ornek_kullanici"
                             className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-colors"
                           />
                         </div>
