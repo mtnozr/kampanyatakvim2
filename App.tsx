@@ -881,29 +881,7 @@ function App() {
       // We force explicit flex centering and line-height.
       const emojiAvatars = clone.querySelectorAll('[role="img"][aria-label="avatar"]');
       emojiAvatars.forEach((el) => {
-        const element = el as HTMLElement;
-        
-        // Reset layout to ensure clean centering
-        element.style.display = 'flex';
-        element.style.alignItems = 'center';
-        element.style.justifyContent = 'center';
-        element.style.textAlign = 'center';
-        
-        // Force dimensions
-        element.style.width = '20px';
-        element.style.height = '20px';
-        element.style.minWidth = '20px';
-        element.style.minHeight = '20px';
-        
-        // Typography adjustments for html2canvas
-        element.style.fontSize = '12px'; 
-        element.style.lineHeight = '1'; 
-        element.style.padding = '0';
-        element.style.margin = '0';
-        
-        // Ensure circular clipping
-        element.style.overflow = 'hidden';
-        element.style.borderRadius = '50%';
+        (el as HTMLElement).style.display = 'none';
       });
 
       // Chrome Fix: Wait for fonts to load and give layout engine time to settle
