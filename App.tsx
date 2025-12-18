@@ -2156,11 +2156,11 @@ function App() {
                   flex flex-col
                   ${isCurrentMonth
                       ? (isHoliday
-                        ? 'bg-red-50/70 dark:bg-red-900/20 border-red-200 dark:border-red-800/30 shadow-sm'
+                        ? 'bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-800/30 shadow-sm'
                         : isDayWeekend
-                          ? 'bg-gray-100 dark:bg-slate-900 border-gray-200 dark:border-slate-800 shadow-sm'
-                          : 'bg-white dark:bg-slate-800 border-transparent dark:border-slate-700 shadow-sm hover:shadow-md')
-                      : 'bg-gray-50/50 dark:bg-slate-900/50 border-transparent opacity-60'}
+                          ? 'bg-gray-100 dark:bg-slate-900 border-2 border-gray-300 dark:border-slate-800 shadow-sm'
+                          : 'bg-[#FAFAFA] dark:bg-slate-800 border-2 border-gray-300 dark:border-slate-700 shadow-sm hover:bg-white dark:hover:bg-slate-700 hover:border-gray-400 transition-colors')
+                      : 'bg-gray-100/50 dark:bg-slate-900/50 border-2 border-transparent opacity-60'}
                   ${isTodayDate ? 'ring-2 ring-violet-400 ring-offset-2 dark:ring-offset-slate-900' : ''}
                   ${!isDesigner && !loggedInDeptUser?.isBusinessUnit ? 'cursor-default' : 'cursor-pointer'}
                 `}
