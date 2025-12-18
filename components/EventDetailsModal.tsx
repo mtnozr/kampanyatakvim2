@@ -126,7 +126,9 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     }
 
     const subject = `[Kampanya Bilgi Talebi] - ${event.title}`;
-    const body = `Merhaba ${assignee.name},\n\n"${event.title}" başlıklı kampanya hakkında güncel durum ve ilerleme bilgisini paylaşmanızı rica ederim.\n\nTeşekkürler.`;
+    // Get first name from assignee name (split by space and take first part)
+    const assigneeFirstName = assignee.name.split(' ')[0];
+    const body = `Merhaba ${assigneeFirstName},\n\n"${event.title}" başlıklı kampanya hakkında güncel durum ve ilerleme bilgisini paylaşabilir misin?`;
 
     window.location.href = `mailto:${assignee.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
