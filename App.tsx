@@ -2152,32 +2152,33 @@ function App() {
                     }
                   }}
                   className={`
-                  relative min-h-[120px] p-2 rounded-2xl border transition-colors transition-shadow duration-200 group
+                  relative min-h-[140px] p-4 rounded-xl border-2 transition-all duration-200 group
                   flex flex-col
                   ${isCurrentMonth
                       ? (isHoliday
-                        ? 'bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-800/30 shadow-sm'
+                        ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-800/50 shadow-sm'
                         : isDayWeekend
-                          ? 'bg-gray-100 dark:bg-slate-900 border-2 border-gray-300 dark:border-slate-800 shadow-sm'
-                          : 'bg-[#FAFAFA] dark:bg-slate-800 border-2 border-gray-300 dark:border-slate-700 shadow-sm hover:bg-white dark:hover:bg-slate-700 hover:border-gray-400 transition-colors')
-                      : 'bg-gray-100/50 dark:bg-slate-900/50 border-2 border-transparent opacity-60'}
-                  ${isTodayDate ? 'ring-2 ring-violet-400 ring-offset-2 dark:ring-offset-slate-900' : ''}
+                          ? 'bg-[#E2E8F0] dark:bg-[#1E293B] border-slate-400 dark:border-slate-600 shadow-md'
+                          : 'bg-white dark:bg-slate-800 border-zinc-300 dark:border-slate-600 shadow-sm hover:bg-violet-50 dark:hover:bg-slate-700 hover:border-violet-400')
+                      : 'bg-gray-200/50 dark:bg-slate-900/50 border-transparent opacity-40'}
+                  ${isTodayDate ? 'ring-2 ring-red-500 ring-offset-2 dark:ring-offset-slate-900 z-10' : 'border-solid'}
                   ${!isDesigner && !loggedInDeptUser?.isBusinessUnit ? 'cursor-default' : 'cursor-pointer'}
                 `}
                 >
-                  <div className="flex justify-between items-start mb-2">
+                  <div className="flex justify-between items-start mb-3">
                     {isHoliday && isCurrentMonth ? (
-                      <span className="text-[10px] font-bold text-red-600 bg-red-100 px-1.5 py-0.5 rounded leading-tight max-w-[65%] line-clamp-2">
+                      <span className="text-[11px] font-extrabold text-red-700 bg-red-100 px-2 py-0.5 rounded leading-tight max-w-[70%] line-clamp-2 border border-red-200">
                         {holidayName}
                       </span>
                     ) : <div></div>}
 
                     <span className={`
-                    text-sm font-bold w-8 h-8 flex items-center justify-center rounded-full leading-none
+                    text-xl font-extrabold w-10 h-10 flex items-center justify-center rounded-full leading-none
                     ${isTodayDate
-                        ? 'bg-violet-600 text-white'
-                        : isHoliday && isCurrentMonth ? 'text-red-600'
-                          : isCurrentMonth ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400 dark:text-gray-600'}
+                        ? 'bg-red-600 text-white shadow-lg shadow-red-200'
+                        : isHoliday && isCurrentMonth ? 'text-red-700'
+                          : isDayWeekend && isCurrentMonth ? 'text-slate-500 dark:text-slate-400'
+                          : isCurrentMonth ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-600'}
                   `}>
                       {format(day, 'd')}
                     </span>
