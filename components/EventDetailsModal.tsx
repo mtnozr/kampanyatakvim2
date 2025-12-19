@@ -133,6 +133,25 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     window.location.href = `mailto:${assignee.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
+  const formatDuration = (start: Date, end: Date) => {
+    const diffMs = end.getTime() - start.getTime();
+    if (diffMs < 0) return '0 dk';
+    
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    
+    const hours = diffHours % 24;
+    
+    if (diffDays > 0) {
+      return `${diffDays} gün, ${hours} saat`;
+    } else if (hours > 0) {
+      return `${hours} saat`;
+    } else {
+      return `${diffMins} dk`;
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all scale-100 flex flex-col max-h-[90vh] transition-colors">
@@ -434,6 +453,53 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               </div>
             </div>
           )}
+
+          {/* Time Tracking Section */}
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-lg shrink-0">
+              <Clock size={20} />
+            </div>
+            <div className="w-full">
+              <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Süre Bilgileri</p>
+              <div className="mt-1 space-y-1 bg-indigo-50/50 dark:bg-indigo-900/10 p-3 rounded-lg border border-indigo-100 dark:border-indigo-800/30">
+                {event.createdAt ? (
+                    <p className="text-sm text-gray-700 dark:text-gray-300 flex justify-between">
+                        <span className="font-semibold text-gray-500 dark:text-gray-400">Oluşturulma:</span> 
+                        <span>{format(event.createdAt, 'd MMMM yyyy HH:mm', { locale: tr })}</span>
+                    </p>
+                ) : (
+                   <p className="text-sm text-gray-500 italic">Oluşturulma tarihi bilinmiyor</p>
+                )}
+                
+                {/* Duration Calculation */}
+                {(() => {
+                    if (!event.createdAt) return null;
+
+                    if (status === 'Tamamlandı') {
+                        // Find completion date from history
+                        const completionEntry = event.history?.slice().reverse().find(h => h.newStatus === 'Tamamlandı');
+                        
+                        if (completionEntry) {
+                            return (
+                                <p className="text-sm text-gray-700 dark:text-gray-300 flex justify-between border-t border-indigo-100 dark:border-indigo-800/30 pt-1 mt-1">
+                                    <span className="font-semibold text-gray-500 dark:text-gray-400">Tamamlanma Süresi:</span> 
+                                    <span className="font-bold text-green-600 dark:text-green-400">{formatDuration(event.createdAt, completionEntry.date)}</span>
+                                </p>
+                            );
+                        }
+                    } else if (status === 'Planlandı') {
+                        return (
+                            <p className="text-sm text-gray-700 dark:text-gray-300 flex justify-between border-t border-indigo-100 dark:border-indigo-800/30 pt-1 mt-1">
+                                <span className="font-semibold text-gray-500 dark:text-gray-400">Geçen Süre:</span> 
+                                <span className="font-bold text-indigo-600 dark:text-indigo-400">{formatDuration(event.createdAt, new Date())}</span>
+                            </p>
+                        );
+                    }
+                    return null;
+                })()}
+              </div>
+            </div>
+          </div>
 
         </div>
 
