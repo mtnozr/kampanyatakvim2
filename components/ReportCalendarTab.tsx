@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
     format,
-    addMonths,
     endOfMonth,
     endOfWeek,
     eachDayOfInterval,
@@ -11,35 +10,29 @@ import {
     isWeekend,
     startOfMonth,
     startOfWeek,
-    addDays,
     isBefore
 } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { CalendarEvent, User, Department } from '../types';
-import { DAYS_OF_WEEK, REPORT_STATUS_STYLES } from '../constants';
+import { Report, User, Department } from '../types';
+import { DAYS_OF_WEEK } from '../constants';
 import { CheckCircle2, Clock, AlertTriangle, FileText, Plus } from 'lucide-react';
 
 interface ReportCalendarTabProps {
     currentDate: Date;
-    events: CalendarEvent[];
+    reports: Report[];
     users: User[];
     departments: Department[];
-    onMarkReportDone: (eventId: string) => Promise<void>;
-    onUpdateReportDueDate: (eventId: string, newDate: Date) => Promise<void>;
+    onMarkReportDone: (reportId: string) => Promise<void>;
+    onUpdateReportDueDate: (reportId: string, newDate: Date) => Promise<void>;
     onDayClick?: (date: Date) => void;
     loggedInUserId?: string;
     isDesigner: boolean;
     isKampanyaYapan: boolean;
 }
 
-interface ReportEvent extends CalendarEvent {
-    reportDueDate: Date;
-    isOverdue: boolean;
-}
-
 export const ReportCalendarTab: React.FC<ReportCalendarTabProps> = ({
     currentDate,
-    events,
+    reports,
     users,
     departments,
     onMarkReportDone,
@@ -50,23 +43,17 @@ export const ReportCalendarTab: React.FC<ReportCalendarTabProps> = ({
     isKampanyaYapan
 }) => {
     const now = new Date();
-    const [draggedReport, setDraggedReport] = useState<ReportEvent | null>(null);
+    const [draggedReport, setDraggedReport] = useState<Report | null>(null);
 
-    // Calculate pending reports from completed campaigns
-    const pendingReports: ReportEvent[] = useMemo(() => {
-        return events
-            .filter(e => e.status === 'Tamamlandı' && e.reportStatus !== 'done')
-            .map(e => {
-                // Report due date is 30 days after campaign completion
-                const completionDate = e.updatedAt || e.date;
-                const reportDueDate = e.reportDueDate || addDays(completionDate, 30);
-                return {
-                    ...e,
-                    reportDueDate: reportDueDate instanceof Date ? reportDueDate : new Date(reportDueDate),
-                    isOverdue: isBefore(reportDueDate instanceof Date ? reportDueDate : new Date(reportDueDate), now)
-                };
-            });
-    }, [events, now]);
+    // Filter to only pending reports and calculate overdue status
+    const pendingReports = useMemo(() => {
+        return reports
+            .filter(r => r.status === 'pending')
+            .map(r => ({
+                ...r,
+                isOverdue: isBefore(r.dueDate, now)
+            }));
+    }, [reports, now]);
 
     // Calendar logic
     const calendarDays = useMemo(() => {
@@ -83,26 +70,21 @@ export const ReportCalendarTab: React.FC<ReportCalendarTabProps> = ({
 
     // Get reports due on a specific day
     const getReportsForDay = (date: Date) => {
-        return pendingReports.filter(report => isSameDay(report.reportDueDate, date));
+        return pendingReports.filter(report => isSameDay(report.dueDate, date));
     };
 
     // Stats
     const overdueCount = pendingReports.filter(r => r.isOverdue).length;
     const pendingCount = pendingReports.filter(r => !r.isOverdue).length;
 
-    const handleMarkDone = async (eventId: string, e: React.MouseEvent) => {
+    const handleMarkDone = async (reportId: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        await onMarkReportDone(eventId);
+        await onMarkReportDone(reportId);
     };
 
     const getUserName = (userId?: string) => {
         if (!userId) return 'Atanmamış';
         return users.find(u => u.id === userId)?.name || 'Bilinmiyor';
-    };
-
-    const getDepartmentName = (deptId?: string) => {
-        if (!deptId) return '';
-        return departments.find(d => d.id === deptId)?.name || '';
     };
 
     const handleDayClick = (date: Date) => {
@@ -111,7 +93,7 @@ export const ReportCalendarTab: React.FC<ReportCalendarTabProps> = ({
         }
     };
 
-    const handleDragStart = (e: React.DragEvent, report: ReportEvent) => {
+    const handleDragStart = (e: React.DragEvent, report: Report & { isOverdue: boolean }) => {
         if (!isDesigner) return;
         setDraggedReport(report);
         e.dataTransfer.effectAllowed = "move";
@@ -130,7 +112,7 @@ export const ReportCalendarTab: React.FC<ReportCalendarTabProps> = ({
         e.preventDefault();
 
         // Don't do anything if dropped on the same day
-        if (isSameDay(draggedReport.reportDueDate, targetDate)) {
+        if (isSameDay(draggedReport.dueDate, targetDate)) {
             setDraggedReport(null);
             return;
         }
@@ -223,6 +205,7 @@ export const ReportCalendarTab: React.FC<ReportCalendarTabProps> = ({
                                             key={report.id}
                                             draggable={isDesigner}
                                             onDragStart={(e) => handleDragStart(e, report)}
+                                            onClick={(e) => e.stopPropagation()}
                                             className={`
                         p-2 rounded-lg border text-xs transition-all
                         ${report.isOverdue
@@ -237,6 +220,11 @@ export const ReportCalendarTab: React.FC<ReportCalendarTabProps> = ({
                                             <div className="text-gray-500 dark:text-gray-400 text-[10px] mb-1">
                                                 📊 {getUserName(report.assigneeId)}
                                             </div>
+                                            {report.campaignTitle && (
+                                                <div className="text-gray-400 dark:text-gray-500 text-[10px] mb-1 truncate">
+                                                    🎯 {report.campaignTitle}
+                                                </div>
+                                            )}
                                             <div className="flex items-center justify-between gap-1">
                                                 <span className={`
                           px-1.5 py-0.5 rounded text-[10px] font-medium
