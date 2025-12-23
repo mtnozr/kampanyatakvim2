@@ -57,10 +57,19 @@ export const ReportCalendarTab: React.FC<ReportCalendarTabProps> = ({
         }));
     }, [reports, now]);
 
-    // Stats
-    const pendingReports = allReportsWithStatus.filter(r => r.status === 'pending' && !r.isOverdue);
-    const overdueReports = allReportsWithStatus.filter(r => r.isOverdue);
-    const completedReports = allReportsWithStatus.filter(r => r.status === 'done');
+    // Stats - filter by user if kampanya yapan (not designer)
+    const myReports = useMemo(() => {
+        // Designer sees all reports, Kampanya Yapan sees only their own
+        if (isDesigner) return allReportsWithStatus;
+        if (isKampanyaYapan && loggedInUserId) {
+            return allReportsWithStatus.filter(r => r.assigneeId === loggedInUserId);
+        }
+        return allReportsWithStatus;
+    }, [allReportsWithStatus, isDesigner, isKampanyaYapan, loggedInUserId]);
+
+    const pendingReports = myReports.filter(r => r.status === 'pending' && !r.isOverdue);
+    const overdueReports = myReports.filter(r => r.isOverdue);
+    const completedReports = myReports.filter(r => r.status === 'done');
 
     // Calendar logic
     const calendarDays = useMemo(() => {
@@ -161,6 +170,12 @@ export const ReportCalendarTab: React.FC<ReportCalendarTabProps> = ({
         <div className="space-y-4">
             {/* Stats Bar */}
             <div className="flex items-center gap-4 p-4 bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm flex-wrap">
+                {/* Show label for Kampanya Yapan role */}
+                {isKampanyaYapan && !isDesigner && (
+                    <div className="flex items-center gap-2 px-3 py-1 bg-violet-100 dark:bg-violet-900/30 rounded-full">
+                        <span className="text-xs font-bold text-violet-700 dark:text-violet-300">📋 Senin Raporların</span>
+                    </div>
+                )}
                 <div className="flex items-center gap-2">
                     <Clock className="text-amber-500" size={20} />
                     <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
@@ -182,7 +197,7 @@ export const ReportCalendarTab: React.FC<ReportCalendarTabProps> = ({
                 <div className="flex items-center gap-2">
                     <FileText className="text-gray-500" size={20} />
                     <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                        Toplam: <span className="font-bold">{allReportsWithStatus.length}</span>
+                        Toplam: <span className="font-bold">{myReports.length}</span>
                     </span>
                 </div>
             </div>
