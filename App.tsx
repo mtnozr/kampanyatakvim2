@@ -2075,6 +2075,27 @@ function App() {
     }
   };
 
+  // Calculate pending counts based on user role
+  const myPendingCampaigns = useMemo(() => {
+    // Designer sees all pending campaigns, Kampanya Yapan sees only their own
+    const allPending = events.filter(e => e.status === 'Planlandı');
+    if (isDesigner) return allPending;
+    if (isKampanyaYapan && connectedPersonnelUser) {
+      return allPending.filter(e => e.assigneeId === connectedPersonnelUser.id);
+    }
+    return allPending;
+  }, [events, isDesigner, isKampanyaYapan, connectedPersonnelUser]);
+
+  const myPendingReports = useMemo(() => {
+    // Designer sees all pending reports, Kampanya Yapan sees only their own
+    const allPending = reports.filter(r => r.status === 'pending');
+    if (isDesigner) return allPending;
+    if (isKampanyaYapan && connectedPersonnelUser) {
+      return allPending.filter(r => r.assigneeId === connectedPersonnelUser.id);
+    }
+    return allPending;
+  }, [reports, isDesigner, isKampanyaYapan, connectedPersonnelUser]);
+
   // Check if user can see Report tab
   const canSeeReportTab = isDesigner || isKampanyaYapan || !!connectedPersonnelUser;
 
@@ -2447,13 +2468,18 @@ function App() {
             <button
               onClick={() => setActiveTab('kampanya')}
               className={`
-                px-6 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200
+                px-6 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200 relative
                 ${activeTab === 'kampanya'
                   ? 'bg-violet-600 text-white shadow-lg shadow-violet-200 dark:shadow-none'
                   : 'bg-white text-gray-600 border border-gray-200 hover:bg-violet-50 hover:text-violet-600 hover:border-violet-200 dark:bg-slate-800 dark:text-gray-300 dark:border-slate-600 dark:hover:bg-slate-700'}
               `}
             >
               📅 KAMPANYA
+              {myPendingCampaigns.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800">
+                  {myPendingCampaigns.length}
+                </span>
+              )}
             </button>
             {canSeeReportTab && (
               <button
@@ -2466,9 +2492,9 @@ function App() {
                 `}
               >
                 📊 RAPOR
-                {reports.filter(r => r.status === 'pending').length > 0 && (
+                {myPendingReports.length > 0 && (
                   <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800">
-                    {reports.filter(r => r.status === 'pending').length}
+                    {myPendingReports.length}
                   </span>
                 )}
               </button>
