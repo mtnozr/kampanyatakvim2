@@ -1381,6 +1381,7 @@ function App() {
     setLoggedInDeptUser(null);
     setIsDesigner(false);
     setIsKampanyaYapan(false);
+    setIsAnalitik(false);
     // Clear cookies
     deleteCookie('designer_auth');
     deleteCookie('kampanya_yapan_auth');
