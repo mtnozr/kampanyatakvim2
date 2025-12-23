@@ -2332,8 +2332,10 @@ function App() {
   // Check if user can see Report tab (Analitik-only users cannot)
   const canSeeReportTab = (isDesigner || isKampanyaYapan || !!connectedPersonnelUser) && !isOnlyAnalitik;
 
-  // Check if user can see Analytics tab
-  const canSeeAnalyticsTab = isDesigner || isAnalitik;
+  // Check if user can see Analytics tab (only Super Admin or Analitik role)
+  // Super Admin = isDesigner but NOT a departmentUser
+  const isSuperAdmin = isDesigner && !loggedInDeptUser;
+  const canSeeAnalyticsTab = isSuperAdmin || isAnalitik;
 
   // Check if user can see Kampanya tab (everyone except only-Analitik users)
   const canSeeKampanyaTab = !isOnlyAnalitik;
