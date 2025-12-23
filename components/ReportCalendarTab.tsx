@@ -17,6 +17,10 @@ import { Report, User, Department } from '../types';
 import { DAYS_OF_WEEK } from '../constants';
 import { Clock, AlertTriangle, FileText, Plus, CheckCircle2 } from 'lucide-react';
 
+interface ReportWithStatus extends Report {
+    isOverdue: boolean;
+}
+
 interface ReportCalendarTabProps {
     currentDate: Date;
     reports: Report[];
@@ -45,15 +49,18 @@ export const ReportCalendarTab: React.FC<ReportCalendarTabProps> = ({
     const now = new Date();
     const [draggedReport, setDraggedReport] = useState<Report | null>(null);
 
-    // Filter to only pending reports and calculate overdue status
-    const pendingReports = useMemo(() => {
-        return reports
-            .filter(r => r.status === 'pending')
-            .map(r => ({
-                ...r,
-                isOverdue: isBefore(r.dueDate, now)
-            }));
+    // All reports with overdue status calculation
+    const allReportsWithStatus = useMemo(() => {
+        return reports.map(r => ({
+            ...r,
+            isOverdue: r.status === 'pending' && isBefore(r.dueDate, now)
+        }));
     }, [reports, now]);
+
+    // Stats
+    const pendingReports = allReportsWithStatus.filter(r => r.status === 'pending' && !r.isOverdue);
+    const overdueReports = allReportsWithStatus.filter(r => r.isOverdue);
+    const completedReports = allReportsWithStatus.filter(r => r.status === 'done');
 
     // Calendar logic
     const calendarDays = useMemo(() => {
@@ -68,14 +75,10 @@ export const ReportCalendarTab: React.FC<ReportCalendarTabProps> = ({
         });
     }, [currentDate]);
 
-    // Get reports due on a specific day
+    // Get reports for a specific day (all statuses)
     const getReportsForDay = (date: Date) => {
-        return pendingReports.filter(report => isSameDay(report.dueDate, date));
+        return allReportsWithStatus.filter(report => isSameDay(report.dueDate, date));
     };
-
-    // Stats
-    const overdueCount = pendingReports.filter(r => r.isOverdue).length;
-    const pendingCount = pendingReports.filter(r => !r.isOverdue).length;
 
     const getUserName = (userId?: string) => {
         if (!userId) return 'Atanmamış';
@@ -88,13 +91,13 @@ export const ReportCalendarTab: React.FC<ReportCalendarTabProps> = ({
         }
     };
 
-    const handleReportClick = (e: React.MouseEvent, report: Report & { isOverdue: boolean }) => {
+    const handleReportClick = (e: React.MouseEvent, report: ReportWithStatus) => {
         e.stopPropagation();
         onReportClick(report);
     };
 
-    const handleDragStart = (e: React.DragEvent, report: Report & { isOverdue: boolean }) => {
-        if (!isDesigner) return;
+    const handleDragStart = (e: React.DragEvent, report: ReportWithStatus) => {
+        if (!isDesigner || report.status === 'done') return;
         setDraggedReport(report);
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("text/plain", report.id);
@@ -123,26 +126,63 @@ export const ReportCalendarTab: React.FC<ReportCalendarTabProps> = ({
 
     const canAddReport = isDesigner;
 
+    // Get styling for report card
+    const getReportCardStyle = (report: ReportWithStatus) => {
+        if (report.status === 'done') {
+            return 'bg-emerald-50 border-emerald-300 dark:bg-emerald-900/30 dark:border-emerald-700 hover:bg-emerald-100';
+        }
+        if (report.isOverdue) {
+            return 'bg-red-50 border-red-300 dark:bg-red-900/30 dark:border-red-700 hover:bg-red-100';
+        }
+        return 'bg-amber-50 border-amber-300 dark:bg-amber-900/30 dark:border-amber-700 hover:bg-amber-100';
+    };
+
+    // Get badge styling for report status
+    const getStatusBadge = (report: ReportWithStatus) => {
+        if (report.status === 'done') {
+            return {
+                className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-800 dark:text-emerald-200',
+                text: '✅ Tamamlandı'
+            };
+        }
+        if (report.isOverdue) {
+            return {
+                className: 'bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-200',
+                text: '⚠️ Gecikmiş'
+            };
+        }
+        return {
+            className: 'bg-amber-100 text-amber-700 dark:bg-amber-800 dark:text-amber-200',
+            text: '⏳ Bekliyor'
+        };
+    };
+
     return (
         <div className="space-y-4">
             {/* Stats Bar */}
-            <div className="flex items-center gap-4 p-4 bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
+            <div className="flex items-center gap-4 p-4 bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm flex-wrap">
                 <div className="flex items-center gap-2">
                     <Clock className="text-amber-500" size={20} />
                     <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                        Bekleyen: <span className="text-amber-600 font-bold">{pendingCount}</span>
+                        Bekleyen: <span className="text-amber-600 font-bold">{pendingReports.length}</span>
                     </span>
                 </div>
                 <div className="flex items-center gap-2">
                     <AlertTriangle className="text-red-500" size={20} />
                     <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                        Gecikmiş: <span className="text-red-600 font-bold">{overdueCount}</span>
+                        Gecikmiş: <span className="text-red-600 font-bold">{overdueReports.length}</span>
+                    </span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <CheckCircle2 className="text-emerald-500" size={20} />
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                        Tamamlandı: <span className="text-emerald-600 font-bold">{completedReports.length}</span>
                     </span>
                 </div>
                 <div className="flex items-center gap-2">
                     <FileText className="text-gray-500" size={20} />
                     <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                        Toplam: <span className="font-bold">{pendingReports.length}</span>
+                        Toplam: <span className="font-bold">{allReportsWithStatus.length}</span>
                     </span>
                 </div>
             </div>
@@ -196,43 +236,40 @@ export const ReportCalendarTab: React.FC<ReportCalendarTabProps> = ({
                             </div>
 
                             <div className="flex-1 overflow-y-auto space-y-2">
-                                {dayReports.map(report => (
-                                    <div
-                                        key={report.id}
-                                        draggable={isDesigner}
-                                        onDragStart={(e) => handleDragStart(e, report)}
-                                        onClick={(e) => handleReportClick(e, report)}
-                                        className={`
-                      p-2 rounded-lg border text-xs transition-all cursor-pointer hover:shadow-md
-                      ${report.isOverdue
-                                                ? 'bg-red-50 border-red-300 dark:bg-red-900/30 dark:border-red-700 hover:bg-red-100'
-                                                : 'bg-amber-50 border-amber-300 dark:bg-amber-900/30 dark:border-amber-700 hover:bg-amber-100'}
-                      ${isDesigner ? 'active:cursor-grabbing' : ''}
-                    `}
-                                    >
-                                        <div className="font-semibold text-gray-800 dark:text-white truncate mb-1">
-                                            {report.title}
-                                        </div>
-                                        <div className="text-gray-500 dark:text-gray-400 text-[10px] mb-1">
-                                            📊 {getUserName(report.assigneeId)}
-                                        </div>
-                                        {report.campaignTitle && (
-                                            <div className="text-gray-400 dark:text-gray-500 text-[10px] mb-1 truncate">
-                                                🎯 {report.campaignTitle}
+                                {dayReports.map(report => {
+                                    const badge = getStatusBadge(report);
+
+                                    return (
+                                        <div
+                                            key={report.id}
+                                            draggable={isDesigner && report.status !== 'done'}
+                                            onDragStart={(e) => handleDragStart(e, report)}
+                                            onClick={(e) => handleReportClick(e, report)}
+                                            className={`
+                        p-2 rounded-lg border text-xs transition-all cursor-pointer hover:shadow-md
+                        ${getReportCardStyle(report)}
+                        ${isDesigner && report.status !== 'done' ? 'active:cursor-grabbing' : ''}
+                      `}
+                                        >
+                                            <div className="font-semibold text-gray-800 dark:text-white truncate mb-1">
+                                                {report.title}
                                             </div>
-                                        )}
-                                        <div className="flex items-center gap-1">
-                                            <span className={`
-                        px-1.5 py-0.5 rounded text-[10px] font-medium
-                        ${report.isOverdue
-                                                    ? 'bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-200'
-                                                    : 'bg-amber-100 text-amber-700 dark:bg-amber-800 dark:text-amber-200'}
-                      `}>
-                                                {report.isOverdue ? '⚠️ Gecikmiş' : '⏳ Bekliyor'}
-                                            </span>
+                                            <div className="text-gray-500 dark:text-gray-400 text-[10px] mb-1">
+                                                📊 {getUserName(report.assigneeId)}
+                                            </div>
+                                            {report.campaignTitle && (
+                                                <div className="text-gray-400 dark:text-gray-500 text-[10px] mb-1 truncate">
+                                                    🎯 {report.campaignTitle}
+                                                </div>
+                                            )}
+                                            <div className="flex items-center gap-1">
+                                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${badge.className}`}>
+                                                    {badge.text}
+                                                </span>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
 
                             {/* Add Report Indicator for Designer */}
