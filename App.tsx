@@ -2012,6 +2012,10 @@ function App() {
   const handleDeleteReport = async (reportId: string) => {
     try {
       await deleteDoc(doc(db, "reports", reportId));
+
+      // Clear the selected report to close the modal
+      setSelectedReport(null);
+
       addToast('Rapor silindi.', 'success');
 
       // Log the action
