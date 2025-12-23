@@ -39,6 +39,7 @@ export interface CalendarEvent {
   updatedAt?: Date;
   history?: EventHistoryItem[];
   note?: string; // Campaign delay note or sticky note
+  requiresReport?: boolean; // Whether this campaign needs a report when completed
 
   // Report Tracking Fields
   reportStatus?: 'pending' | 'done';      // Report status

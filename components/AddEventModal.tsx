@@ -6,7 +6,7 @@ import { URGENCY_CONFIGS, TURKISH_HOLIDAYS, DIFFICULTY_CONFIGS } from '../consta
 interface AddEventModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (title: string, urgency: UrgencyLevel, date: Date, assigneeId?: string, description?: string, departmentId?: string, difficulty?: DifficultyLevel) => void;
+  onAdd: (title: string, urgency: UrgencyLevel, date: Date, assigneeId?: string, description?: string, departmentId?: string, difficulty?: DifficultyLevel, requiresReport?: boolean) => void;
   initialDate?: Date;
   initialData?: {
     title?: string;
@@ -19,10 +19,10 @@ interface AddEventModalProps {
   monthlyChampionId?: string | null;
 }
 
-export const AddEventModal: React.FC<AddEventModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  onAdd, 
+export const AddEventModal: React.FC<AddEventModalProps> = ({
+  isOpen,
+  onClose,
+  onAdd,
   initialDate,
   initialData,
   users,
@@ -37,6 +37,7 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
   const [departmentId, setDepartmentId] = useState<string>('');
   const [description, setDescription] = useState('');
   const [holidayWarning, setHolidayWarning] = useState<string | null>(null);
+  const [requiresReport, setRequiresReport] = useState(true);
 
   // Helper function to convert text to Title Case with Turkish support
   const toTitleCase = (str: string) => {
@@ -56,7 +57,7 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
         setDateStr(formattedDate);
         checkHoliday(formattedDate);
       }
-      
+
       if (initialData) {
         setTitle(initialData.title || '');
         setUrgency(initialData.urgency || 'Medium');
@@ -67,8 +68,8 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
         // Actually, if simply opening with a date, we usually reset fields.
         // Logic: If initialData is present, use it. Else reset fields.
       }
-    } 
-    
+    }
+
     if (!isOpen) {
       // Reset on close
       setTitle('');
@@ -78,6 +79,7 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
       setDepartmentId('');
       setDescription('');
       setHolidayWarning(null);
+      setRequiresReport(true);
     }
   }, [isOpen, initialDate, initialData]);
 
@@ -108,7 +110,7 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
     }
 
     const selectedDate = new Date(dateStr);
-    onAdd(title, urgency, selectedDate, assigneeId, description, departmentId, difficulty);
+    onAdd(title, urgency, selectedDate, assigneeId, description, departmentId, difficulty, requiresReport);
     onClose();
     setTitle('');
     setUrgency('Medium');
@@ -117,6 +119,7 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
     setDepartmentId('');
     setDescription('');
     setHolidayWarning(null);
+    setRequiresReport(true);
   };
 
   if (!isOpen) return null;
@@ -210,8 +213,8 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
                   {[...departments]
                     .sort((a, b) => a.name.localeCompare(b.name, 'tr'))
                     .map(dept => (
-                    <option key={dept.id} value={dept.id}>{dept.name}</option>
-                  ))}
+                      <option key={dept.id} value={dept.id}>{dept.name}</option>
+                    ))}
                 </select>
                 <Building className="absolute left-2.5 top-2.5 text-gray-400 dark:text-gray-500" size={16} />
               </div>
@@ -291,6 +294,20 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
               rows={3}
               className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-slate-600 focus:border-violet-500 focus:ring-2 focus:ring-violet-200 outline-none transition-all resize-none bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
             />
+          </div>
+
+          {/* Rapor Yapılacak mı */}
+          <div className="flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+            <input
+              type="checkbox"
+              id="requiresReport"
+              checked={requiresReport}
+              onChange={(e) => setRequiresReport(e.target.checked)}
+              className="w-5 h-5 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 dark:bg-slate-600 dark:border-slate-500"
+            />
+            <label htmlFor="requiresReport" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+              📊 Tamamlandığında rapor oluşturulsun
+            </label>
           </div>
 
           <div className="pt-4 flex justify-end gap-3 shrink-0">
