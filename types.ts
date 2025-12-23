@@ -1,5 +1,6 @@
 export type UrgencyLevel = 'Very High' | 'High' | 'Medium' | 'Low';
 export type DifficultyLevel = 'BASİT' | 'BASİT ÜSTÜ' | 'ORTA' | 'ZOR' | 'ÇOK ZOR';
+export type ReportStatus = 'pending' | 'done';
 
 export interface User {
   id: string;
@@ -38,6 +39,12 @@ export interface CalendarEvent {
   updatedAt?: Date;
   history?: EventHistoryItem[];
   note?: string; // Campaign delay note or sticky note
+
+  // Report Tracking Fields
+  reportStatus?: 'pending' | 'done';      // Report status
+  reportDueDate?: Date;                   // Campaign completion + 30 days
+  reportCompletedAt?: Date;               // When the report was completed
+  reportCompletedBy?: string;             // ID of the person who completed the report
 }
 
 export interface UrgencyConfig {

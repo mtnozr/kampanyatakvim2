@@ -76,6 +76,27 @@ export const STATUS_STYLES: Record<string, UrgencyConfig> = {
   },
 };
 
+export const REPORT_STATUS_STYLES: Record<string, UrgencyConfig> = {
+  'pending': {
+    label: 'Bekliyor',
+    colorBg: 'bg-amber-100',
+    colorBorder: 'border-amber-500',
+    colorText: 'text-amber-900',
+  },
+  'done': {
+    label: 'Tamamlandı',
+    colorBg: 'bg-emerald-100',
+    colorBorder: 'border-emerald-500',
+    colorText: 'text-emerald-900',
+  },
+  'overdue': {
+    label: 'Gecikmiş',
+    colorBg: 'bg-red-100',
+    colorBorder: 'border-red-500',
+    colorText: 'text-red-900',
+  },
+};
+
 // Sadece kurumsal ve temel Kadın/Erkek emojileri
 export const AVAILABLE_EMOJIS = [
   '👨‍💼', '👩‍💼', // Ofis Çalışanı
