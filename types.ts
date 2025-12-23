@@ -93,6 +93,7 @@ export interface DepartmentUser {
   isBusinessUnit?: boolean; // New role for requesting work
   isAnalitik?: boolean; // Analytics role - can manage analytics tasks
   email?: string; // Contact email for notifications
+  hasDefaultPassword?: boolean; // True if user hasn't changed from default password
   createdAt: Date;
   lastSeen?: Date; // For tracking online status
 }

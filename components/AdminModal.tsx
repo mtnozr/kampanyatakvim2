@@ -952,6 +952,12 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                                   {user.isBusinessUnit && (
                                     <span className="text-[10px] bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-1.5 py-0.5 rounded font-medium">İş Birimi</span>
                                   )}
+                                  {user.isAnalitik && (
+                                    <span className="text-[10px] bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 px-1.5 py-0.5 rounded font-medium">Analitik</span>
+                                  )}
+                                  {user.hasDefaultPassword && (
+                                    <span className="text-[10px] bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-1.5 py-0.5 rounded font-medium" title="Varsayılan şifre kullanıyor">⚠️ Varsayılan Şifre</span>
+                                  )}
                                 </div>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">{dept ? dept.name : 'Silinmiş Birim'} • {user.email || 'E-posta yok'}</p>
                               </div>

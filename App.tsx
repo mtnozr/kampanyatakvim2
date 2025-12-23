@@ -1302,6 +1302,7 @@ function App() {
         isBusinessUnit: isBusinessUnitRole,
         isAnalitik: isAnalitikRole,
         email: userEmail,
+        hasDefaultPassword: cleanPassword === '123456', // Flag for default password
         createdAt: Timestamp.now()
       });
       addToast(`${username} kullanıcısı eklendi. (Server: ${serverProjectId})`, 'success');
@@ -1403,6 +1404,13 @@ function App() {
       await reauthenticateWithCredential(auth.currentUser, credential);
 
       await updatePassword(auth.currentUser, newPassword);
+
+      // Clear the hasDefaultPassword flag in Firestore
+      if (loggedInDeptUser.id) {
+        await updateDoc(doc(db, "departmentUsers", loggedInDeptUser.id), {
+          hasDefaultPassword: false
+        });
+      }
 
       addToast('Şifreniz başarıyla güncellendi.', 'success');
     } catch (error: any) {
