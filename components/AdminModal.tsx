@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Trash2, Plus, ShieldCheck, Lock, Users, Calendar, AlertTriangle, Building, UserPlus, LogOut, FileText, Download, Megaphone, Settings, Trophy, Activity, History, Edit2 } from 'lucide-react';
-import { User, CalendarEvent, Department, DepartmentUser, Announcement } from '../types';
+import { User, CalendarEvent, Department, DepartmentUser, Announcement, AnalyticsUser } from '../types';
 import { calculateMonthlyChampion } from '../utils/gamification';
 import { AVAILABLE_EMOJIS, URGENCY_CONFIGS } from '../constants';
 import { changelog } from '../changelog';
@@ -23,7 +23,7 @@ interface AdminModalProps {
   onAddDepartment: (name: string) => void;
   onDeleteDepartment: (id: string) => void;
   departmentUsers: DepartmentUser[];
-  onAddDepartmentUser: (username: string, password: string, departmentId: string, isDesigner: boolean, isKampanyaYapan: boolean, isBusinessUnit: boolean, email?: string) => void;
+  onAddDepartmentUser: (username: string, password: string, departmentId: string, isDesigner: boolean, isKampanyaYapan: boolean, isBusinessUnit: boolean, isAnalitik: boolean, email?: string) => void;
   onDeleteDepartmentUser: (id: string) => void;
   onUpdateDepartmentUser?: (id: string, updates: Partial<DepartmentUser> & { password?: string }) => void;
   onBulkAddEvents: (events: Partial<CalendarEvent>[]) => Promise<void>;
@@ -34,6 +34,10 @@ interface AdminModalProps {
   autoThemeConfig: { enabled: boolean; time: string };
   onUpdateAutoThemeConfig: (config: { enabled: boolean; time: string }) => Promise<void>;
   monthlyChampionId?: string | null;
+  // Analytics Personnel Props
+  analyticsUsers?: AnalyticsUser[];
+  onAddAnalyticsUser?: (name: string, email: string, emoji: string) => void;
+  onDeleteAnalyticsUser?: (id: string) => void;
 }
 
 export const AdminModal: React.FC<AdminModalProps> = ({
@@ -59,7 +63,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   onDeleteAnnouncement,
   autoThemeConfig,
   onUpdateAutoThemeConfig,
-  monthlyChampionId
+  monthlyChampionId,
+  analyticsUsers = [],
+  onAddAnalyticsUser,
+  onDeleteAnalyticsUser
 }) => {
   const [localThemeConfig, setLocalThemeConfig] = useState(autoThemeConfig);
   const [authUser, setAuthUser] = useState<FirebaseUser | null>(null);
@@ -75,7 +82,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [activeTab, setActiveTab] = useState<'users' | 'events' | 'departments' | 'dept-users' | 'import-export' | 'announcements' | 'settings' | 'active-users' | 'changelog'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'events' | 'departments' | 'dept-users' | 'import-export' | 'announcements' | 'settings' | 'active-users' | 'changelog' | 'analytics-users'>('users');
   const [importText, setImportText] = useState('');
 
   // Loading state for auth check
@@ -85,6 +92,11 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState('');
+
+  // Analytics Personnel Form States
+  const [newAnalyticsName, setNewAnalyticsName] = useState('');
+  const [newAnalyticsEmail, setNewAnalyticsEmail] = useState('');
+  const [selectedAnalyticsEmoji, setSelectedAnalyticsEmoji] = useState('');
 
   // Announcement Form States
   const [newAnnTitle, setNewAnnTitle] = useState('');
@@ -102,7 +114,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [newDeptUserIsDesigner, setNewDeptUserIsDesigner] = useState(false);
   const [newDeptUserIsKampanyaYapan, setNewDeptUserIsKampanyaYapan] = useState(false);
   const [newDeptUserIsBusinessUnit, setNewDeptUserIsBusinessUnit] = useState(false);
-  
+  const [newDeptUserIsAnalitik, setNewDeptUserIsAnalitik] = useState(false);
+
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
 
   const [error, setError] = useState('');
@@ -177,24 +190,24 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         // Check permissions
         const q = query(collection(db, "departmentUsers"), where("uid", "==", user.uid));
         try {
-            const snap = await getDocs(q);
-            if (!snap.empty) {
-                const deptUser = snap.docs[0].data() as DepartmentUser;
-                if (deptUser.isDesigner) {
-                    setAuthUser(user);
-                    onSetIsDesigner(true);
-                } else {
-                    // Unauthorized for Admin Panel
-                    setAuthUser(null);
-                }
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            const deptUser = snap.docs[0].data() as DepartmentUser;
+            if (deptUser.isDesigner) {
+              setAuthUser(user);
+              onSetIsDesigner(true);
             } else {
-                // No department user record found -> Assume Super Admin
-                setAuthUser(user);
-                onSetIsDesigner(true);
+              // Unauthorized for Admin Panel
+              setAuthUser(null);
             }
+          } else {
+            // No department user record found -> Assume Super Admin
+            setAuthUser(user);
+            onSetIsDesigner(true);
+          }
         } catch (e) {
-            console.error("Admin auth check failed", e);
-            setAuthUser(null);
+          console.error("Admin auth check failed", e);
+          setAuthUser(null);
         }
       } else {
         setAuthUser(null);
@@ -293,6 +306,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     setNewDeptUserIsDesigner(!!user.isDesigner);
     setNewDeptUserIsKampanyaYapan(!!user.isKampanyaYapan);
     setNewDeptUserIsBusinessUnit(!!user.isBusinessUnit);
+    setNewDeptUserIsAnalitik(!!user.isAnalitik);
     setNewDeptPassword(''); // Clear password field
     setError('');
   };
@@ -306,6 +320,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     setNewDeptUserIsDesigner(false);
     setNewDeptUserIsKampanyaYapan(false);
     setNewDeptUserIsBusinessUnit(false);
+    setNewDeptUserIsAnalitik(false);
     setError('');
   };
 
@@ -333,41 +348,43 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     const finalEmail = newDeptEmail.includes('@') ? newDeptEmail : `${newDeptEmail.trim().toLowerCase().replace(/\s+/g, '')}@kampanyatakvim.com`;
 
     if (editingUserId) {
-        if (onUpdateDepartmentUser) {
-             const updates: any = {
-                username: newDeptUsername,
-                departmentId: newDeptUserDeptId,
-                isDesigner: newDeptUserIsDesigner,
-                isKampanyaYapan: newDeptUserIsKampanyaYapan,
-                isBusinessUnit: newDeptUserIsBusinessUnit,
-                email: finalEmail
-             };
-             if (newDeptPassword.trim()) {
-                 updates.password = newDeptPassword.trim();
-             }
-             onUpdateDepartmentUser(editingUserId, updates);
-             handleCancelEdit(); // Reset form
+      if (onUpdateDepartmentUser) {
+        const updates: any = {
+          username: newDeptUsername,
+          departmentId: newDeptUserDeptId,
+          isDesigner: newDeptUserIsDesigner,
+          isKampanyaYapan: newDeptUserIsKampanyaYapan,
+          isBusinessUnit: newDeptUserIsBusinessUnit,
+          isAnalitik: newDeptUserIsAnalitik,
+          email: finalEmail
+        };
+        if (newDeptPassword.trim()) {
+          updates.password = newDeptPassword.trim();
         }
+        onUpdateDepartmentUser(editingUserId, updates);
+        handleCancelEdit(); // Reset form
+      }
     } else {
-        // Check if email already exists
-        const existingUser = departmentUsers.find(
-          u => u.email && u.email.toLowerCase() === finalEmail.toLowerCase()
-        );
-        if (existingUser) {
-          setError('Bu kullanıcı adı zaten kullanılıyor.');
-          return;
-        }
+      // Check if email already exists
+      const existingUser = departmentUsers.find(
+        u => u.email && u.email.toLowerCase() === finalEmail.toLowerCase()
+      );
+      if (existingUser) {
+        setError('Bu kullanıcı adı zaten kullanılıyor.');
+        return;
+      }
 
-        onAddDepartmentUser(newDeptUsername, newDeptPassword, newDeptUserDeptId, newDeptUserIsDesigner, newDeptUserIsKampanyaYapan, newDeptUserIsBusinessUnit, finalEmail);
-        // Reset form
-        setNewDeptUsername('');
-        setNewDeptPassword('');
-        setNewDeptEmail('');
-        setNewDeptUserDeptId('');
-        setNewDeptUserIsDesigner(false);
-        setNewDeptUserIsKampanyaYapan(false);
-        setNewDeptUserIsBusinessUnit(false);
-        setError('');
+      onAddDepartmentUser(newDeptUsername, newDeptPassword, newDeptUserDeptId, newDeptUserIsDesigner, newDeptUserIsKampanyaYapan, newDeptUserIsBusinessUnit, newDeptUserIsAnalitik, finalEmail);
+      // Reset form
+      setNewDeptUsername('');
+      setNewDeptPassword('');
+      setNewDeptEmail('');
+      setNewDeptUserDeptId('');
+      setNewDeptUserIsDesigner(false);
+      setNewDeptUserIsKampanyaYapan(false);
+      setNewDeptUserIsBusinessUnit(false);
+      setNewDeptUserIsAnalitik(false);
+      setError('');
     }
   };
 
@@ -604,6 +621,12 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               >
                 <Settings size={16} /> Ayarlar
               </button>
+              <button
+                onClick={() => setActiveTab('analytics-users')}
+                className={`flex-1 py-3 px-2 text-xs md:text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === 'analytics-users' ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
+              >
+                📊 Analitik Personel
+              </button>
             </div>
 
             {/* Content Area */}
@@ -765,14 +788,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 <div className="flex flex-col h-full">
                   {/* Add Department User Form */}
                   <div className="p-6 bg-white dark:bg-slate-800 border-b dark:border-slate-700 space-y-4 shrink-0 transition-colors">
-                  <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                    <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide flex items-center gap-2">
                       {editingUserId ? (
                         <>
-                           <Edit2 size={14} /> Kullanıcı Düzenle
+                          <Edit2 size={14} /> Kullanıcı Düzenle
                         </>
                       ) : (
                         <>
-                           <UserPlus size={14} /> Yeni Birim Kullanıcısı Ekle
+                          <UserPlus size={14} /> Yeni Birim Kullanıcısı Ekle
                         </>
                       )}
                     </h3>
@@ -791,7 +814,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         </div>
                         <div>
                           <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">
-                              Şifre {editingUserId && <span className="font-normal text-gray-400">(Değişmeyecekse boş bırakın)</span>}
+                            Şifre {editingUserId && <span className="font-normal text-gray-400">(Değişmeyecekse boş bırakın)</span>}
                           </label>
                           <input
                             type="text"
@@ -862,30 +885,41 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                           <span className="text-sm text-gray-700 dark:text-gray-300">İş Birimi Yetkisi Ver</span>
                           <span className="text-[10px] text-gray-400 dark:text-gray-500">(İş talebi oluşturma izni)</span>
                         </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={newDeptUserIsAnalitik}
+                            onChange={(e) => {
+                              setNewDeptUserIsAnalitik(e.target.checked);
+                            }}
+                            className="w-4 h-4 rounded border-gray-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 bg-white dark:bg-slate-700"
+                          />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">Analitik Yetkisi Ver</span>
+                          <span className="text-[10px] text-gray-400 dark:text-gray-500">(Analitik görevleri görüntüleme izni)</span>
+                        </label>
                       </div>
                       <div className="flex justify-between items-center">
                         <p className="text-red-500 text-xs h-4">{error}</p>
                         <div className="flex gap-2">
-                             {editingUserId && (
-                                <button
-                                  type="button"
-                                  onClick={handleCancelEdit}
-                                  className="px-4 py-2 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600 text-sm flex items-center gap-2 transition-colors"
-                                >
-                                  <X size={16} /> İptal
-                                </button>
-                             )}
-                             <button
-                               type="submit"
-                               className={`px-4 py-2 rounded-lg text-white text-sm flex items-center gap-2 shadow-lg dark:shadow-none transition-colors ${
-                                 editingUserId 
-                                   ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-200' 
-                                   : 'bg-violet-600 hover:bg-violet-700 shadow-violet-200'
-                               }`}
-                             >
-                               {editingUserId ? <><Edit2 size={16} /> Güncelle</> : <><Plus size={16} /> Ekle</>}
-                             </button>
-                          </div>
+                          {editingUserId && (
+                            <button
+                              type="button"
+                              onClick={handleCancelEdit}
+                              className="px-4 py-2 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600 text-sm flex items-center gap-2 transition-colors"
+                            >
+                              <X size={16} /> İptal
+                            </button>
+                          )}
+                          <button
+                            type="submit"
+                            className={`px-4 py-2 rounded-lg text-white text-sm flex items-center gap-2 shadow-lg dark:shadow-none transition-colors ${editingUserId
+                              ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-200'
+                              : 'bg-violet-600 hover:bg-violet-700 shadow-violet-200'
+                              }`}
+                          >
+                            {editingUserId ? <><Edit2 size={16} /> Güncelle</> : <><Plus size={16} /> Ekle</>}
+                          </button>
+                        </div>
                       </div>
                     </form>
                   </div>
@@ -901,15 +935,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         return (
                           <div key={user.id} className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-gray-100 dark:border-slate-700 flex items-center justify-between group hover:shadow-sm transition-all">
                             <div className="flex items-center gap-3">
-                              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
-                                user.isDesigner 
-                                  ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400' 
-                                  : user.isKampanyaYapan 
-                                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-                                    : user.isBusinessUnit
-                                      ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
-                                      : 'bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400'
-                              }`}>
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${user.isDesigner
+                                ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400'
+                                : user.isKampanyaYapan
+                                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                                  : user.isBusinessUnit
+                                    ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
+                                    : 'bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400'
+                                }`}>
                                 {user.username.charAt(0).toUpperCase()}
                               </div>
                               <div>
@@ -929,20 +962,20 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                               </div>
                             </div>
                             <div className="flex items-center gap-1">
-                                <button
-                                  onClick={() => handleEditDeptUser(user)}
-                                  className="p-2 text-gray-300 dark:text-gray-600 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                                  title="Düzenle"
-                                >
-                                  <Edit2 size={16} />
-                                </button>
-                                <button
-                                  onClick={() => onDeleteDepartmentUser(user.id)}
-                                  className="p-2 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                  title="Kullanıcıyı Sil"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
+                              <button
+                                onClick={() => handleEditDeptUser(user)}
+                                className="p-2 text-gray-300 dark:text-gray-600 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                title="Düzenle"
+                              >
+                                <Edit2 size={16} />
+                              </button>
+                              <button
+                                onClick={() => onDeleteDepartmentUser(user.id)}
+                                className="p-2 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                title="Kullanıcıyı Sil"
+                              >
+                                <Trash2 size={16} />
+                              </button>
                             </div>
                           </div>
                         );
@@ -1152,10 +1185,9 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                                 <span className="text-[10px] bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full">
                                   {format(ann.createdAt, 'd MMM yyyy HH:mm', { locale: tr })}
                                 </span>
-                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${
-                                  ann.visibleTo === 'all' ? 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 border-green-100 dark:border-green-900/30' :
+                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${ann.visibleTo === 'all' ? 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 border-green-100 dark:border-green-900/30' :
                                   'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-900/30'
-                                }`}>
+                                  }`}>
                                   {ann.visibleTo === 'all' ? 'Tüm Herkes' : 'Kampanya Yapan ve Admin'}
                                 </span>
                               </div>
@@ -1188,13 +1220,13 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         {departmentUsers.filter(u => u.lastSeen && new Date().getTime() - new Date(u.lastSeen).getTime() < 5 * 60 * 1000).length} Çevrimiçi
                       </span>
                     </div>
-                    
+
                     <div className="divide-y divide-gray-100 dark:divide-slate-700">
                       {departmentUsers
                         .sort((a, b) => (b.lastSeen ? new Date(b.lastSeen).getTime() : 0) - (a.lastSeen ? new Date(a.lastSeen).getTime() : 0))
                         .map(user => {
                           const isOnline = user.lastSeen && new Date().getTime() - new Date(user.lastSeen).getTime() < 5 * 60 * 1000;
-                          const lastSeenText = user.lastSeen 
+                          const lastSeenText = user.lastSeen
                             ? format(new Date(user.lastSeen), 'HH:mm', { locale: tr })
                             : 'Görülmedi';
                           const deptName = departments.find(d => d.id === user.departmentId)?.name || 'Bilinmiyor';
@@ -1216,7 +1248,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             </div>
                           );
                         })}
-                        
+
                       {departmentUsers.length === 0 && (
                         <div className="p-8 text-center text-gray-500 dark:text-gray-400 text-sm">
                           Kullanıcı bulunamadı.
@@ -1257,105 +1289,215 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               {/* --- SETTINGS TAB --- */}
               {activeTab === 'settings' && (
                 <div className="p-6 h-full overflow-y-auto">
-                    <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">Genel Ayarlar</h3>
-                    
-                    <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-6 shadow-sm space-y-6">
+                  <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">Genel Ayarlar</h3>
 
-                        <div className="flex items-start justify-between border-b border-gray-100 dark:border-slate-700 pb-6">
-                            <div>
-                                <h4 className="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-                                  <Trophy size={18} className="text-yellow-500" />
-                                  Gamification / Rozet Sistemi
-                                </h4>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                  Sistemi aktif ederek en çok kampanya tamamlayan kullanıcıya aylık şampiyonluk rozeti (🏆) verilir.
-                                </p>
-                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 italic">
-                                  Not: Test butonu ile anlık hesaplama yapabilirsiniz.
-                                </p>
-                            </div>
-                            <div className="flex flex-col items-end gap-2">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                                  {gamificationEnabled ? 'Aktif' : 'Pasif'}
-                                </span>
-                                <input 
-                                  type="checkbox" 
-                                  checked={gamificationEnabled}
-                                  onChange={(e) => handleGamificationToggle(e.target.checked)}
-                                  className="w-5 h-5 text-violet-600 rounded focus:ring-violet-500 border-gray-300 dark:border-slate-600 dark:bg-slate-700"
-                                />
-                              </div>
-                              <button
-                                onClick={handleForceCalculate}
-                                disabled={!gamificationEnabled}
-                                className={`px-4 py-2 text-white text-xs font-bold rounded-lg transition-colors ${gamificationEnabled ? 'bg-violet-600 hover:bg-violet-700' : 'bg-gray-300 cursor-not-allowed dark:bg-slate-600'}`}
-                              >
-                                Bu Ayı Hesapla (Test)
-                              </button>
-                            </div>
+                  <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-6 shadow-sm space-y-6">
+
+                    <div className="flex items-start justify-between border-b border-gray-100 dark:border-slate-700 pb-6">
+                      <div>
+                        <h4 className="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                          <Trophy size={18} className="text-yellow-500" />
+                          Gamification / Rozet Sistemi
+                        </h4>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Sistemi aktif ederek en çok kampanya tamamlayan kullanıcıya aylık şampiyonluk rozeti (🏆) verilir.
+                        </p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 italic">
+                          Not: Test butonu ile anlık hesaplama yapabilirsiniz.
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                            {gamificationEnabled ? 'Aktif' : 'Pasif'}
+                          </span>
+                          <input
+                            type="checkbox"
+                            checked={gamificationEnabled}
+                            onChange={(e) => handleGamificationToggle(e.target.checked)}
+                            className="w-5 h-5 text-violet-600 rounded focus:ring-violet-500 border-gray-300 dark:border-slate-600 dark:bg-slate-700"
+                          />
                         </div>
-                        {gamificationMsg && (
-                          <div className="p-3 -mt-4 mb-4 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 text-sm rounded-lg font-medium border border-violet-100 dark:border-violet-800/50">
-                            {gamificationMsg}
-                          </div>
-                        )}
-
-                        <div className="flex items-start justify-between border-b border-gray-100 dark:border-slate-700 pb-6">
-                            <div>
-                                <h4 className="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-                                  <FileText size={18} className="text-blue-500" />
-                                  İş Birimi Talep Girişi
-                                </h4>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                  İş birimi kullanıcılarının kampanya talebi oluşturabilmesini aktif/pasif yapın.
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-2 h-6">
-                                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                                  {requestSubmissionEnabled ? 'Aktif' : 'Pasif'}
-                                </span>
-                                <input 
-                                  type="checkbox" 
-                                  checked={requestSubmissionEnabled}
-                                  onChange={(e) => handleRequestSubmissionToggle(e.target.checked)}
-                                  className="w-5 h-5 text-violet-600 rounded focus:ring-violet-500 border-gray-300 dark:border-slate-600 dark:bg-slate-700"
-                                />
-                            </div>
-                        </div>
-                        
-                        <div className="flex items-start justify-between">
-                            <div>
-                                <h4 className="font-bold text-gray-800 dark:text-gray-200">Otomatik Karanlık Mod</h4>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Belirlenen saatte tüm kullanıcılar için karanlık modu aktif et.</p>
-                            </div>
-                            <div className="flex items-center h-6">
-                              <input 
-                                type="checkbox" 
-                                id="autoDarkMode"
-                                checked={localThemeConfig.enabled}
-                                onChange={(e) => handleThemeConfigChange({ ...localThemeConfig, enabled: e.target.checked })}
-                                className="w-5 h-5 text-violet-600 rounded focus:ring-violet-500 border-gray-300 dark:border-slate-600 dark:bg-slate-700"
-                              />
-                            </div>
-                        </div>
-
-                        {localThemeConfig.enabled && (
-                            <div className="pt-4 border-t dark:border-slate-700 animate-in fade-in slide-in-from-top-2 duration-300">
-                                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 block">Aktif Olma Saati</label>
-                                <input
-                                    type="time"
-                                    value={localThemeConfig.time}
-                                    onChange={(e) => handleThemeConfigChange({ ...localThemeConfig, time: e.target.value })}
-                                    className="px-4 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white transition-colors"
-                                />
-                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                                    Sistem saati <strong>{localThemeConfig.time}</strong> olduğunda karanlık mod otomatik olarak açılacaktır. Kullanıcılar manuel olarak kapatabilirler.
-                                </p>
-                            </div>
-                        )}
-
+                        <button
+                          onClick={handleForceCalculate}
+                          disabled={!gamificationEnabled}
+                          className={`px-4 py-2 text-white text-xs font-bold rounded-lg transition-colors ${gamificationEnabled ? 'bg-violet-600 hover:bg-violet-700' : 'bg-gray-300 cursor-not-allowed dark:bg-slate-600'}`}
+                        >
+                          Bu Ayı Hesapla (Test)
+                        </button>
+                      </div>
                     </div>
+                    {gamificationMsg && (
+                      <div className="p-3 -mt-4 mb-4 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 text-sm rounded-lg font-medium border border-violet-100 dark:border-violet-800/50">
+                        {gamificationMsg}
+                      </div>
+                    )}
+
+                    <div className="flex items-start justify-between border-b border-gray-100 dark:border-slate-700 pb-6">
+                      <div>
+                        <h4 className="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                          <FileText size={18} className="text-blue-500" />
+                          İş Birimi Talep Girişi
+                        </h4>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          İş birimi kullanıcılarının kampanya talebi oluşturabilmesini aktif/pasif yapın.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 h-6">
+                        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                          {requestSubmissionEnabled ? 'Aktif' : 'Pasif'}
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={requestSubmissionEnabled}
+                          onChange={(e) => handleRequestSubmissionToggle(e.target.checked)}
+                          className="w-5 h-5 text-violet-600 rounded focus:ring-violet-500 border-gray-300 dark:border-slate-600 dark:bg-slate-700"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h4 className="font-bold text-gray-800 dark:text-gray-200">Otomatik Karanlık Mod</h4>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Belirlenen saatte tüm kullanıcılar için karanlık modu aktif et.</p>
+                      </div>
+                      <div className="flex items-center h-6">
+                        <input
+                          type="checkbox"
+                          id="autoDarkMode"
+                          checked={localThemeConfig.enabled}
+                          onChange={(e) => handleThemeConfigChange({ ...localThemeConfig, enabled: e.target.checked })}
+                          className="w-5 h-5 text-violet-600 rounded focus:ring-violet-500 border-gray-300 dark:border-slate-600 dark:bg-slate-700"
+                        />
+                      </div>
+                    </div>
+
+                    {localThemeConfig.enabled && (
+                      <div className="pt-4 border-t dark:border-slate-700 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 block">Aktif Olma Saati</label>
+                        <input
+                          type="time"
+                          value={localThemeConfig.time}
+                          onChange={(e) => handleThemeConfigChange({ ...localThemeConfig, time: e.target.value })}
+                          className="px-4 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white transition-colors"
+                        />
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                          Sistem saati <strong>{localThemeConfig.time}</strong> olduğunda karanlık mod otomatik olarak açılacaktır. Kullanıcılar manuel olarak kapatabilirler.
+                        </p>
+                      </div>
+                    )}
+
+                  </div>
+                </div>
+              )}
+
+              {/* --- ANALYTICS PERSONNEL TAB --- */}
+              {activeTab === 'analytics-users' && (
+                <div className="flex flex-col h-full">
+                  {/* Add Analytics Personnel Form */}
+                  <div className="p-6 bg-white dark:bg-slate-800 border-b dark:border-slate-700 space-y-4 shrink-0 transition-colors">
+                    <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Yeni Analitik Personel Ekle</h3>
+                    <form onSubmit={(e) => {
+                      e.preventDefault();
+                      if (!newAnalyticsName.trim() || !newAnalyticsEmail.trim() || !selectedAnalyticsEmoji) {
+                        setError('Lütfen tüm alanları doldurunuz.');
+                        return;
+                      }
+                      if (onAddAnalyticsUser) {
+                        onAddAnalyticsUser(newAnalyticsName, newAnalyticsEmail, selectedAnalyticsEmoji);
+                        setNewAnalyticsName('');
+                        setNewAnalyticsEmail('');
+                        setSelectedAnalyticsEmoji('');
+                        setError('');
+                      }
+                    }} className="space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">İsim Soyisim</label>
+                          <input
+                            type="text"
+                            value={newAnalyticsName}
+                            onChange={(e) => setNewAnalyticsName(e.target.value)}
+                            placeholder="Örn: Zeynep Kaya"
+                            className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-colors"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">E-posta</label>
+                          <input
+                            type="email"
+                            value={newAnalyticsEmail}
+                            onChange={(e) => setNewAnalyticsEmail(e.target.value)}
+                            placeholder="zeynep@mail.com"
+                            className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-colors"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 block">Emoji Seçimi</label>
+                        <div className="grid grid-cols-8 gap-2 p-3 bg-gray-50 dark:bg-slate-900/50 rounded-lg border border-gray-100 dark:border-slate-700 max-h-32 overflow-y-auto custom-scrollbar transition-colors">
+                          {AVAILABLE_EMOJIS.map((emoji) => (
+                            <button
+                              key={emoji}
+                              type="button"
+                              onClick={() => setSelectedAnalyticsEmoji(emoji)}
+                              className={`
+                                w-8 h-8 flex items-center justify-center rounded-full text-lg transition-all
+                                ${selectedAnalyticsEmoji === emoji
+                                  ? 'bg-blue-600 ring-2 ring-blue-300 dark:ring-blue-500/50 transform scale-110 shadow-md'
+                                  : 'bg-white dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600'}
+                              `}
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center pt-2">
+                        <p className="text-red-500 text-xs h-4">{error}</p>
+                        <button
+                          type="submit"
+                          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 shadow-lg shadow-blue-200 dark:shadow-none text-sm transition-colors"
+                        >
+                          <Plus size={16} /> Ekle
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* Analytics Personnel List */}
+                  <div className="p-6">
+                    <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">Mevcut Analitik Personel ({analyticsUsers.length})</h3>
+                    <div className="space-y-2">
+                      {analyticsUsers.map(user => (
+                        <div key={user.id} className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-gray-100 dark:border-slate-700 flex items-center justify-between group hover:shadow-sm transition-all">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-xl shadow-sm">
+                              {user.emoji}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{user.name}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
+                            </div>
+                          </div>
+                          {onDeleteAnalyticsUser && (
+                            <button
+                              onClick={() => onDeleteAnalyticsUser(user.id)}
+                              className="p-2 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                              title="Personeli Sil"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      {analyticsUsers.length === 0 && (
+                        <p className="text-gray-400 dark:text-gray-500 text-center py-4 text-sm">Henüz analitik personel eklenmemiş.</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

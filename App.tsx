@@ -18,7 +18,7 @@ import { Bell, ChevronLeft, ChevronRight, Plus, Users, ClipboardList, Loader2, S
 import emailjs from '@emailjs/browser';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { CalendarEvent, UrgencyLevel, User, AppNotification, ToastMessage, ActivityLog, Department, DepartmentUser, Announcement, DifficultyLevel, WorkRequest, Report } from './types';
+import { CalendarEvent, UrgencyLevel, User, AppNotification, ToastMessage, ActivityLog, Department, DepartmentUser, Announcement, DifficultyLevel, WorkRequest, Report, AnalyticsUser, AnalyticsTask, CampaignStatus } from './types';
 import { INITIAL_EVENTS, DAYS_OF_WEEK, INITIAL_USERS, URGENCY_CONFIGS, TURKISH_HOLIDAYS, INITIAL_DEPARTMENTS, DIFFICULTY_CONFIGS } from './constants';
 import { EventBadge } from './components/EventBadge';
 import { AddEventModal } from './components/AddEventModal';
@@ -39,6 +39,9 @@ import { MyTasksModal } from './components/MyTasksModal';
 import { ReportCalendarTab } from './components/ReportCalendarTab';
 import { AddReportModal } from './components/AddReportModal';
 import { ReportDetailsModal } from './components/ReportDetailsModal';
+import { AnalyticsCalendarTab } from './components/AnalyticsCalendarTab';
+import { AddAnalyticsTaskModal } from './components/AddAnalyticsTaskModal';
+import { AnalyticsTaskDetailsModal } from './components/AnalyticsTaskDetailsModal';
 import { ThemeToggle } from './components/ThemeToggle';
 import { useTheme } from './hooks/useTheme';
 import { setCookie, getCookie, deleteCookie } from './utils/cookies';
@@ -125,8 +128,16 @@ function App() {
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterDepartment, setFilterDepartment] = useState<string>('');
 
-  // Calendar Tab State (KAMPANYA or RAPOR)
-  const [activeTab, setActiveTab] = useState<'kampanya' | 'rapor'>('kampanya');
+  // Calendar Tab State (KAMPANYA, RAPOR, or ANALİTİK)
+  const [activeTab, setActiveTab] = useState<'kampanya' | 'rapor' | 'analitik'>('kampanya');
+
+  // Analytics State
+  const [analyticsUsers, setAnalyticsUsers] = useState<AnalyticsUser[]>([]);
+  const [analyticsTasks, setAnalyticsTasks] = useState<AnalyticsTask[]>([]);
+  const [isAnalitik, setIsAnalitik] = useState(false);
+  const [selectedAnalyticsTask, setSelectedAnalyticsTask] = useState<AnalyticsTask | null>(null);
+  const [isAddAnalyticsModalOpen, setIsAddAnalyticsModalOpen] = useState(false);
+  const [selectedAnalyticsDate, setSelectedAnalyticsDate] = useState<Date | undefined>(undefined);
 
   // Modals State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -184,6 +195,7 @@ function App() {
             setLoggedInDeptUser(deptUserData);
             setIsDesigner(!!deptUserData.isDesigner);
             setIsKampanyaYapan(!!deptUserData.isKampanyaYapan);
+            setIsAnalitik(!!deptUserData.isAnalitik);
 
             // Only show welcome toast if not recently shown (optional, but simple toast is fine)
             // addToast(`Hoşgeldiniz, ${deptUserData.username}`, 'success');
@@ -192,6 +204,7 @@ function App() {
             setLoggedInDeptUser(null);
             setIsDesigner(true); // Super admins are designers by default
             setIsKampanyaYapan(false);
+            setIsAnalitik(false);
           }
         } catch (err) {
           console.error("Auth check failed:", err);
@@ -201,6 +214,7 @@ function App() {
         setLoggedInDeptUser(null);
         setIsDesigner(false);
         setIsKampanyaYapan(false);
+        setIsAnalitik(false);
       }
     });
     return () => unsubscribe();
@@ -349,6 +363,35 @@ function App() {
         completedAt: docSnap.data().completedAt instanceof Timestamp ? docSnap.data().completedAt.toDate() : undefined
       } as Report));
       setReports(fetchedReports);
+    });
+    return () => unsubscribe();
+  }, [refreshKey]);
+
+  // 10. Sync Analytics Users
+  useEffect(() => {
+    const q = query(collection(db, "analyticsUsers"), orderBy("name", "asc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedUsers: AnalyticsUser[] = snapshot.docs.map(docSnap => ({
+        ...docSnap.data(),
+        id: docSnap.id
+      } as AnalyticsUser));
+      setAnalyticsUsers(fetchedUsers);
+    });
+    return () => unsubscribe();
+  }, [refreshKey]);
+
+  // 11. Sync Analytics Tasks
+  useEffect(() => {
+    const q = query(collection(db, "analyticsTasks"), orderBy("date", "asc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedTasks: AnalyticsTask[] = snapshot.docs.map(docSnap => ({
+        ...docSnap.data(),
+        id: docSnap.id,
+        date: docSnap.data().date instanceof Timestamp ? docSnap.data().date.toDate() : new Date(docSnap.data().date),
+        createdAt: docSnap.data().createdAt instanceof Timestamp ? docSnap.data().createdAt.toDate() : undefined,
+        updatedAt: docSnap.data().updatedAt instanceof Timestamp ? docSnap.data().updatedAt.toDate() : undefined
+      } as AnalyticsTask));
+      setAnalyticsTasks(fetchedTasks);
     });
     return () => unsubscribe();
   }, [refreshKey]);
@@ -870,6 +913,29 @@ function App() {
     }
   };
 
+  // === ANALYTICS USER HANDLERS ===
+  const handleAddAnalyticsUser = async (name: string, email: string, emoji: string) => {
+    try {
+      await addDoc(collection(db, "analyticsUsers"), {
+        name,
+        email,
+        emoji
+      });
+      addToast(`${name} (Analitik) başarıyla eklendi.`, 'success');
+    } catch (e) {
+      addToast('Analitik personel ekleme hatası.', 'info');
+    }
+  };
+
+  const handleDeleteAnalyticsUser = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, "analyticsUsers", id));
+      addToast('Analitik personel silindi.', 'info');
+    } catch (e) {
+      addToast('Analitik silme hatası.', 'info');
+    }
+  };
+
   const handleAddDepartment = async (name: string) => {
     try {
       await addDoc(collection(db, "departments"), { name });
@@ -1165,7 +1231,7 @@ function App() {
     }
   };
 
-  const handleAddDepartmentUser = async (username: string, password: string, departmentId: string, isDesignerRole: boolean, isKampanyaYapanRole: boolean, isBusinessUnitRole: boolean, email?: string) => {
+  const handleAddDepartmentUser = async (username: string, password: string, departmentId: string, isDesignerRole: boolean, isKampanyaYapanRole: boolean, isBusinessUnitRole: boolean, isAnalitikRole: boolean, email?: string) => {
     try {
       // Enforce email
       const userEmail = email || `${username.toLowerCase().replace(/\s+/g, '')}@kampanyatakvim.com`;
@@ -1234,6 +1300,7 @@ function App() {
         isDesigner: isDesignerRole,
         isKampanyaYapan: isKampanyaYapanRole,
         isBusinessUnit: isBusinessUnitRole,
+        isAnalitik: isAnalitikRole,
         email: userEmail,
         createdAt: Timestamp.now()
       });
@@ -2075,6 +2142,151 @@ function App() {
     }
   };
 
+  // === ANALYTICS HANDLERS ===
+
+  // Handle adding analytics task
+  const handleAddAnalyticsTask = async (title: string, urgency: UrgencyLevel, date: Date, assigneeId?: string, notes?: string) => {
+    try {
+      const taskDoc = await addDoc(collection(db, "analyticsTasks"), {
+        title,
+        urgency,
+        date: Timestamp.fromDate(date),
+        assigneeId: assigneeId || null,
+        notes: notes || null,
+        status: 'Planlandı',
+        createdAt: Timestamp.now()
+      });
+
+      addToast('Analitik iş eklendi.', 'success');
+
+      // Log the action
+      await addDoc(collection(db, "logs"), {
+        message: `Analitik iş eklendi: ${title}`,
+        timestamp: Timestamp.now()
+      });
+
+      // Send email notification if assignee has email
+      if (assigneeId) {
+        const assignee = analyticsUsers.find(u => u.id === assigneeId);
+        if (assignee?.email) {
+          const subject = `${title} - Analitik Görev Ataması`;
+          const body = `"${title}" adlı analitik görevi için atandınız.\n\nTarih: ${format(date, 'd MMMM yyyy', { locale: tr })}\nAciliyet: ${URGENCY_CONFIGS[urgency].label}${notes ? `\n\nNotlar: ${notes}` : ''}`;
+          window.location.href = `mailto:${assignee.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        }
+      }
+    } catch (e) {
+      console.error('Analytics task add error:', e);
+      addToast('Analitik iş ekleme hatası.', 'info');
+    }
+  };
+
+  // Handle deleting analytics task
+  const handleDeleteAnalyticsTask = async (taskId: string) => {
+    try {
+      await deleteDoc(doc(db, "analyticsTasks", taskId));
+      setSelectedAnalyticsTask(null);
+      addToast('Analitik iş silindi.', 'success');
+
+      await addDoc(collection(db, "logs"), {
+        message: `Analitik iş silindi (ID: ${taskId.substring(0, 6).toUpperCase()})`,
+        timestamp: Timestamp.now()
+      });
+    } catch (e) {
+      console.error('Analytics task delete error:', e);
+      addToast('Analitik iş silme hatası.', 'info');
+    }
+  };
+
+  // Handle updating analytics task
+  const handleUpdateAnalyticsTask = async (taskId: string, updates: Partial<AnalyticsTask>) => {
+    try {
+      const updateData: any = { updatedAt: Timestamp.now() };
+      if (updates.title !== undefined) updateData.title = updates.title;
+      if (updates.urgency !== undefined) updateData.urgency = updates.urgency;
+      if (updates.assigneeId !== undefined) updateData.assigneeId = updates.assigneeId || null;
+      if (updates.notes !== undefined) updateData.notes = updates.notes || null;
+      if (updates.date !== undefined) updateData.date = Timestamp.fromDate(updates.date);
+
+      await updateDoc(doc(db, "analyticsTasks", taskId), updateData);
+      addToast('Analitik iş güncellendi.', 'success');
+
+      // Refresh selected task if it matches
+      if (selectedAnalyticsTask?.id === taskId) {
+        const updatedTask = analyticsTasks.find(t => t.id === taskId);
+        if (updatedTask) {
+          setSelectedAnalyticsTask({ ...updatedTask, ...updates });
+        }
+      }
+    } catch (e) {
+      console.error('Analytics task update error:', e);
+      addToast('Analitik iş güncelleme hatası.', 'info');
+    }
+  };
+
+  // Handle updating analytics task status
+  const handleUpdateAnalyticsTaskStatus = async (taskId: string, status: CampaignStatus) => {
+    try {
+      const updateData: any = {
+        status,
+        updatedAt: Timestamp.now()
+      };
+
+      await updateDoc(doc(db, "analyticsTasks", taskId), updateData);
+
+      const statusLabels = {
+        'Planlandı': 'Planlandı',
+        'Tamamlandı': 'Tamamlandı',
+        'İptal Edildi': 'İptal Edildi'
+      };
+
+      addToast(`İş durumu "${statusLabels[status]}" olarak güncellendi.`, 'success');
+
+      // Log the action
+      const task = analyticsTasks.find(t => t.id === taskId);
+      if (task) {
+        await addDoc(collection(db, "logs"), {
+          message: `Analitik iş durumu değişti: ${task.title} -> ${statusLabels[status]}`,
+          timestamp: Timestamp.now()
+        });
+      }
+
+      // Refresh selected task
+      if (selectedAnalyticsTask?.id === taskId) {
+        setSelectedAnalyticsTask({ ...selectedAnalyticsTask, status });
+      }
+    } catch (e) {
+      console.error('Analytics task status update error:', e);
+      addToast('İş durumu güncelleme hatası.', 'info');
+    }
+  };
+
+  // Handle updating analytics task date (drag-and-drop)
+  const handleUpdateAnalyticsTaskDate = async (taskId: string, newDate: Date) => {
+    try {
+      await updateDoc(doc(db, "analyticsTasks", taskId), {
+        date: Timestamp.fromDate(newDate),
+        updatedAt: Timestamp.now()
+      });
+      addToast(`İş tarihi ${format(newDate, 'd MMMM yyyy', { locale: tr })} olarak güncellendi.`, 'success');
+    } catch (e) {
+      console.error('Analytics task date update error:', e);
+      addToast('Tarih güncelleme hatası.', 'info');
+    }
+  };
+
+  // Handle analytics task click
+  const handleAnalyticsTaskClick = (task: AnalyticsTask) => {
+    setSelectedAnalyticsTask(task);
+  };
+
+  // Handle analytics day click
+  const handleAnalyticsDayClick = (date: Date) => {
+    if (isDesigner) {
+      setSelectedAnalyticsDate(date);
+      setIsAddAnalyticsModalOpen(true);
+    }
+  };
+
   // Calculate pending counts based on user role
   const myPendingCampaigns = useMemo(() => {
     // Designer sees all pending campaigns, Kampanya Yapan sees only their own
@@ -2096,8 +2308,27 @@ function App() {
     return allPending;
   }, [reports, isDesigner, isKampanyaYapan, connectedPersonnelUser]);
 
+  // Connected Analytics User (for role-based filtering)
+  const connectedAnalyticsUser = useMemo(() => {
+    if (!loggedInDeptUser || !loggedInDeptUser.email) return null;
+    return analyticsUsers.find(u => u.email?.trim().toLowerCase() === loggedInDeptUser.email?.trim().toLowerCase());
+  }, [loggedInDeptUser, analyticsUsers]);
+
+  const myPendingAnalyticsTasks = useMemo(() => {
+    // Designer sees all pending tasks, Analitik sees only their own
+    const allPending = analyticsTasks.filter(t => t.status === 'Planlandı');
+    if (isDesigner) return allPending;
+    if (isAnalitik && connectedAnalyticsUser) {
+      return allPending.filter(t => t.assigneeId === connectedAnalyticsUser.id);
+    }
+    return allPending;
+  }, [analyticsTasks, isDesigner, isAnalitik, connectedAnalyticsUser]);
+
   // Check if user can see Report tab
   const canSeeReportTab = isDesigner || isKampanyaYapan || !!connectedPersonnelUser;
+
+  // Check if user can see Analytics tab
+  const canSeeAnalyticsTab = isDesigner || isAnalitik;
 
   // Render Loading State if Initial Data Fetching
   if (isEventsLoading || isUsersLoading) {
@@ -2499,6 +2730,24 @@ function App() {
                 )}
               </button>
             )}
+            {canSeeAnalyticsTab && (
+              <button
+                onClick={() => setActiveTab('analitik')}
+                className={`
+                  px-6 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200 relative
+                  ${activeTab === 'analitik'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 dark:shadow-none'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 dark:bg-slate-800 dark:text-gray-300 dark:border-slate-600 dark:hover:bg-slate-700'}
+                `}
+              >
+                📈 ANALİTİK
+                {myPendingAnalyticsTasks.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800">
+                    {myPendingAnalyticsTasks.length}
+                  </span>
+                )}
+              </button>
+            )}
           </div>
 
           {/* Conditional Content Based on Active Tab */}
@@ -2665,7 +2914,7 @@ function App() {
                 })}
               </div>
             </>
-          ) : (
+          ) : activeTab === 'rapor' ? (
             <ReportCalendarTab
               currentDate={currentDate}
               reports={reports}
@@ -2678,7 +2927,19 @@ function App() {
               isDesigner={isDesigner}
               isKampanyaYapan={isKampanyaYapan}
             />
-          )}
+          ) : activeTab === 'analitik' ? (
+            <AnalyticsCalendarTab
+              currentDate={currentDate}
+              tasks={analyticsTasks}
+              users={analyticsUsers}
+              onTaskClick={handleAnalyticsTaskClick}
+              onUpdateTaskDate={handleUpdateAnalyticsTaskDate}
+              onDayClick={handleAnalyticsDayClick}
+              loggedInUserId={connectedAnalyticsUser?.id}
+              isDesigner={isDesigner}
+              isAnalitik={isAnalitik}
+            />
+          ) : null}
         </div> {/* End of printable-calendar */}
 
         {/* Login Button (Bottom Left) - Only show when not logged in */}
@@ -2735,6 +2996,29 @@ function App() {
           canEdit={isDesigner || isKampanyaYapan}
         />
 
+        <AddAnalyticsTaskModal
+          isOpen={isAddAnalyticsModalOpen}
+          onClose={() => {
+            setIsAddAnalyticsModalOpen(false);
+            setSelectedAnalyticsDate(undefined);
+          }}
+          onAdd={handleAddAnalyticsTask}
+          initialDate={selectedAnalyticsDate}
+          users={analyticsUsers}
+        />
+
+        <AnalyticsTaskDetailsModal
+          isOpen={!!selectedAnalyticsTask}
+          task={selectedAnalyticsTask}
+          users={analyticsUsers}
+          onClose={() => setSelectedAnalyticsTask(null)}
+          onUpdate={handleUpdateAnalyticsTask}
+          onDelete={handleDeleteAnalyticsTask}
+          onUpdateStatus={handleUpdateAnalyticsTaskStatus}
+          canEdit={isDesigner}
+          canChangeStatus={isDesigner || isAnalitik}
+        />
+
         <RequestWorkModal
           isOpen={isRequestModalOpen}
           onClose={() => setIsRequestModalOpen(false)}
@@ -2776,6 +3060,9 @@ function App() {
           autoThemeConfig={autoThemeConfig}
           onUpdateAutoThemeConfig={handleUpdateAutoThemeConfig}
           monthlyChampionId={monthlyChampionId}
+          analyticsUsers={analyticsUsers}
+          onAddAnalyticsUser={handleAddAnalyticsUser}
+          onDeleteAnalyticsUser={handleDeleteAnalyticsUser}
         />
 
         <ChangePasswordModal
