@@ -15,14 +15,14 @@ import {
 import { tr } from 'date-fns/locale';
 import { Report, User, Department } from '../types';
 import { DAYS_OF_WEEK } from '../constants';
-import { CheckCircle2, Clock, AlertTriangle, FileText, Plus } from 'lucide-react';
+import { Clock, AlertTriangle, FileText, Plus, CheckCircle2 } from 'lucide-react';
 
 interface ReportCalendarTabProps {
     currentDate: Date;
     reports: Report[];
     users: User[];
     departments: Department[];
-    onMarkReportDone: (reportId: string) => Promise<void>;
+    onReportClick: (report: Report) => void;
     onUpdateReportDueDate: (reportId: string, newDate: Date) => Promise<void>;
     onDayClick?: (date: Date) => void;
     loggedInUserId?: string;
@@ -35,7 +35,7 @@ export const ReportCalendarTab: React.FC<ReportCalendarTabProps> = ({
     reports,
     users,
     departments,
-    onMarkReportDone,
+    onReportClick,
     onUpdateReportDueDate,
     onDayClick,
     loggedInUserId,
@@ -77,11 +77,6 @@ export const ReportCalendarTab: React.FC<ReportCalendarTabProps> = ({
     const overdueCount = pendingReports.filter(r => r.isOverdue).length;
     const pendingCount = pendingReports.filter(r => !r.isOverdue).length;
 
-    const handleMarkDone = async (reportId: string, e: React.MouseEvent) => {
-        e.stopPropagation();
-        await onMarkReportDone(reportId);
-    };
-
     const getUserName = (userId?: string) => {
         if (!userId) return 'Atanmamış';
         return users.find(u => u.id === userId)?.name || 'Bilinmiyor';
@@ -91,6 +86,11 @@ export const ReportCalendarTab: React.FC<ReportCalendarTabProps> = ({
         if (isDesigner && onDayClick) {
             onDayClick(date);
         }
+    };
+
+    const handleReportClick = (e: React.MouseEvent, report: Report & { isOverdue: boolean }) => {
+        e.stopPropagation();
+        onReportClick(report);
     };
 
     const handleDragStart = (e: React.DragEvent, report: Report & { isOverdue: boolean }) => {
@@ -196,58 +196,43 @@ export const ReportCalendarTab: React.FC<ReportCalendarTabProps> = ({
                             </div>
 
                             <div className="flex-1 overflow-y-auto space-y-2">
-                                {dayReports.map(report => {
-                                    const canMarkDone = isDesigner || isKampanyaYapan ||
-                                        (loggedInUserId && report.assigneeId === loggedInUserId);
-
-                                    return (
-                                        <div
-                                            key={report.id}
-                                            draggable={isDesigner}
-                                            onDragStart={(e) => handleDragStart(e, report)}
-                                            onClick={(e) => e.stopPropagation()}
-                                            className={`
-                        p-2 rounded-lg border text-xs transition-all
-                        ${report.isOverdue
-                                                    ? 'bg-red-50 border-red-300 dark:bg-red-900/30 dark:border-red-700'
-                                                    : 'bg-amber-50 border-amber-300 dark:bg-amber-900/30 dark:border-amber-700'}
-                        ${isDesigner ? 'cursor-grab active:cursor-grabbing' : ''}
-                      `}
-                                        >
-                                            <div className="font-semibold text-gray-800 dark:text-white truncate mb-1">
-                                                {report.title}
-                                            </div>
-                                            <div className="text-gray-500 dark:text-gray-400 text-[10px] mb-1">
-                                                📊 {getUserName(report.assigneeId)}
-                                            </div>
-                                            {report.campaignTitle && (
-                                                <div className="text-gray-400 dark:text-gray-500 text-[10px] mb-1 truncate">
-                                                    🎯 {report.campaignTitle}
-                                                </div>
-                                            )}
-                                            <div className="flex items-center justify-between gap-1">
-                                                <span className={`
-                          px-1.5 py-0.5 rounded text-[10px] font-medium
-                          ${report.isOverdue
-                                                        ? 'bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-200'
-                                                        : 'bg-amber-100 text-amber-700 dark:bg-amber-800 dark:text-amber-200'}
-                        `}>
-                                                    {report.isOverdue ? '⚠️ Gecikmiş' : '⏳ Bekliyor'}
-                                                </span>
-                                                {canMarkDone && (
-                                                    <button
-                                                        onClick={(e) => handleMarkDone(report.id, e)}
-                                                        className="flex items-center gap-1 px-1.5 py-0.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded text-[10px] font-medium transition-colors dark:bg-emerald-800 dark:text-emerald-200 dark:hover:bg-emerald-700"
-                                                        title="Raporu Tamamla"
-                                                    >
-                                                        <CheckCircle2 size={10} />
-                                                        Tamamla
-                                                    </button>
-                                                )}
-                                            </div>
+                                {dayReports.map(report => (
+                                    <div
+                                        key={report.id}
+                                        draggable={isDesigner}
+                                        onDragStart={(e) => handleDragStart(e, report)}
+                                        onClick={(e) => handleReportClick(e, report)}
+                                        className={`
+                      p-2 rounded-lg border text-xs transition-all cursor-pointer hover:shadow-md
+                      ${report.isOverdue
+                                                ? 'bg-red-50 border-red-300 dark:bg-red-900/30 dark:border-red-700 hover:bg-red-100'
+                                                : 'bg-amber-50 border-amber-300 dark:bg-amber-900/30 dark:border-amber-700 hover:bg-amber-100'}
+                      ${isDesigner ? 'active:cursor-grabbing' : ''}
+                    `}
+                                    >
+                                        <div className="font-semibold text-gray-800 dark:text-white truncate mb-1">
+                                            {report.title}
                                         </div>
-                                    );
-                                })}
+                                        <div className="text-gray-500 dark:text-gray-400 text-[10px] mb-1">
+                                            📊 {getUserName(report.assigneeId)}
+                                        </div>
+                                        {report.campaignTitle && (
+                                            <div className="text-gray-400 dark:text-gray-500 text-[10px] mb-1 truncate">
+                                                🎯 {report.campaignTitle}
+                                            </div>
+                                        )}
+                                        <div className="flex items-center gap-1">
+                                            <span className={`
+                        px-1.5 py-0.5 rounded text-[10px] font-medium
+                        ${report.isOverdue
+                                                    ? 'bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-200'
+                                                    : 'bg-amber-100 text-amber-700 dark:bg-amber-800 dark:text-amber-200'}
+                      `}>
+                                                {report.isOverdue ? '⚠️ Gecikmiş' : '⏳ Bekliyor'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
 
                             {/* Add Report Indicator for Designer */}

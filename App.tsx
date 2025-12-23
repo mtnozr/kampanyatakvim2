@@ -38,6 +38,7 @@ import { DesignerCampaignsModal } from './components/DesignerCampaignsModal';
 import { MyTasksModal } from './components/MyTasksModal';
 import { ReportCalendarTab } from './components/ReportCalendarTab';
 import { AddReportModal } from './components/AddReportModal';
+import { ReportDetailsModal } from './components/ReportDetailsModal';
 import { ThemeToggle } from './components/ThemeToggle';
 import { useTheme } from './hooks/useTheme';
 import { setCookie, getCookie, deleteCookie } from './utils/cookies';
@@ -107,6 +108,7 @@ function App() {
   const [requestSubmissionEnabled, setRequestSubmissionEnabled] = useState(true);
   const [isAddReportModalOpen, setIsAddReportModalOpen] = useState(false);
   const [selectedReportDate, setSelectedReportDate] = useState<Date | undefined>(undefined);
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
 
   // Local UI State
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -1961,6 +1963,53 @@ function App() {
     }
   };
 
+  // Handle report click - opens details modal
+  const handleReportClick = (report: Report) => {
+    setSelectedReport(report);
+  };
+
+  // Handle updating a report
+  const handleUpdateReport = async (reportId: string, updates: Partial<Report>) => {
+    try {
+      const updateData: any = { updatedAt: Timestamp.now() };
+      if (updates.title !== undefined) updateData.title = updates.title;
+      if (updates.assigneeId !== undefined) updateData.assigneeId = updates.assigneeId || null;
+      if (updates.dueDate !== undefined) updateData.dueDate = Timestamp.fromDate(updates.dueDate);
+
+      await updateDoc(doc(db, "reports", reportId), updateData);
+
+      addToast('Rapor güncellendi.', 'success');
+
+      // Refresh selected report if it matches
+      if (selectedReport?.id === reportId) {
+        const updatedReport = reports.find(r => r.id === reportId);
+        if (updatedReport) {
+          setSelectedReport({ ...updatedReport, ...updates });
+        }
+      }
+    } catch (e) {
+      console.error('Report update error:', e);
+      addToast('Rapor güncelleme hatası.', 'info');
+    }
+  };
+
+  // Handle deleting a report
+  const handleDeleteReport = async (reportId: string) => {
+    try {
+      await deleteDoc(doc(db, "reports", reportId));
+      addToast('Rapor silindi.', 'success');
+
+      // Log the action
+      await addDoc(collection(db, "logs"), {
+        message: `Rapor silindi (ID: ${reportId.substring(0, 6).toUpperCase()})`,
+        timestamp: Timestamp.now()
+      });
+    } catch (e) {
+      console.error('Report delete error:', e);
+      addToast('Rapor silme hatası.', 'info');
+    }
+  };
+
   // Check if user can see Report tab
   const canSeeReportTab = isDesigner || isKampanyaYapan || !!connectedPersonnelUser;
 
@@ -2530,7 +2579,7 @@ function App() {
               reports={reports}
               users={users}
               departments={departments}
-              onMarkReportDone={handleMarkReportDone}
+              onReportClick={handleReportClick}
               onUpdateReportDueDate={handleUpdateReportDueDate}
               onDayClick={handleReportDayClick}
               loggedInUserId={connectedPersonnelUser?.id}
@@ -2579,6 +2628,17 @@ function App() {
           onAdd={handleAddReport}
           initialDate={selectedReportDate}
           users={users}
+        />
+
+        <ReportDetailsModal
+          isOpen={!!selectedReport}
+          report={selectedReport}
+          users={users}
+          onClose={() => setSelectedReport(null)}
+          onUpdate={handleUpdateReport}
+          onDelete={handleDeleteReport}
+          onMarkDone={handleMarkReportDone}
+          canEdit={isDesigner || isKampanyaYapan}
         />
 
         <RequestWorkModal
