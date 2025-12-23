@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, FileText, Calendar, User as UserIcon, Trash2, Save, CheckCircle2, AlertTriangle, Clock, Tag } from 'lucide-react';
-import { Report, User } from '../types';
+import { X, FileText, Calendar, User as UserIcon, Trash2, Save, CheckCircle2, AlertTriangle, Clock, Tag, XCircle, RotateCcw } from 'lucide-react';
+import { Report, User, ReportStatus } from '../types';
 import { format, isBefore } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
@@ -12,6 +12,7 @@ interface ReportDetailsModalProps {
     onUpdate: (reportId: string, updates: Partial<Report>) => Promise<void>;
     onDelete: (reportId: string) => Promise<void>;
     onMarkDone: (reportId: string) => Promise<void>;
+    onUpdateStatus: (reportId: string, status: ReportStatus) => Promise<void>;
     canEdit: boolean;
 }
 
@@ -23,6 +24,7 @@ export const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({
     onUpdate,
     onDelete,
     onMarkDone,
+    onUpdateStatus,
     canEdit
 }) => {
     const [title, setTitle] = useState('');
@@ -32,6 +34,7 @@ export const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
     // Reset form when modal opens or report changes
     useEffect(() => {
@@ -82,11 +85,64 @@ export const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({
         onClose();
     };
 
+    const handleStatusChange = async (newStatus: ReportStatus) => {
+        setIsUpdatingStatus(true);
+        try {
+            await onUpdateStatus(report.id, newStatus);
+            onClose();
+        } catch (e) {
+            console.error('Status change failed:', e);
+        }
+        setIsUpdatingStatus(false);
+    };
+
+    // Get header color based on status
+    const getHeaderColor = () => {
+        if (report.status === 'done') return 'bg-gradient-to-r from-emerald-600 to-teal-600';
+        if (report.status === 'cancelled') return 'bg-gradient-to-r from-gray-600 to-slate-600';
+        if (isOverdue) return 'bg-gradient-to-r from-red-600 to-rose-600';
+        return 'bg-gradient-to-r from-amber-500 to-orange-500';
+    };
+
+    // Get status badge
+    const getStatusBadge = () => {
+        if (report.status === 'done') {
+            return (
+                <span className="flex items-center gap-2 px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium dark:bg-emerald-800 dark:text-emerald-200">
+                    <CheckCircle2 size={16} />
+                    Tamamlandı
+                </span>
+            );
+        }
+        if (report.status === 'cancelled') {
+            return (
+                <span className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm font-medium dark:bg-gray-800 dark:text-gray-200">
+                    <XCircle size={16} />
+                    İptal Edildi
+                </span>
+            );
+        }
+        if (isOverdue) {
+            return (
+                <span className="flex items-center gap-2 px-3 py-1.5 bg-red-100 text-red-700 rounded-full text-sm font-medium dark:bg-red-800 dark:text-red-200">
+                    <AlertTriangle size={16} />
+                    Gecikmiş
+                </span>
+            );
+        }
+        return (
+            <span className="flex items-center gap-2 px-3 py-1.5 bg-amber-100 text-amber-700 rounded-full text-sm font-medium dark:bg-amber-800 dark:text-amber-200">
+                <Clock size={16} />
+                Bekliyor
+            </span>
+        );
+    };
+
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100 dark:border-slate-700">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100 dark:border-slate-700 max-h-[90vh] flex flex-col">
                 {/* Header */}
-                <div className={`p-5 ${isOverdue ? 'bg-gradient-to-r from-red-600 to-rose-600' : 'bg-gradient-to-r from-emerald-600 to-teal-600'}`}>
+                <div className={`p-5 ${getHeaderColor()} shrink-0`}>
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <FileText className="text-white/90" size={24} />
@@ -102,25 +158,10 @@ export const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({
                 </div>
 
                 {/* Content */}
-                <div className="p-6 space-y-5">
+                <div className="p-6 space-y-5 overflow-y-auto">
                     {/* Status Badge */}
                     <div className="flex items-center gap-2">
-                        {report.status === 'done' ? (
-                            <span className="flex items-center gap-2 px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium dark:bg-emerald-800 dark:text-emerald-200">
-                                <CheckCircle2 size={16} />
-                                Tamamlandı
-                            </span>
-                        ) : isOverdue ? (
-                            <span className="flex items-center gap-2 px-3 py-1.5 bg-red-100 text-red-700 rounded-full text-sm font-medium dark:bg-red-800 dark:text-red-200">
-                                <AlertTriangle size={16} />
-                                Gecikmiş
-                            </span>
-                        ) : (
-                            <span className="flex items-center gap-2 px-3 py-1.5 bg-amber-100 text-amber-700 rounded-full text-sm font-medium dark:bg-amber-800 dark:text-amber-200">
-                                <Clock size={16} />
-                                Bekliyor
-                            </span>
-                        )}
+                        {getStatusBadge()}
                         {report.isAutoGenerated && (
                             <span className="px-2 py-1 bg-violet-100 text-violet-700 rounded-full text-xs font-medium dark:bg-violet-800 dark:text-violet-200">
                                 Otomatik
@@ -236,7 +277,7 @@ export const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({
                         </div>
                     )}
 
-                    {/* Actions */}
+                    {/* Actions for PENDING reports */}
                     {canEdit && report.status === 'pending' && !showDeleteConfirm && (
                         <div className="flex flex-col gap-3 pt-2">
                             {isEditing ? (
@@ -273,20 +314,75 @@ export const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({
                                             Düzenle
                                         </button>
                                         <button
-                                            onClick={() => setShowDeleteConfirm(true)}
-                                            className="px-4 py-3 bg-red-100 text-red-600 rounded-xl font-medium hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 transition-colors flex items-center gap-2"
+                                            onClick={() => handleStatusChange('cancelled')}
+                                            disabled={isUpdatingStatus}
+                                            className="flex-1 px-4 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors flex items-center justify-center gap-2"
                                         >
-                                            <Trash2 size={18} />
-                                            Sil
+                                            <XCircle size={18} />
+                                            İptal Et
                                         </button>
                                     </div>
+                                    <button
+                                        onClick={() => setShowDeleteConfirm(true)}
+                                        className="w-full px-4 py-3 bg-red-100 text-red-600 rounded-xl font-medium hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <Trash2 size={18} />
+                                        Sil
+                                    </button>
                                 </>
                             )}
                         </div>
                     )}
 
-                    {/* Close Button for completed reports or non-editors */}
-                    {(report.status === 'done' || !canEdit) && (
+                    {/* Actions for DONE or CANCELLED reports - allow status change */}
+                    {canEdit && (report.status === 'done' || report.status === 'cancelled') && !showDeleteConfirm && (
+                        <div className="flex flex-col gap-3 pt-2">
+                            <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                                Durumu Değiştir
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                                <button
+                                    onClick={() => handleStatusChange('pending')}
+                                    disabled={isUpdatingStatus}
+                                    className="px-3 py-2 rounded-lg text-xs font-medium transition-all flex flex-col items-center gap-1 bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400"
+                                >
+                                    <Clock size={16} />
+                                    Bekliyor
+                                </button>
+                                <button
+                                    onClick={() => handleStatusChange('done')}
+                                    disabled={isUpdatingStatus || report.status === 'done'}
+                                    className={`px-3 py-2 rounded-lg text-xs font-medium transition-all flex flex-col items-center gap-1 ${report.status === 'done'
+                                        ? 'bg-emerald-200 text-emerald-800 cursor-default'
+                                        : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                        }`}
+                                >
+                                    <CheckCircle2 size={16} />
+                                    Tamamlandı
+                                </button>
+                                <button
+                                    onClick={() => handleStatusChange('cancelled')}
+                                    disabled={isUpdatingStatus || report.status === 'cancelled'}
+                                    className={`px-3 py-2 rounded-lg text-xs font-medium transition-all flex flex-col items-center gap-1 ${report.status === 'cancelled'
+                                        ? 'bg-gray-200 text-gray-800 cursor-default'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-slate-700 dark:text-gray-400'
+                                        }`}
+                                >
+                                    <XCircle size={16} />
+                                    İptal Edildi
+                                </button>
+                            </div>
+                            <button
+                                onClick={onClose}
+                                className="w-full px-4 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+                            >
+                                Kapat
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Close Button for non-editors */}
+                    {!canEdit && (
                         <button
                             onClick={onClose}
                             className="w-full px-4 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"

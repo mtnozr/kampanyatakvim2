@@ -2025,6 +2025,52 @@ function App() {
     }
   };
 
+  // Handle updating report status
+  const handleUpdateReportStatus = async (reportId: string, status: 'pending' | 'done' | 'cancelled') => {
+    const report = reports.find(r => r.id === reportId);
+    if (!report) return;
+
+    const reporterId = loggedInDeptUser?.id || auth.currentUser?.uid || 'unknown';
+
+    try {
+      const updateData: any = {
+        status,
+        updatedAt: Timestamp.now()
+      };
+
+      // If marking as done, add completion info
+      if (status === 'done') {
+        updateData.completedAt = Timestamp.now();
+        updateData.completedBy = reporterId;
+      }
+
+      // If reverting from done, clear completion info
+      if (status !== 'done') {
+        updateData.completedAt = null;
+        updateData.completedBy = null;
+      }
+
+      await updateDoc(doc(db, "reports", reportId), updateData);
+
+      const statusLabels: Record<string, string> = {
+        'pending': 'Bekliyor',
+        'done': 'Tamamlandı',
+        'cancelled': 'İptal Edildi'
+      };
+
+      addToast(`Rapor durumu "${statusLabels[status]}" olarak güncellendi.`, 'success');
+
+      // Log the action
+      await addDoc(collection(db, "logs"), {
+        message: `Rapor durumu değişti: ${report.title} -> ${statusLabels[status]}`,
+        timestamp: Timestamp.now()
+      });
+    } catch (e) {
+      console.error('Report status update error:', e);
+      addToast('Rapor durumu güncelleme hatası.', 'info');
+    }
+  };
+
   // Check if user can see Report tab
   const canSeeReportTab = isDesigner || isKampanyaYapan || !!connectedPersonnelUser;
 
@@ -2654,6 +2700,7 @@ function App() {
           onUpdate={handleUpdateReport}
           onDelete={handleDeleteReport}
           onMarkDone={handleMarkReportDone}
+          onUpdateStatus={handleUpdateReportStatus}
           canEdit={isDesigner || isKampanyaYapan}
         />
 

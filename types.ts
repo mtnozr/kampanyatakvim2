@@ -1,6 +1,6 @@
 export type UrgencyLevel = 'Very High' | 'High' | 'Medium' | 'Low';
 export type DifficultyLevel = 'BASİT' | 'BASİT ÜSTÜ' | 'ORTA' | 'ZOR' | 'ÇOK ZOR';
-export type ReportStatus = 'pending' | 'done';
+export type ReportStatus = 'pending' | 'done' | 'cancelled';
 
 export interface User {
   id: string;
