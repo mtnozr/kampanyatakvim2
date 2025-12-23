@@ -190,15 +190,17 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
                   required
                 >
                   <option value="">Seçiniz</option>
-                  {users.map(user => {
-                    const hasPendingEvents = events.some(e => e.assigneeId === user.id && e.status === 'Planlandı');
-                    const indicator = hasPendingEvents ? '🔴' : '🟢';
-                    return (
-                      <option key={user.id} value={user.id}>
-                        {indicator} {user.name} {monthlyChampionId === user.id ? '🏆' : ''}
-                      </option>
-                    );
-                  })}
+                  {[...users]
+                    .sort((a, b) => a.name.localeCompare(b.name, 'tr'))
+                    .map(user => {
+                      const hasPendingEvents = events.some(e => e.assigneeId === user.id && e.status === 'Planlandı');
+                      const indicator = hasPendingEvents ? '🔴' : '🟢';
+                      return (
+                        <option key={user.id} value={user.id}>
+                          {indicator} {user.name} {monthlyChampionId === user.id ? '🏆' : ''}
+                        </option>
+                      );
+                    })}
                 </select>
                 <UserPlus className="absolute left-2.5 top-2.5 text-gray-400 dark:text-gray-500" size={16} />
               </div>
