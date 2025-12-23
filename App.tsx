@@ -352,18 +352,56 @@ function App() {
   }, [refreshKey]);
 
   // 10. Migrate existing completed campaigns to reports (one-time check)
+  // Also cleans up any duplicate reports that were accidentally created
+  const migrationDone = React.useRef(false);
+
   useEffect(() => {
-    const migrateExistingCampaigns = async () => {
+    const cleanupAndMigrate = async () => {
+      // Prevent multiple runs
+      if (migrationDone.current) return;
+
       // Only run if we have both events and reports loaded
       if (events.length === 0) return;
 
-      // Find completed campaigns without corresponding reports
+      // Mark as done immediately to prevent race conditions
+      migrationDone.current = true;
+
+      // STEP 1: Clean up duplicates - keep only the first report for each campaignId
+      const campaignReportsMap = new Map<string, string[]>();
+
+      reports.forEach(report => {
+        if (report.campaignId) {
+          const existing = campaignReportsMap.get(report.campaignId) || [];
+          existing.push(report.id);
+          campaignReportsMap.set(report.campaignId, existing);
+        }
+      });
+
+      // Delete duplicates (keep the first one)
+      for (const [campaignId, reportIds] of campaignReportsMap.entries()) {
+        if (reportIds.length > 1) {
+          // Keep first, delete rest
+          const toDelete = reportIds.slice(1);
+          for (const reportId of toDelete) {
+            try {
+              await deleteDoc(doc(db, "reports", reportId));
+              console.log(`Deleted duplicate report: ${reportId} for campaign ${campaignId}`);
+            } catch (err) {
+              console.error('Failed to delete duplicate:', err);
+            }
+          }
+        }
+      }
+
+      // STEP 2: Migrate completed campaigns that don't have reports yet
       const completedEvents = events.filter(e => e.status === 'Tamamlandı');
+
+      // Create a Set of existing campaign IDs in reports for faster lookup
+      const existingCampaignIds = new Set(reports.filter(r => r.campaignId).map(r => r.campaignId));
 
       for (const event of completedEvents) {
         // Check if report already exists for this campaign
-        const existingReport = reports.find(r => r.campaignId === event.id);
-        if (existingReport) continue;
+        if (existingCampaignIds.has(event.id)) continue;
 
         // Calculate due date: 30 days after completion, adjusted to business day
         const completionDate = event.updatedAt || event.date;
@@ -389,7 +427,7 @@ function App() {
 
     // Run migration once both events and reports are loaded
     if (!isEventsLoading && events.length > 0) {
-      migrateExistingCampaigns();
+      cleanupAndMigrate();
     }
   }, [events, reports, isEventsLoading]);
 
