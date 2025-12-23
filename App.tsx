@@ -2146,11 +2146,12 @@ function App() {
   // === ANALYTICS HANDLERS ===
 
   // Handle adding analytics task
-  const handleAddAnalyticsTask = async (title: string, urgency: UrgencyLevel, date: Date, assigneeId?: string, notes?: string) => {
+  const handleAddAnalyticsTask = async (title: string, urgency: UrgencyLevel, date: Date, assigneeId?: string, notes?: string, difficulty?: 'Kolay' | 'Orta' | 'Zor') => {
     try {
       const taskDoc = await addDoc(collection(db, "analyticsTasks"), {
         title,
         urgency,
+        difficulty: difficulty || 'Orta',
         date: Timestamp.fromDate(date),
         assigneeId: assigneeId || null,
         notes: notes || null,
@@ -2171,7 +2172,7 @@ function App() {
         const assignee = analyticsUsers.find(u => u.id === assigneeId);
         if (assignee?.email) {
           const subject = `${title} - Analitik Görev Ataması`;
-          const body = `"${title}" adlı analitik görevi için atandınız.\n\nTarih: ${format(date, 'd MMMM yyyy', { locale: tr })}\nAciliyet: ${URGENCY_CONFIGS[urgency].label}${notes ? `\n\nNotlar: ${notes}` : ''}`;
+          const body = `"${title}" adlı analitik görevi size verildi.\n\nTarih: ${format(date, 'd MMMM yyyy', { locale: tr })}\nAciliyet: ${URGENCY_CONFIGS[urgency].label}${notes ? `\n\nNotlar: ${notes}` : ''}`;
           window.location.href = `mailto:${assignee.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         }
       }

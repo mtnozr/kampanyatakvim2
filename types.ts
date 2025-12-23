@@ -157,6 +157,7 @@ export interface AnalyticsTask {
   title: string;           // İşin Adı
   date: Date;
   urgency: UrgencyLevel;   // Aciliyet
+  difficulty?: 'Kolay' | 'Orta' | 'Zor';  // Zorluk Seviyesi (only visible to admins)
   notes?: string;          // Notlar
   assigneeId?: string;     // Assigned AnalyticsUser.id
   status?: CampaignStatus; // Planlandı, Tamamlandı, İptal Edildi

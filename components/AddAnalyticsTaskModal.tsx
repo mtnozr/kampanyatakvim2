@@ -6,7 +6,7 @@ import { URGENCY_CONFIGS, TURKISH_HOLIDAYS } from '../constants';
 interface AddAnalyticsTaskModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onAdd: (title: string, urgency: UrgencyLevel, date: Date, assigneeId?: string, notes?: string) => void;
+    onAdd: (title: string, urgency: UrgencyLevel, date: Date, assigneeId?: string, notes?: string, difficulty?: 'Kolay' | 'Orta' | 'Zor') => void;
     initialDate?: Date;
     users: AnalyticsUser[];
 }
@@ -23,6 +23,7 @@ export const AddAnalyticsTaskModal: React.FC<AddAnalyticsTaskModalProps> = ({
     const [dateStr, setDateStr] = useState('');
     const [assigneeId, setAssigneeId] = useState<string>('');
     const [notes, setNotes] = useState('');
+    const [difficulty, setDifficulty] = useState<'Kolay' | 'Orta' | 'Zor'>('Orta');
     const [holidayWarning, setHolidayWarning] = useState<string | null>(null);
 
     // Helper function to convert text to Title Case with Turkish support
@@ -48,6 +49,7 @@ export const AddAnalyticsTaskModal: React.FC<AddAnalyticsTaskModalProps> = ({
             setUrgency('Medium');
             setAssigneeId('');
             setNotes('');
+            setDifficulty('Orta');
             setHolidayWarning(null);
         }
     }, [isOpen, initialDate]);
@@ -79,12 +81,13 @@ export const AddAnalyticsTaskModal: React.FC<AddAnalyticsTaskModalProps> = ({
         }
 
         const selectedDate = new Date(dateStr);
-        onAdd(title, urgency, selectedDate, assigneeId, notes);
+        onAdd(title, urgency, selectedDate, assigneeId, notes, difficulty);
         onClose();
         setTitle('');
         setUrgency('Medium');
         setAssigneeId('');
         setNotes('');
+        setDifficulty('Orta');
         setHolidayWarning(null);
     };
 
@@ -189,6 +192,37 @@ export const AddAnalyticsTaskModal: React.FC<AddAnalyticsTaskModalProps> = ({
                                         `}
                                     >
                                         <span className={isSelected ? config.colorText : ''}>{config.label}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Zorluk Seviyesi <span className="text-red-500">*</span>
+                        </label>
+                        <div className="grid grid-cols-3 gap-2">
+                            {(['Kolay', 'Orta', 'Zor'] as const).map((level) => {
+                                const isSelected = difficulty === level;
+                                const colorConfig = {
+                                    Kolay: { bg: 'bg-green-50 dark:bg-green-900/20', text: 'text-green-700 dark:text-green-400', border: 'border-green-300 dark:border-green-700' },
+                                    Orta: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-700 dark:text-yellow-400', border: 'border-yellow-300 dark:border-yellow-700' },
+                                    Zor: { bg: 'bg-red-50 dark:bg-red-900/20', text: 'text-red-700 dark:text-red-400', border: 'border-red-300 dark:border-red-700' }
+                                }[level];
+                                return (
+                                    <button
+                                        key={level}
+                                        type="button"
+                                        onClick={() => setDifficulty(level)}
+                                        className={`
+                                            px-3 py-2 rounded-lg text-sm font-medium text-center border transition-all
+                                            ${isSelected
+                                                ? `${colorConfig.bg} ${colorConfig.border} border ring-1 ring-offset-1 ring-gray-300 dark:ring-slate-600 dark:ring-offset-slate-800`
+                                                : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-600 dark:bg-slate-700 dark:border-slate-600 dark:hover:bg-slate-600 dark:text-gray-300'}
+                                        `}
+                                    >
+                                        <span className={isSelected ? colorConfig.text : ''}>{level}</span>
                                     </button>
                                 );
                             })}
