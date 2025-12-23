@@ -787,7 +787,17 @@ function App() {
 
   const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
   const prevMonth = () => setCurrentDate(addMonths(currentDate, -1));
-  const resetToToday = () => setCurrentDate(new Date());
+
+  // Ref for today cell to enable scrolling
+  const todayCellRef = React.useRef<HTMLDivElement>(null);
+
+  const resetToToday = () => {
+    setCurrentDate(new Date());
+    // Use setTimeout to ensure the DOM is updated before scrolling
+    setTimeout(() => {
+      todayCellRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  };
 
   const getHolidayName = (date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
@@ -2435,6 +2445,7 @@ function App() {
                   return (
                     <div
                       key={day.toString()}
+                      ref={isTodayDate ? todayCellRef : undefined}
                       onClick={() => openAddModal(day)}
                       onDragOver={(e) => {
                         if (isDesigner) {
