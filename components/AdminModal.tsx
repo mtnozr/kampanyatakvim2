@@ -192,14 +192,9 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         try {
           const snap = await getDocs(q);
           if (!snap.empty) {
-            const deptUser = snap.docs[0].data() as DepartmentUser;
-            if (deptUser.isDesigner) {
-              setAuthUser(user);
-              onSetIsDesigner(true);
-            } else {
-              // Unauthorized for Admin Panel
-              setAuthUser(null);
-            }
+            // This is a Department User - NOT authorized for Admin Panel
+            // Even Designer role users cannot access Admin Panel (only Super Admin can)
+            setAuthUser(null);
           } else {
             // No department user record found -> Assume Super Admin
             setAuthUser(user);
