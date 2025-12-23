@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, UserPlus, AlertCircle, AlignLeft, AlertTriangle, Building, Gauge } from 'lucide-react';
-import { UrgencyLevel, User, Department, DifficultyLevel } from '../types';
+import { UrgencyLevel, User, Department, DifficultyLevel, CalendarEvent } from '../types';
 import { URGENCY_CONFIGS, TURKISH_HOLIDAYS, DIFFICULTY_CONFIGS } from '../constants';
 
 interface AddEventModalProps {
@@ -17,6 +17,7 @@ interface AddEventModalProps {
   users: User[];
   departments: Department[];
   monthlyChampionId?: string | null;
+  events: CalendarEvent[];
 }
 
 export const AddEventModal: React.FC<AddEventModalProps> = ({
@@ -27,7 +28,8 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
   initialData,
   users,
   departments,
-  monthlyChampionId
+  monthlyChampionId,
+  events
 }) => {
   const [title, setTitle] = useState('');
   const [urgency, setUrgency] = useState<UrgencyLevel>('Medium');
@@ -188,11 +190,15 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
                   required
                 >
                   <option value="">Seçiniz</option>
-                  {users.map(user => (
-                    <option key={user.id} value={user.id}>
-                      {user.name} {monthlyChampionId === user.id ? '🏆' : ''}
-                    </option>
-                  ))}
+                  {users.map(user => {
+                    const hasPendingEvents = events.some(e => e.assigneeId === user.id && e.status === 'Planlandı');
+                    const indicator = hasPendingEvents ? '🔴' : '🟢';
+                    return (
+                      <option key={user.id} value={user.id}>
+                        {indicator} {user.name} {monthlyChampionId === user.id ? '🏆' : ''}
+                      </option>
+                    );
+                  })}
                 </select>
                 <UserPlus className="absolute left-2.5 top-2.5 text-gray-400 dark:text-gray-500" size={16} />
               </div>

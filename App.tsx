@@ -2679,6 +2679,7 @@ function App() {
           } : undefined}
           users={users}
           departments={departments}
+          events={events} // Pass events for workload indicators
         />
 
         <AddReportModal
