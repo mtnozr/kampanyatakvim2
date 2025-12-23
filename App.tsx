@@ -2324,11 +2324,24 @@ function App() {
     return allPending;
   }, [analyticsTasks, isDesigner, isAnalitik, connectedAnalyticsUser]);
 
-  // Check if user can see Report tab
-  const canSeeReportTab = isDesigner || isKampanyaYapan || !!connectedPersonnelUser;
+  // Check if user is ONLY Analitik (not Designer) - they can only see Analytics tab
+  const isOnlyAnalitik = isAnalitik && !isDesigner && !isKampanyaYapan;
+
+  // Check if user can see Report tab (Analitik-only users cannot)
+  const canSeeReportTab = (isDesigner || isKampanyaYapan || !!connectedPersonnelUser) && !isOnlyAnalitik;
 
   // Check if user can see Analytics tab
   const canSeeAnalyticsTab = isDesigner || isAnalitik;
+
+  // Check if user can see Kampanya tab (everyone except only-Analitik users)
+  const canSeeKampanyaTab = !isOnlyAnalitik;
+
+  // Auto-switch to analytics tab for Analitik-only users
+  useEffect(() => {
+    if (isOnlyAnalitik && activeTab !== 'analitik') {
+      setActiveTab('analitik');
+    }
+  }, [isOnlyAnalitik, activeTab]);
 
   // Render Loading State if Initial Data Fetching
   if (isEventsLoading || isUsersLoading) {
@@ -2696,22 +2709,24 @@ function App() {
 
           {/* Tab Navigation */}
           <div className="flex items-center gap-2 mb-6">
-            <button
-              onClick={() => setActiveTab('kampanya')}
-              className={`
-                px-6 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200 relative
-                ${activeTab === 'kampanya'
-                  ? 'bg-violet-600 text-white shadow-lg shadow-violet-200 dark:shadow-none'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-violet-50 hover:text-violet-600 hover:border-violet-200 dark:bg-slate-800 dark:text-gray-300 dark:border-slate-600 dark:hover:bg-slate-700'}
-              `}
-            >
-              📅 KAMPANYA
-              {myPendingCampaigns.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800">
-                  {myPendingCampaigns.length}
-                </span>
-              )}
-            </button>
+            {canSeeKampanyaTab && (
+              <button
+                onClick={() => setActiveTab('kampanya')}
+                className={`
+                  px-6 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200 relative
+                  ${activeTab === 'kampanya'
+                    ? 'bg-violet-600 text-white shadow-lg shadow-violet-200 dark:shadow-none'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-violet-50 hover:text-violet-600 hover:border-violet-200 dark:bg-slate-800 dark:text-gray-300 dark:border-slate-600 dark:hover:bg-slate-700'}
+                `}
+              >
+                📅 KAMPANYA
+                {myPendingCampaigns.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800">
+                    {myPendingCampaigns.length}
+                  </span>
+                )}
+              </button>
+            )}
             {canSeeReportTab && (
               <button
                 onClick={() => setActiveTab('rapor')}
