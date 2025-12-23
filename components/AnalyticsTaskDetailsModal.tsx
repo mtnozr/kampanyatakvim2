@@ -215,7 +215,7 @@ export const AnalyticsTaskDetailsModal: React.FC<AnalyticsTaskDetailsModalProps>
                                 <p className="text-gray-800 dark:text-white">
                                     {assignee ? assignee.name : 'Atanmamış'}
                                 </p>
-                                {assignee?.email && (
+                                {canEdit && assignee?.email && (
                                     <button
                                         onClick={handleRequestInfo}
                                         className="ml-auto px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-1 dark:bg-blue-900/30 dark:text-blue-300"
@@ -284,8 +284,8 @@ export const AnalyticsTaskDetailsModal: React.FC<AnalyticsTaskDetailsModalProps>
                                 Zorluk Seviyesi
                             </label>
                             <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${task.difficulty === 'Kolay' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                                    task.difficulty === 'Zor' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                                        'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                task.difficulty === 'Zor' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                                    'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
                                 }`}>
                                 {task.difficulty}
                             </span>
