@@ -138,8 +138,45 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
       alert('Bu kampanya için görevli personel atanmamış veya telefon numarası bulunmuyor.');
       return;
     }
-    // Use sip: protocol for Cisco Jabber
-    window.location.href = `sip:${assignee.phone}`;
+
+    // Detect if user is on mobile device
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      // Convert Jabber format (9xxxxxxx) to mobile format (0216xxxxxxx)
+      // Replace leading '9' with '0216'
+      let mobilePhone = assignee.phone;
+      if (mobilePhone.startsWith('9')) {
+        mobilePhone = '0216' + mobilePhone.substring(1);
+      }
+      // Use tel: protocol for mobile phones
+      window.location.href = `tel:${mobilePhone}`;
+    } else {
+      // Use sip: protocol for Cisco Jabber on desktop
+      window.location.href = `sip:${assignee.phone}`;
+    }
+  };
+
+  // Helper function to get formatted phone for display
+  const getDisplayPhone = (phone: string) => {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (isMobile && phone.startsWith('9')) {
+      return '0216' + phone.substring(1);
+    }
+    return phone;
+  };
+
+  // Get phone link based on device
+  const getPhoneLink = (phone: string) => {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (isMobile) {
+      let mobilePhone = phone;
+      if (phone.startsWith('9')) {
+        mobilePhone = '0216' + phone.substring(1);
+      }
+      return `tel:${mobilePhone}`;
+    }
+    return `sip:${phone}`;
   };
 
   const formatDuration = (start: Date, end: Date) => {
@@ -205,10 +242,10 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
             )}
 
             <span className={`inline-block px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${status === 'Tamamlandı'
-                ? 'bg-green-500 text-white border border-green-600'
-                : status === 'İptal Edildi'
-                  ? 'bg-red-500 text-white border border-red-600'
-                  : 'bg-yellow-400 text-yellow-900 border border-yellow-500'
+              ? 'bg-green-500 text-white border border-green-600'
+              : status === 'İptal Edildi'
+                ? 'bg-red-500 text-white border border-red-600'
+                : 'bg-yellow-400 text-yellow-900 border border-yellow-500'
               } mb-2`}>
               {displayConfig.label}
             </span>
@@ -327,11 +364,11 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                         <div className="flex items-center gap-1 mt-1">
                           <Phone size={12} className="text-gray-400" />
                           <a
-                            href={`sip:${assignee.phone}`}
+                            href={getPhoneLink(assignee.phone)}
                             className="text-xs text-green-600 dark:text-green-400 hover:underline font-medium"
-                            title="Jabber ile Ara"
+                            title="Ara"
                           >
-                            {assignee.phone}
+                            {getDisplayPhone(assignee.phone)}
                           </a>
                         </div>
                       )}
