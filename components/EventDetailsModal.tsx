@@ -204,7 +204,12 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               </div>
             )}
 
-            <span className={`inline-block px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${displayConfig.colorBorder} ${displayConfig.colorText} bg-white/50 dark:bg-slate-700/50 mb-2`}>
+            <span className={`inline-block px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${status === 'Tamamlandı'
+                ? 'bg-green-500 text-white border border-green-600'
+                : status === 'İptal Edildi'
+                  ? 'bg-red-500 text-white border border-red-600'
+                  : 'bg-yellow-400 text-yellow-900 border border-yellow-500'
+              } mb-2`}>
               {displayConfig.label}
             </span>
             {isEditMode ? (
@@ -538,7 +543,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   className="flex-1 h-11 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
                   title="Jabber ile Ara"
                 >
-                  <Phone size={16} /> 📞 Ara
+                  <Phone size={16} /> Ara
                 </button>
               )}
               <button
