@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Trash2, Plus, ShieldCheck, Lock, Users, Calendar, AlertTriangle, Building, UserPlus, LogOut, FileText, Download, Megaphone, Settings, Trophy, Activity, History, Edit2 } from 'lucide-react';
+import { X, Trash2, Plus, ShieldCheck, Lock, Users, Calendar, AlertTriangle, Building, UserPlus, LogOut, FileText, Download, Megaphone, Settings, Trophy, Activity, History, Edit2, Save } from 'lucide-react';
 import { User, CalendarEvent, Department, DepartmentUser, Announcement, AnalyticsUser } from '../types';
 import { calculateMonthlyChampion } from '../utils/gamification';
 import { AVAILABLE_EMOJIS, URGENCY_CONFIGS } from '../constants';
@@ -17,6 +17,7 @@ interface AdminModalProps {
   events: CalendarEvent[];
   departments: Department[];
   onAddUser: (name: string, email: string, emoji: string, phone?: string) => void;
+  onUpdateUser?: (id: string, updates: Partial<User>) => void;
   onDeleteUser: (id: string) => void;
   onDeleteEvent: (id: string) => void;
   onDeleteAllEvents: () => void;
@@ -47,6 +48,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   events,
   departments,
   onAddUser,
+  onUpdateUser,
   onDeleteUser,
   onDeleteEvent,
   onDeleteAllEvents,
@@ -93,6 +95,13 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [newEmail, setNewEmail] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState('');
+
+  // Edit User States
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editUserName, setEditUserName] = useState('');
+  const [editUserEmail, setEditUserEmail] = useState('');
+  const [editUserPhone, setEditUserPhone] = useState('');
+  const [editUserEmoji, setEditUserEmoji] = useState('');
 
   // Analytics Personnel Form States
   const [newAnalyticsName, setNewAnalyticsName] = useState('');
@@ -267,6 +276,36 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     } catch (err: any) {
       console.error(err);
       setError('Kullanıcı eklenirken hata oluştu: ' + err.message);
+    }
+  };
+
+  const startEditUser = (user: User) => {
+    setEditingUser(user);
+    setEditUserName(user.name);
+    setEditUserEmail(user.email);
+    setEditUserPhone(user.phone || '');
+    setEditUserEmoji(user.emoji || '');
+  };
+
+  const handleEditUser = async () => {
+    if (!editingUser || !onUpdateUser) return;
+    if (!editUserName.trim() || !editUserEmail.trim()) {
+      setError('Ad ve e-posta zorunludur.');
+      return;
+    }
+
+    try {
+      await onUpdateUser(editingUser.id, {
+        name: editUserName.trim(),
+        email: editUserEmail.trim(),
+        phone: editUserPhone.trim() || undefined,
+        emoji: editUserEmoji || undefined
+      });
+      setEditingUser(null);
+      setError('');
+    } catch (err: any) {
+      console.error(err);
+      setError('Güncelleme hatası: ' + err.message);
     }
   };
 
@@ -718,15 +757,29 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                                 {user.name} {monthlyChampionId === user.id ? '🏆' : ''}
                               </p>
                               <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
+                              {user.phone && (
+                                <p className="text-[10px] text-green-600 dark:text-green-400">📞 {user.phone}</p>
+                              )}
                             </div>
                           </div>
-                          <button
-                            onClick={() => onDeleteUser(user.id)}
-                            className="p-2 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                            title="Personeli Sil"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          <div className="flex items-center gap-1">
+                            {onUpdateUser && (
+                              <button
+                                onClick={() => startEditUser(user)}
+                                className="p-2 text-gray-300 dark:text-gray-600 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                title="Düzenle"
+                              >
+                                <Edit2 size={16} />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => onDeleteUser(user.id)}
+                              className="p-2 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                              title="Personeli Sil"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         </div>
                       ))}
                       {users.length === 0 && (
@@ -734,6 +787,83 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       )}
                     </div>
                   </div>
+
+                  {/* Edit User Modal */}
+                  {editingUser && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md m-4 overflow-hidden">
+                        <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex justify-between items-center bg-blue-50/50 dark:bg-slate-800/50">
+                          <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                            <Edit2 size={20} className="text-blue-600" />
+                            Personeli Düzenle
+                          </h3>
+                          <button onClick={() => setEditingUser(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                            <X size={20} />
+                          </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                          <div>
+                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">İsim Soyisim</label>
+                            <input
+                              type="text"
+                              value={editUserName}
+                              onChange={(e) => setEditUserName(e.target.value)}
+                              className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">E-posta</label>
+                            <input
+                              type="email"
+                              value={editUserEmail}
+                              onChange={(e) => setEditUserEmail(e.target.value)}
+                              className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Telefon (Jabber)</label>
+                            <input
+                              type="tel"
+                              value={editUserPhone}
+                              onChange={(e) => setEditUserPhone(e.target.value)}
+                              placeholder="5551234567"
+                              className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 block">Emoji</label>
+                            <div className="grid grid-cols-8 gap-2 p-3 bg-gray-50 dark:bg-slate-900/50 rounded-lg border border-gray-100 dark:border-slate-700 max-h-32 overflow-y-auto">
+                              {AVAILABLE_EMOJIS.map((emoji) => (
+                                <button
+                                  key={emoji}
+                                  type="button"
+                                  onClick={() => setEditUserEmoji(emoji)}
+                                  className={`w-8 h-8 flex items-center justify-center rounded-full text-lg transition-all ${editUserEmoji === emoji ? 'bg-blue-600 ring-2 ring-blue-300 transform scale-110 shadow-md' : 'bg-white dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600'}`}
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          {error && <p className="text-red-500 text-xs">{error}</p>}
+                          <div className="flex justify-end gap-3 pt-2">
+                            <button
+                              onClick={() => setEditingUser(null)}
+                              className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                            >
+                              İptal
+                            </button>
+                            <button
+                              onClick={handleEditUser}
+                              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm flex items-center gap-2 transition-colors"
+                            >
+                              <Save size={16} /> Kaydet
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

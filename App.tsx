@@ -914,6 +914,16 @@ function App() {
     }
   };
 
+  const handleUpdateUser = async (id: string, updates: Partial<User>) => {
+    try {
+      await updateDoc(doc(db, "users", id), updates);
+      addToast('Personel güncellendi.', 'success');
+    } catch (e) {
+      console.error('Update user error:', e);
+      addToast('Güncelleme hatası.', 'info');
+    }
+  };
+
   // === ANALYTICS USER HANDLERS ===
   const handleAddAnalyticsUser = async (name: string, email: string, emoji: string) => {
     try {
@@ -3071,6 +3081,7 @@ function App() {
           events={events}
           departments={departments}
           onAddUser={handleAddUser}
+          onUpdateUser={handleUpdateUser}
           onDeleteUser={handleDeleteUser}
           onDeleteEvent={handleDeleteEvent}
           onDeleteAllEvents={handleDeleteAllEvents}
