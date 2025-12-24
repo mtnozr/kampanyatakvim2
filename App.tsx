@@ -843,6 +843,15 @@ function App() {
     }, 100);
   };
 
+  // Auto-scroll to today when page loads
+  useEffect(() => {
+    // Wait for the calendar to render, then scroll to today
+    const timer = setTimeout(() => {
+      todayCellRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
   const getHolidayName = (date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     return TURKISH_HOLIDAYS[dateStr];
