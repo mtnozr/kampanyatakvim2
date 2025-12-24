@@ -6,6 +6,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  phone?: string;      // Phone number for Jabber click-to-call
   emoji?: string;     // New property for selected emoji
   role?: string;      // Optional role for reporting
 }

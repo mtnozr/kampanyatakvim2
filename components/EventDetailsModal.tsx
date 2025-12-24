@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, User as UserIcon, AlertCircle, AlignLeft, Building, Edit2, Save, XCircle, Trash2, CheckCircle2, XCircle as CancelIcon, Clock, Gauge, StickyNote, Mail } from 'lucide-react';
+import { X, Calendar, User as UserIcon, AlertCircle, AlignLeft, Building, Edit2, Save, XCircle, Trash2, CheckCircle2, XCircle as CancelIcon, Clock, Gauge, StickyNote, Mail, Phone } from 'lucide-react';
 import { CalendarEvent, User, Department, UrgencyLevel, CampaignStatus, DifficultyLevel } from '../types';
 import { URGENCY_CONFIGS, STATUS_STYLES, DIFFICULTY_CONFIGS } from '../constants';
 import { format } from 'date-fns';
@@ -65,11 +65,11 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
 
   // Urgency config (always fallback to Low if undefined)
   const urgencyConfig = URGENCY_CONFIGS[event.urgency] ?? URGENCY_CONFIGS['Low'];
-  
+
   // Display config based on LOCAL Status state if exists, otherwise Urgency
   // This allows immediate UI feedback when clicking status buttons
-  const displayConfig = (status && STATUS_STYLES[status]) 
-    ? STATUS_STYLES[status] 
+  const displayConfig = (status && STATUS_STYLES[status])
+    ? STATUS_STYLES[status]
     : urgencyConfig;
 
   const department = departments.find(d => d.id === event.departmentId);
@@ -133,16 +133,25 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     window.location.href = `mailto:${assignee.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
+  const handleCallAssignee = () => {
+    if (!assignee?.phone) {
+      alert('Bu kampanya için görevli personel atanmamış veya telefon numarası bulunmuyor.');
+      return;
+    }
+    // Use sip: protocol for Cisco Jabber
+    window.location.href = `sip:${assignee.phone}`;
+  };
+
   const formatDuration = (start: Date, end: Date) => {
     const diffMs = end.getTime() - start.getTime();
     if (diffMs < 0) return '0 dk';
-    
+
     const diffMins = Math.floor(diffMs / (1000 * 60));
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
-    
+
     const hours = diffHours % 24;
-    
+
     if (diffDays > 0) {
       return `${diffDays} gün, ${hours} saat`;
     } else if (hours > 0) {
@@ -159,38 +168,35 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
         {/* Header with Status/Urgency Color */}
         <div className={`px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex justify-between items-start ${displayConfig.colorBg} bg-opacity-30 shrink-0 transition-colors duration-300`}>
           <div className="flex-1">
-             {/* Status Toggle UI for Authorized Users */}
+            {/* Status Toggle UI for Authorized Users */}
             {(isDesigner || isKampanyaYapan) && (
               <div className="flex bg-white/50 dark:bg-slate-700/50 p-1 rounded-lg border border-gray-200/50 dark:border-slate-600/50 mb-3 w-fit backdrop-blur-sm">
                 <button
                   onClick={() => handleStatusChange('Planlandı')}
-                  className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all ${
-                    status === 'Planlandı' 
-                    ? 'bg-yellow-100 text-yellow-700 shadow-sm dark:bg-yellow-900/30 dark:text-yellow-300' 
-                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600'
-                  }`}
+                  className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all ${status === 'Planlandı'
+                      ? 'bg-yellow-100 text-yellow-700 shadow-sm dark:bg-yellow-900/30 dark:text-yellow-300'
+                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600'
+                    }`}
                   title="Planlandı"
                 >
                   <Clock size={12} /> Planlandı
                 </button>
                 <button
                   onClick={() => handleStatusChange('Tamamlandı')}
-                  className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all ${
-                    status === 'Tamamlandı' 
-                    ? 'bg-green-100 text-green-700 shadow-sm dark:bg-green-900/30 dark:text-green-300' 
-                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600'
-                  }`}
+                  className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all ${status === 'Tamamlandı'
+                      ? 'bg-green-100 text-green-700 shadow-sm dark:bg-green-900/30 dark:text-green-300'
+                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600'
+                    }`}
                   title="Tamamlandı"
                 >
                   <CheckCircle2 size={12} /> Tamamlandı
                 </button>
                 <button
                   onClick={() => handleStatusChange('İptal Edildi')}
-                  className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all ${
-                    status === 'İptal Edildi' 
-                    ? 'bg-red-100 text-red-700 shadow-sm dark:bg-red-900/30 dark:text-red-300' 
-                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600'
-                  }`}
+                  className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all ${status === 'İptal Edildi'
+                      ? 'bg-red-100 text-red-700 shadow-sm dark:bg-red-900/30 dark:text-red-300'
+                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600'
+                    }`}
                   title="İptal Edildi"
                 >
                   <CancelIcon size={12} /> İptal
@@ -264,8 +270,8 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   {[...departments]
                     .sort((a, b) => a.name.localeCompare(b.name, 'tr'))
                     .map(dept => (
-                    <option key={dept.id} value={dept.id}>{dept.name}</option>
-                  ))}
+                      <option key={dept.id} value={dept.id}>{dept.name}</option>
+                    ))}
                 </select>
               ) : (
                 <p className="text-gray-800 dark:text-gray-200 font-medium">
@@ -312,6 +318,18 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                         {assignee.name} {monthlyChampionId === assignee.id ? '🏆' : ''}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">{assignee.email}</p>
+                      {assignee.phone && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <Phone size={12} className="text-gray-400" />
+                          <a
+                            href={`sip:${assignee.phone}`}
+                            className="text-xs text-green-600 dark:text-green-400 hover:underline font-medium"
+                            title="Jabber ile Ara"
+                          >
+                            {assignee.phone}
+                          </a>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -423,27 +441,27 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
 
           {/* Sticky Note Section - Read Only */}
           {event.note && (
-             <div className="flex items-start gap-3">
+            <div className="flex items-start gap-3">
               <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded-lg shrink-0">
                 <StickyNote size={20} />
               </div>
               <div className="w-full">
                 <div className="flex justify-between items-center mb-1">
-                    <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Not</p>
-                    {/* Delete Note Button (Only for Designers or Kampanya Yapan) */}
-                    {(isDesigner || isKampanyaYapan) && onEdit && (
-                        <button
-                            onClick={() => {
-                                if (window.confirm('Bu notu silmek istediğinize emin misiniz?')) {
-                                    onEdit(event.id, { note: '' });
-                                }
-                            }}
-                            className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700"
-                            title="Notu Sil"
-                        >
-                            <Trash2 size={14} />
-                        </button>
-                    )}
+                  <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Not</p>
+                  {/* Delete Note Button (Only for Designers or Kampanya Yapan) */}
+                  {(isDesigner || isKampanyaYapan) && onEdit && (
+                    <button
+                      onClick={() => {
+                        if (window.confirm('Bu notu silmek istediğinize emin misiniz?')) {
+                          onEdit(event.id, { note: '' });
+                        }
+                      }}
+                      className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700"
+                      title="Notu Sil"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
                 </div>
                 <div className="mt-1 bg-yellow-50 dark:bg-yellow-900/10 p-3 rounded-lg border border-yellow-200 dark:border-yellow-700/30 relative">
                   <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-medium">
@@ -463,39 +481,39 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Süre Bilgileri</p>
               <div className="mt-1 space-y-1 bg-indigo-50/50 dark:bg-indigo-900/10 p-3 rounded-lg border border-indigo-100 dark:border-indigo-800/30">
                 {event.createdAt ? (
-                    <p className="text-sm text-gray-700 dark:text-gray-300 flex justify-between">
-                        <span className="font-semibold text-gray-500 dark:text-gray-400">Oluşturulma:</span> 
-                        <span>{format(event.createdAt, 'd MMMM yyyy HH:mm', { locale: tr })}</span>
-                    </p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 flex justify-between">
+                    <span className="font-semibold text-gray-500 dark:text-gray-400">Oluşturulma:</span>
+                    <span>{format(event.createdAt, 'd MMMM yyyy HH:mm', { locale: tr })}</span>
+                  </p>
                 ) : (
-                   <p className="text-sm text-gray-500 italic">Oluşturulma tarihi bilinmiyor</p>
+                  <p className="text-sm text-gray-500 italic">Oluşturulma tarihi bilinmiyor</p>
                 )}
-                
+
                 {/* Duration Calculation */}
                 {(() => {
-                    if (!event.createdAt) return null;
+                  if (!event.createdAt) return null;
 
-                    if (status === 'Tamamlandı') {
-                        // Find completion date from history
-                        const completionEntry = event.history?.slice().reverse().find(h => h.newStatus === 'Tamamlandı');
-                        
-                        if (completionEntry) {
-                            return (
-                                <p className="text-sm text-gray-700 dark:text-gray-300 flex justify-between border-t border-indigo-100 dark:border-indigo-800/30 pt-1 mt-1">
-                                    <span className="font-semibold text-gray-500 dark:text-gray-400">Tamamlanma Süresi:</span> 
-                                    <span className="font-bold text-green-600 dark:text-green-400">{formatDuration(event.createdAt, completionEntry.date)}</span>
-                                </p>
-                            );
-                        }
-                    } else if (status === 'Planlandı') {
-                        return (
-                            <p className="text-sm text-gray-700 dark:text-gray-300 flex justify-between border-t border-indigo-100 dark:border-indigo-800/30 pt-1 mt-1">
-                                <span className="font-semibold text-gray-500 dark:text-gray-400">Geçen Süre:</span> 
-                                <span className="font-bold text-indigo-600 dark:text-indigo-400">{formatDuration(event.createdAt, new Date())}</span>
-                            </p>
-                        );
+                  if (status === 'Tamamlandı') {
+                    // Find completion date from history
+                    const completionEntry = event.history?.slice().reverse().find(h => h.newStatus === 'Tamamlandı');
+
+                    if (completionEntry) {
+                      return (
+                        <p className="text-sm text-gray-700 dark:text-gray-300 flex justify-between border-t border-indigo-100 dark:border-indigo-800/30 pt-1 mt-1">
+                          <span className="font-semibold text-gray-500 dark:text-gray-400">Tamamlanma Süresi:</span>
+                          <span className="font-bold text-green-600 dark:text-green-400">{formatDuration(event.createdAt, completionEntry.date)}</span>
+                        </p>
+                      );
                     }
-                    return null;
+                  } else if (status === 'Planlandı') {
+                    return (
+                      <p className="text-sm text-gray-700 dark:text-gray-300 flex justify-between border-t border-indigo-100 dark:border-indigo-800/30 pt-1 mt-1">
+                        <span className="font-semibold text-gray-500 dark:text-gray-400">Geçen Süre:</span>
+                        <span className="font-bold text-indigo-600 dark:text-indigo-400">{formatDuration(event.createdAt, new Date())}</span>
+                      </p>
+                    );
+                  }
+                  return null;
                 })()}
               </div>
             </div>
@@ -514,6 +532,15 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               >
                 <Mail size={18} /> <span className="hidden sm:inline">Bilgi İste</span>
               </button>
+              {assignee?.phone && (
+                <button
+                  onClick={handleCallAssignee}
+                  className="px-4 h-12 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm flex items-center justify-center gap-2 transition-colors min-w-[48px]"
+                  title="Jabber ile Ara"
+                >
+                  <Phone size={18} /> <span className="hidden sm:inline">Ara</span>
+                </button>
+              )}
               <button
                 onClick={() => setIsEditMode(true)}
                 className="flex-1 px-4 h-12 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium text-sm flex items-center justify-center gap-2 transition-colors"

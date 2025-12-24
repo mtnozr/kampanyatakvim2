@@ -16,7 +16,7 @@ interface AdminModalProps {
   users: User[];
   events: CalendarEvent[];
   departments: Department[];
-  onAddUser: (name: string, email: string, emoji: string) => void;
+  onAddUser: (name: string, email: string, emoji: string, phone?: string) => void;
   onDeleteUser: (id: string) => void;
   onDeleteEvent: (id: string) => void;
   onDeleteAllEvents: () => void;
@@ -91,6 +91,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   // User Form States
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
+  const [newPhone, setNewPhone] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState('');
 
   // Analytics Personnel Form States
@@ -255,11 +256,12 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     }
 
     try {
-      await onAddUser(newName, newEmail, selectedEmoji);
+      await onAddUser(newName, newEmail, selectedEmoji, newPhone || undefined);
 
       // Reset form
       setNewName('');
       setNewEmail('');
+      setNewPhone('');
       setSelectedEmoji('');
       setError('');
     } catch (err: any) {
@@ -652,6 +654,16 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             value={newEmail}
                             onChange={(e) => setNewEmail(e.target.value)}
                             placeholder="ali@mail.com"
+                            className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-colors"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Telefon (Jabber)</label>
+                          <input
+                            type="tel"
+                            value={newPhone}
+                            onChange={(e) => setNewPhone(e.target.value)}
+                            placeholder="5551234567"
                             className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-colors"
                           />
                         </div>
