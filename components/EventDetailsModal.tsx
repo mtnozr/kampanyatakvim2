@@ -174,8 +174,8 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 <button
                   onClick={() => handleStatusChange('Planlandı')}
                   className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all ${status === 'Planlandı'
-                      ? 'bg-yellow-100 text-yellow-700 shadow-sm dark:bg-yellow-900/30 dark:text-yellow-300'
-                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600'
+                    ? 'bg-yellow-100 text-yellow-700 shadow-sm dark:bg-yellow-900/30 dark:text-yellow-300'
+                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600'
                     }`}
                   title="Planlandı"
                 >
@@ -184,8 +184,8 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 <button
                   onClick={() => handleStatusChange('Tamamlandı')}
                   className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all ${status === 'Tamamlandı'
-                      ? 'bg-green-100 text-green-700 shadow-sm dark:bg-green-900/30 dark:text-green-300'
-                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600'
+                    ? 'bg-green-500 text-white shadow-sm dark:bg-green-600 dark:text-white'
+                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600'
                     }`}
                   title="Tamamlandı"
                 >
@@ -194,8 +194,8 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 <button
                   onClick={() => handleStatusChange('İptal Edildi')}
                   className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all ${status === 'İptal Edildi'
-                      ? 'bg-red-100 text-red-700 shadow-sm dark:bg-red-900/30 dark:text-red-300'
-                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600'
+                    ? 'bg-red-100 text-red-700 shadow-sm dark:bg-red-900/30 dark:text-red-300'
+                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600'
                     }`}
                   title="İptal Edildi"
                 >
@@ -524,38 +524,38 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
         {/* Footer Actions */}
         <div className="px-6 py-4 bg-gray-50 dark:bg-slate-700/30 border-t border-gray-100 dark:border-slate-700 shrink-0">
           {isDesigner && !isEditMode ? (
-            <div className="flex gap-3">
+            <div className="flex gap-2">
               <button
                 onClick={handleRequestInfo}
-                className="px-4 h-12 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm flex items-center justify-center gap-2 transition-colors min-w-[48px]"
+                className="flex-1 h-11 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
                 title="Bilgi İste"
               >
-                <Mail size={18} /> <span className="hidden sm:inline">Bilgi İste</span>
+                <Mail size={16} /> Bilgi İste
               </button>
               {assignee?.phone && (
                 <button
                   onClick={handleCallAssignee}
-                  className="px-4 h-12 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm flex items-center justify-center gap-2 transition-colors min-w-[48px]"
+                  className="flex-1 h-11 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
                   title="Jabber ile Ara"
                 >
-                  <Phone size={18} /> <span className="hidden sm:inline">Ara</span>
+                  <Phone size={16} /> 📞 Ara
                 </button>
               )}
               <button
                 onClick={() => setIsEditMode(true)}
-                className="flex-1 px-4 h-12 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium text-sm flex items-center justify-center gap-2 transition-colors"
+                className="flex-1 h-11 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
               >
                 <Edit2 size={16} /> Düzenle
               </button>
               <button
                 onClick={handleDelete}
-                className="px-4 h-12 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm flex items-center justify-center gap-2 transition-colors"
+                className="flex-1 h-11 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
               >
                 <Trash2 size={16} /> Sil
               </button>
               <button
                 onClick={onClose}
-                className="px-4 h-12 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white font-medium text-sm transition-colors"
+                className="px-3 h-11 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white font-medium text-xs transition-colors"
               >
                 Kapat
               </button>

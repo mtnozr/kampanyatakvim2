@@ -1887,19 +1887,36 @@ function App() {
     }
   };
 
-  const handleEventDrop = async (event: CalendarEvent, newDate: Date) => {
+  const handleEventDrop = async (event: CalendarEvent, newDate: Date, ctrlKey: boolean = false) => {
     if (!isDesigner) return;
 
-    // If dropped on the same day, do nothing
-    if (isSameDay(event.date, newDate)) return;
+    // If dropped on the same day without Ctrl, do nothing
+    if (isSameDay(event.date, newDate) && !ctrlKey) return;
 
     try {
-      // Create a toast to indicate progress
-      addToast('Tarih güncelleniyor...', 'info');
-      await handleEditEvent(event.id, { date: newDate });
+      if (ctrlKey) {
+        // COPY: Create a new campaign with the same data but new date
+        addToast('Kampanya kopyalanıyor...', 'info');
+        const { id, createdAt, history, ...eventData } = event;
+        await addDoc(collection(db, "events"), {
+          ...eventData,
+          date: Timestamp.fromDate(newDate),
+          status: 'Planlandı', // Reset status for copied campaign
+          createdAt: Timestamp.now(),
+          history: [{
+            date: Timestamp.now(),
+            action: `Kopyalandı (${format(event.date, 'd MMM', { locale: tr })} → ${format(newDate, 'd MMM', { locale: tr })})`
+          }]
+        });
+        addToast('Kampanya kopyalandı!', 'success');
+      } else {
+        // MOVE: Update existing campaign date
+        addToast('Tarih güncelleniyor...', 'info');
+        await handleEditEvent(event.id, { date: newDate });
+      }
     } catch (error) {
       console.error('Drag drop update failed:', error);
-      addToast('Tarih güncellemesi başarısız.', 'info');
+      addToast('İşlem başarısız.', 'info');
     }
   };
 
@@ -2824,7 +2841,7 @@ function App() {
                       onDrop={(e) => {
                         if (isDesigner && draggedEvent) {
                           e.preventDefault();
-                          handleEventDrop(draggedEvent, day);
+                          handleEventDrop(draggedEvent, day, e.ctrlKey || e.metaKey);
                           setDraggedEvent(null);
                         }
                       }}
