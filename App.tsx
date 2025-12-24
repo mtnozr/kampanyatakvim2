@@ -845,10 +845,21 @@ function App() {
 
   // Auto-scroll to today when page loads
   useEffect(() => {
-    // Wait for the calendar to render, then scroll to today
-    const timer = setTimeout(() => {
-      todayCellRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 500);
+    // Retry mechanism to ensure DOM is ready
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    const scrollToToday = () => {
+      if (todayCellRef.current) {
+        todayCellRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else if (attempts < maxAttempts) {
+        attempts++;
+        setTimeout(scrollToToday, 200);
+      }
+    };
+
+    // Start after initial render
+    const timer = setTimeout(scrollToToday, 300);
     return () => clearTimeout(timer);
   }, []);
 
