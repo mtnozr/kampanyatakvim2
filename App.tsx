@@ -2675,8 +2675,8 @@ function App() {
               <Users size={20} />
             </button>
 
-            {/* Super Admin Password Change Button */}
-            {isSuperAdmin && (
+            {/* Admin Password Change Button */}
+            {isDesigner && (
               <button
                 onClick={() => setIsAdminPasswordOpen(true)}
                 className="p-1.5 text-gray-500 hover:text-amber-600 hover:bg-amber-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-amber-300 dark:hover:bg-amber-900/30"
