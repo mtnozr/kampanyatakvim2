@@ -6,6 +6,7 @@ import {
   startOfYear,
   endOfYear,
   startOfMonth,
+  endOfMonth,
   subMonths,
   subDays,
   isWithinInterval,
@@ -93,6 +94,7 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users, 
         break;
       case 'thisMonth':
         start = startOfMonth(now);
+        end = endOfMonth(now); // Include entire month, not just up to today
         break;
       case 'last3Months':
         start = subMonths(now, 3);
