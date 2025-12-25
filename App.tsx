@@ -45,6 +45,7 @@ import { AddAnalyticsTaskModal } from './components/AddAnalyticsTaskModal';
 import { AnalyticsTaskDetailsModal } from './components/AnalyticsTaskDetailsModal';
 import { PhoneDirectory } from './components/PhoneDirectory';
 import { WeatherWidget } from './components/WeatherWidget';
+import { StickyNoteWidget } from './components/StickyNoteWidget';
 import { ThemeToggle } from './components/ThemeToggle';
 import { useTheme } from './hooks/useTheme';
 import { setCookie, getCookie, deleteCookie } from './utils/cookies';
@@ -3105,6 +3106,7 @@ function App() {
         {isDesigner && (
           <div className="fixed right-4 top-1/2 -translate-y-1/2 z-30 w-72 flex flex-col gap-3">
             <WeatherWidget />
+            <StickyNoteWidget />
             <PhoneDirectory users={users} analyticsUsers={analyticsUsers} />
           </div>
         )}
