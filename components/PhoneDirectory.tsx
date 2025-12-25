@@ -23,13 +23,13 @@ export const PhoneDirectory: React.FC<PhoneDirectoryProps> = ({ users, analytics
         [allPersonnel]
     );
 
-    // Filter by search query (name or phone)
+    // Filter by search query (name or phone) - Turkish locale for proper İ/i handling
     const filteredPersonnel = useMemo(() => {
         if (!searchQuery.trim()) return personnelWithPhone;
 
-        const query = searchQuery.toLowerCase().trim();
+        const query = searchQuery.toLocaleLowerCase('tr').trim();
         return personnelWithPhone.filter(p =>
-            p.name.toLowerCase().includes(query) ||
+            p.name.toLocaleLowerCase('tr').includes(query) ||
             p.phone?.includes(query)
         );
     }, [personnelWithPhone, searchQuery]);
