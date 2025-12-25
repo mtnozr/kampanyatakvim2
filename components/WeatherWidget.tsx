@@ -9,29 +9,30 @@ interface DayForecast {
 }
 
 // Weather code to icon mapping (WMO Weather interpretation codes)
+// Using bright colors for visibility on gradient background
 const getWeatherIcon = (code: number, size: number = 20) => {
-    const className = "shrink-0";
+    const baseClass = "shrink-0 drop-shadow-sm";
 
     // Clear sky
-    if (code === 0) return <Sun size={size} className={`${className} text-yellow-500`} />;
+    if (code === 0) return <Sun size={size} className={`${baseClass} text-yellow-300`} />;
     // Mainly clear, partly cloudy
-    if (code <= 3) return <Sun size={size} className={`${className} text-yellow-400`} />;
+    if (code <= 3) return <Sun size={size} className={`${baseClass} text-amber-300`} />;
     // Fog
-    if (code >= 45 && code <= 48) return <Cloud size={size} className={`${className} text-gray-400`} />;
+    if (code >= 45 && code <= 48) return <Cloud size={size} className={`${baseClass} text-white/80`} />;
     // Drizzle
-    if (code >= 51 && code <= 57) return <CloudRain size={size} className={`${className} text-blue-400`} />;
+    if (code >= 51 && code <= 57) return <CloudRain size={size} className={`${baseClass} text-cyan-200`} />;
     // Rain
-    if (code >= 61 && code <= 67) return <CloudRain size={size} className={`${className} text-blue-500`} />;
+    if (code >= 61 && code <= 67) return <CloudRain size={size} className={`${baseClass} text-white`} />;
     // Snow
-    if (code >= 71 && code <= 77) return <CloudSnow size={size} className={`${className} text-blue-200`} />;
+    if (code >= 71 && code <= 77) return <CloudSnow size={size} className={`${baseClass} text-white`} />;
     // Rain showers
-    if (code >= 80 && code <= 82) return <CloudRain size={size} className={`${className} text-blue-600`} />;
+    if (code >= 80 && code <= 82) return <CloudRain size={size} className={`${baseClass} text-cyan-100`} />;
     // Snow showers
-    if (code >= 85 && code <= 86) return <CloudSnow size={size} className={`${className} text-blue-300`} />;
+    if (code >= 85 && code <= 86) return <CloudSnow size={size} className={`${baseClass} text-white`} />;
     // Thunderstorm
-    if (code >= 95) return <CloudLightning size={size} className={`${className} text-purple-500`} />;
+    if (code >= 95) return <CloudLightning size={size} className={`${baseClass} text-yellow-200`} />;
     // Default
-    return <Cloud size={size} className={`${className} text-gray-500`} />;
+    return <Cloud size={size} className={`${baseClass} text-white/70`} />;
 };
 
 // Get Turkish day names
@@ -122,8 +123,8 @@ export const WeatherWidget: React.FC = () => {
                             <div
                                 key={day.date.toISOString()}
                                 className={`flex flex-col items-center p-1.5 rounded-xl transition-colors ${index === 0
-                                        ? 'bg-white/20'
-                                        : 'hover:bg-white/10'
+                                    ? 'bg-white/20'
+                                    : 'hover:bg-white/10'
                                     }`}
                             >
                                 <span className="text-[10px] text-white/90 font-medium mb-1">
