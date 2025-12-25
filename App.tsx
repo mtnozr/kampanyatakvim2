@@ -1929,7 +1929,21 @@ function App() {
       if (ctrlKey) {
         // COPY: Create a new campaign with the same data but new date
         addToast('Kampanya kopyalanıyor...', 'info');
-        const { id, createdAt, history, ...eventData } = event;
+
+        // Extract only the fields we want to copy (exclude IDs, dates that need conversion, report data)
+        const {
+          id,
+          createdAt,
+          updatedAt,
+          history,
+          date,
+          reportStatus,
+          reportDueDate,
+          reportCompletedAt,
+          reportCompletedBy,
+          ...eventData
+        } = event;
+
         await addDoc(collection(db, "events"), {
           ...eventData,
           date: Timestamp.fromDate(newDate),
