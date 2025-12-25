@@ -945,16 +945,27 @@ function App() {
   };
 
   // === ANALYTICS USER HANDLERS ===
-  const handleAddAnalyticsUser = async (name: string, email: string, emoji: string) => {
+  const handleAddAnalyticsUser = async (name: string, email: string, emoji: string, phone?: string) => {
     try {
       await addDoc(collection(db, "analyticsUsers"), {
         name,
         email,
-        emoji
+        emoji,
+        phone: phone || null
       });
       addToast(`${name} (Analitik) başarıyla eklendi.`, 'success');
     } catch (e) {
       addToast('Analitik personel ekleme hatası.', 'info');
+    }
+  };
+
+  const handleUpdateAnalyticsUser = async (id: string, updates: Partial<AnalyticsUser>) => {
+    try {
+      await updateDoc(doc(db, "analyticsUsers", id), updates);
+      addToast('Analitik personel güncellendi.', 'success');
+    } catch (e) {
+      console.error('Update analytics user error:', e);
+      addToast('Güncelleme hatası.', 'info');
     }
   };
 
@@ -3138,6 +3149,7 @@ function App() {
           monthlyChampionId={monthlyChampionId}
           analyticsUsers={analyticsUsers}
           onAddAnalyticsUser={handleAddAnalyticsUser}
+          onUpdateAnalyticsUser={handleUpdateAnalyticsUser}
           onDeleteAnalyticsUser={handleDeleteAnalyticsUser}
         />
 

@@ -37,7 +37,8 @@ interface AdminModalProps {
   monthlyChampionId?: string | null;
   // Analytics Personnel Props
   analyticsUsers?: AnalyticsUser[];
-  onAddAnalyticsUser?: (name: string, email: string, emoji: string) => void;
+  onAddAnalyticsUser?: (name: string, email: string, emoji: string, phone?: string) => void;
+  onUpdateAnalyticsUser?: (id: string, updates: Partial<AnalyticsUser>) => void;
   onDeleteAnalyticsUser?: (id: string) => void;
 }
 
@@ -68,6 +69,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   monthlyChampionId,
   analyticsUsers = [],
   onAddAnalyticsUser,
+  onUpdateAnalyticsUser,
   onDeleteAnalyticsUser
 }) => {
   const [localThemeConfig, setLocalThemeConfig] = useState(autoThemeConfig);
@@ -106,7 +108,15 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   // Analytics Personnel Form States
   const [newAnalyticsName, setNewAnalyticsName] = useState('');
   const [newAnalyticsEmail, setNewAnalyticsEmail] = useState('');
+  const [newAnalyticsPhone, setNewAnalyticsPhone] = useState('');
   const [selectedAnalyticsEmoji, setSelectedAnalyticsEmoji] = useState('');
+
+  // Analytics Personnel Edit States
+  const [editingAnalyticsUser, setEditingAnalyticsUser] = useState<AnalyticsUser | null>(null);
+  const [editAnalyticsName, setEditAnalyticsName] = useState('');
+  const [editAnalyticsEmail, setEditAnalyticsEmail] = useState('');
+  const [editAnalyticsPhone, setEditAnalyticsPhone] = useState('');
+  const [editAnalyticsEmoji, setEditAnalyticsEmoji] = useState('');
 
   // Announcement Form States
   const [newAnnTitle, setNewAnnTitle] = useState('');
@@ -1547,14 +1557,15 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         return;
                       }
                       if (onAddAnalyticsUser) {
-                        onAddAnalyticsUser(newAnalyticsName, newAnalyticsEmail, selectedAnalyticsEmoji);
+                        onAddAnalyticsUser(newAnalyticsName, newAnalyticsEmail, selectedAnalyticsEmoji, newAnalyticsPhone || undefined);
                         setNewAnalyticsName('');
                         setNewAnalyticsEmail('');
+                        setNewAnalyticsPhone('');
                         setSelectedAnalyticsEmoji('');
                         setError('');
                       }
                     }} className="space-y-3">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <div>
                           <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">İsim Soyisim</label>
                           <input
@@ -1572,6 +1583,16 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             value={newAnalyticsEmail}
                             onChange={(e) => setNewAnalyticsEmail(e.target.value)}
                             placeholder="zeynep@mail.com"
+                            className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-colors"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Telefon</label>
+                          <input
+                            type="text"
+                            value={newAnalyticsPhone}
+                            onChange={(e) => setNewAnalyticsPhone(e.target.value)}
+                            placeholder="Örn: 9123 veya 0532..."
                             className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-colors"
                           />
                         </div>
@@ -1611,7 +1632,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                   </div>
 
                   {/* Analytics Personnel List */}
-                  <div className="p-6">
+                  <div className="p-6 flex-1 overflow-y-auto">
                     <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">Mevcut Analitik Personel ({analyticsUsers.length})</h3>
                     <div className="space-y-2">
                       {analyticsUsers.map(user => (
@@ -1623,17 +1644,37 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             <div>
                               <p className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{user.name}</p>
                               <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
+                              {user.phone && (
+                                <p className="text-[10px] text-green-600 dark:text-green-400">📞 {user.phone}</p>
+                              )}
                             </div>
                           </div>
-                          {onDeleteAnalyticsUser && (
-                            <button
-                              onClick={() => onDeleteAnalyticsUser(user.id)}
-                              className="p-2 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                              title="Personeli Sil"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          )}
+                          <div className="flex items-center gap-1">
+                            {onUpdateAnalyticsUser && (
+                              <button
+                                onClick={() => {
+                                  setEditingAnalyticsUser(user);
+                                  setEditAnalyticsName(user.name);
+                                  setEditAnalyticsEmail(user.email);
+                                  setEditAnalyticsPhone(user.phone || '');
+                                  setEditAnalyticsEmoji(user.emoji || '');
+                                }}
+                                className="p-2 text-gray-300 dark:text-gray-600 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                title="Düzenle"
+                              >
+                                <Edit2 size={16} />
+                              </button>
+                            )}
+                            {onDeleteAnalyticsUser && (
+                              <button
+                                onClick={() => onDeleteAnalyticsUser(user.id)}
+                                className="p-2 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                title="Personeli Sil"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       ))}
                       {analyticsUsers.length === 0 && (
@@ -1641,6 +1682,93 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       )}
                     </div>
                   </div>
+
+                  {/* Edit Analytics User Modal Overlay */}
+                  {editingAnalyticsUser && (
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center animate-in fade-in duration-200">
+                      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md m-6 animate-in zoom-in-95 duration-200">
+                        <div className="p-6 border-b dark:border-slate-700">
+                          <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                            <Edit2 size={18} /> Analitik Personel Düzenle
+                          </h3>
+                        </div>
+                        <div className="p-6 space-y-4">
+                          <div>
+                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">İsim Soyisim</label>
+                            <input
+                              type="text"
+                              value={editAnalyticsName}
+                              onChange={(e) => setEditAnalyticsName(e.target.value)}
+                              className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">E-posta</label>
+                            <input
+                              type="email"
+                              value={editAnalyticsEmail}
+                              onChange={(e) => setEditAnalyticsEmail(e.target.value)}
+                              className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Telefon</label>
+                            <input
+                              type="text"
+                              value={editAnalyticsPhone}
+                              onChange={(e) => setEditAnalyticsPhone(e.target.value)}
+                              placeholder="Örn: 9123 veya 0532..."
+                              className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 block">Emoji</label>
+                            <div className="grid grid-cols-8 gap-2 p-3 bg-gray-50 dark:bg-slate-900/50 rounded-lg border border-gray-100 dark:border-slate-700 max-h-32 overflow-y-auto">
+                              {AVAILABLE_EMOJIS.map((emoji) => (
+                                <button
+                                  key={emoji}
+                                  type="button"
+                                  onClick={() => setEditAnalyticsEmoji(emoji)}
+                                  className={`
+                                    w-8 h-8 flex items-center justify-center rounded-full text-lg transition-all
+                                    ${editAnalyticsEmoji === emoji
+                                      ? 'bg-blue-600 ring-2 ring-blue-300 dark:ring-blue-500/50 transform scale-110 shadow-md'
+                                      : 'bg-white dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600'}
+                                  `}
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="p-6 border-t dark:border-slate-700 flex justify-end gap-3">
+                          <button
+                            onClick={() => setEditingAnalyticsUser(null)}
+                            className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg text-sm transition-colors"
+                          >
+                            İptal
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (onUpdateAnalyticsUser && editingAnalyticsUser) {
+                                onUpdateAnalyticsUser(editingAnalyticsUser.id, {
+                                  name: editAnalyticsName.trim(),
+                                  email: editAnalyticsEmail.trim(),
+                                  phone: editAnalyticsPhone.trim() || undefined,
+                                  emoji: editAnalyticsEmoji
+                                });
+                                setEditingAnalyticsUser(null);
+                              }
+                            }}
+                            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm flex items-center gap-2 transition-colors"
+                          >
+                            <Save size={16} /> Kaydet
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

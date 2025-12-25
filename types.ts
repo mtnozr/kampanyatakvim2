@@ -151,6 +151,7 @@ export interface AnalyticsUser {
   name: string;
   email: string;
   emoji?: string;
+  phone?: string;  // Phone number for contact
 }
 
 // Analytics Task - for analytics calendar
