@@ -178,15 +178,15 @@ export const PhoneDirectory: React.FC<PhoneDirectoryProps> = ({ users, analytics
 
     if (personnelWithPhone.length === 0) return null;
 
-    // Calculate position style
-    const positionStyle = position
-        ? { left: position.x, top: position.y, transform: 'none' }
-        : { right: 16, top: '50%', transform: 'translateY(-50%)' };
+    // Calculate position style - relative to container when not dragged, absolute when dragged
+    const positionStyle: React.CSSProperties = position
+        ? { position: 'fixed', left: position.x, top: position.y, zIndex: 50 }
+        : {};
 
     return (
         <div
             ref={containerRef}
-            className={`fixed z-30 w-72 ${isDragging ? 'cursor-grabbing' : ''}`}
+            className={`w-full ${isDragging ? 'cursor-grabbing' : ''}`}
             style={positionStyle}
         >
             <div className={`bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 overflow-hidden transition-all duration-300 ${isDragging ? 'shadow-3xl scale-[1.02]' : ''}`}>
@@ -242,8 +242,8 @@ export const PhoneDirectory: React.FC<PhoneDirectoryProps> = ({ users, analytics
                                 }}
                                 placeholder="İsim veya numara ara..."
                                 className={`w-full pl-9 pr-8 py-2 text-sm rounded-lg border bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-teal-500/50 outline-none transition-all ${filteredPersonnel.length === 1
-                                        ? 'border-green-400 dark:border-green-600 focus:border-green-500'
-                                        : 'border-gray-200 dark:border-slate-600 focus:border-teal-500'
+                                    ? 'border-green-400 dark:border-green-600 focus:border-green-500'
+                                    : 'border-gray-200 dark:border-slate-600 focus:border-teal-500'
                                     }`}
                             />
                             {searchQuery && (
