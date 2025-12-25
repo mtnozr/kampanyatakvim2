@@ -3091,6 +3091,7 @@ function App() {
           onAdd={handleAddAnalyticsTask}
           initialDate={selectedAnalyticsDate}
           users={analyticsUsers}
+          tasks={analyticsTasks}
         />
 
         <AnalyticsTaskDetailsModal

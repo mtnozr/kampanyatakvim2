@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Briefcase, AlertCircle, Calendar, User as UserIcon, FileText, AlertTriangle } from 'lucide-react';
-import { UrgencyLevel, AnalyticsUser } from '../types';
+import { UrgencyLevel, AnalyticsUser, AnalyticsTask } from '../types';
 import { URGENCY_CONFIGS, TURKISH_HOLIDAYS } from '../constants';
 
 interface AddAnalyticsTaskModalProps {
@@ -9,6 +9,7 @@ interface AddAnalyticsTaskModalProps {
     onAdd: (title: string, urgency: UrgencyLevel, date: Date, assigneeId?: string, notes?: string, difficulty?: 'Kolay' | 'Orta' | 'Zor') => void;
     initialDate?: Date;
     users: AnalyticsUser[];
+    tasks: AnalyticsTask[];
 }
 
 export const AddAnalyticsTaskModal: React.FC<AddAnalyticsTaskModalProps> = ({
@@ -16,7 +17,8 @@ export const AddAnalyticsTaskModal: React.FC<AddAnalyticsTaskModalProps> = ({
     onClose,
     onAdd,
     initialDate,
-    users
+    users,
+    tasks
 }) => {
     const [title, setTitle] = useState('');
     const [urgency, setUrgency] = useState<UrgencyLevel>('Medium');
@@ -161,11 +163,15 @@ export const AddAnalyticsTaskModal: React.FC<AddAnalyticsTaskModalProps> = ({
                                 <option value="">Seçiniz</option>
                                 {[...users]
                                     .sort((a, b) => a.name.localeCompare(b.name, 'tr'))
-                                    .map(user => (
-                                        <option key={user.id} value={user.id}>
-                                            {user.emoji || '👤'} {user.name}
-                                        </option>
-                                    ))}
+                                    .map(user => {
+                                        const hasPendingTasks = tasks.some(t => t.assigneeId === user.id && t.status === 'Planlandı');
+                                        const indicator = hasPendingTasks ? '🔴' : '🟢';
+                                        return (
+                                            <option key={user.id} value={user.id}>
+                                                {indicator} {user.name}
+                                            </option>
+                                        );
+                                    })}
                             </select>
                             <UserIcon className="absolute left-2.5 top-2.5 text-gray-400 dark:text-gray-500" size={16} />
                         </div>
