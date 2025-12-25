@@ -1944,8 +1944,13 @@ function App() {
           ...eventData
         } = event;
 
+        // Remove undefined values - Firestore doesn't accept undefined
+        const cleanEventData = Object.fromEntries(
+          Object.entries(eventData).filter(([_, value]) => value !== undefined)
+        );
+
         await addDoc(collection(db, "events"), {
-          ...eventData,
+          ...cleanEventData,
           date: Timestamp.fromDate(newDate),
           status: 'Planlandı', // Reset status for copied campaign
           createdAt: Timestamp.now(),
