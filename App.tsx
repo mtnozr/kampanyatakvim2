@@ -3102,8 +3102,8 @@ function App() {
           )}
         </div>
 
-        {/* Right Sidebar - Admin Only */}
-        {isDesigner && (
+        {/* Right Sidebar - Designer and Kampanya Yapan */}
+        {(isDesigner || isKampanyaYapan) && (
           <div className="fixed right-4 top-1/2 -translate-y-1/2 z-30 w-72 flex flex-col gap-3">
             <WeatherWidget />
             <StickyNoteWidget />

@@ -115,10 +115,11 @@ export const StickyNoteWidget: React.FC = () => {
 
             {/* Footer - Last saved */}
             {lastSaved && (
-                <div className="px-3 pb-2">
-                    <p className="text-[9px] text-amber-900/40 text-center flex items-center justify-center gap-1">
-                        <Save size={8} />
-                        Son kayıt: {lastSaved.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                <div className="px-3 pb-2 bg-amber-500/20">
+                    <p className="text-[10px] text-amber-900/70 text-center flex items-center justify-center gap-1 font-medium">
+                        <Save size={10} className="text-green-700" />
+                        <span>Kaydedildi:</span>
+                        <span className="font-bold">{lastSaved.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
                     </p>
                 </div>
             )}
