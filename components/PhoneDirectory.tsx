@@ -235,8 +235,16 @@ export const PhoneDirectory: React.FC<PhoneDirectoryProps> = ({ users, analytics
                                 type="text"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && filteredPersonnel.length === 1 && filteredPersonnel[0].phone) {
+                                        window.location.href = getPhoneLink(filteredPersonnel[0].phone);
+                                    }
+                                }}
                                 placeholder="İsim veya numara ara..."
-                                className="w-full pl-9 pr-8 py-2 text-sm rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none transition-all"
+                                className={`w-full pl-9 pr-8 py-2 text-sm rounded-lg border bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-teal-500/50 outline-none transition-all ${filteredPersonnel.length === 1
+                                        ? 'border-green-400 dark:border-green-600 focus:border-green-500'
+                                        : 'border-gray-200 dark:border-slate-600 focus:border-teal-500'
+                                    }`}
                             />
                             {searchQuery && (
                                 <button
