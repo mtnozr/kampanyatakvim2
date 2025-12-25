@@ -34,7 +34,7 @@ interface AdminModalProps {
   onDeleteAnnouncement: (id: string) => void;
   autoThemeConfig: { enabled: boolean; time: string };
   onUpdateAutoThemeConfig: (config: { enabled: boolean; time: string }) => Promise<void>;
-  monthlyChampionId?: string | null;
+  monthlyChampionIds?: string[];
   // Analytics Personnel Props
   analyticsUsers?: AnalyticsUser[];
   onAddAnalyticsUser?: (name: string, email: string, emoji: string, phone?: string) => void;
@@ -66,7 +66,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   onDeleteAnnouncement,
   autoThemeConfig,
   onUpdateAutoThemeConfig,
-  monthlyChampionId,
+  monthlyChampionIds = [],
   analyticsUsers = [],
   onAddAnalyticsUser,
   onUpdateAnalyticsUser,
@@ -764,7 +764,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             </div>
                             <div>
                               <p className="font-semibold text-gray-800 dark:text-gray-200 text-sm">
-                                {user.name} {monthlyChampionId === user.id ? '🏆' : ''}
+                                {user.name} {monthlyChampionIds.includes(user.id) ? '🏆' : ''}
                               </p>
                               <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
                               {user.phone && (

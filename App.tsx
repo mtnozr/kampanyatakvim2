@@ -109,7 +109,7 @@ function App() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [requests, setRequests] = useState<WorkRequest[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
-  const [monthlyChampionId, setMonthlyChampionId] = useState<string | null>(null);
+  const [monthlyChampionIds, setMonthlyChampionIds] = useState<string[]>([]);
   const [requestSubmissionEnabled, setRequestSubmissionEnabled] = useState(true);
   const [isAddReportModalOpen, setIsAddReportModalOpen] = useState(false);
   const [selectedReportDate, setSelectedReportDate] = useState<Date | undefined>(undefined);
@@ -510,7 +510,7 @@ function App() {
         // Initial check/calculation only if enabled
         calculateMonthlyChampion();
       } else {
-        setMonthlyChampionId(null);
+        setMonthlyChampionIds([]);
       }
     });
 
@@ -525,20 +525,22 @@ function App() {
       const isEnabled = configSnap.exists() ? configSnap.data()?.enabled : true;
 
       if (!isEnabled) {
-        setMonthlyChampionId(null);
+        setMonthlyChampionIds([]);
         return;
       }
 
       if (docSnap.exists()) {
         const data = docSnap.data();
-        if (data && data.userId) {
-          console.log('🏆 App: Monthly champion updated:', data.userId);
-          setMonthlyChampionId(data.userId);
+        // Support both old userId and new userIds array
+        const ids = data?.userIds || (data?.userId ? [data.userId] : []);
+        if (ids.length > 0) {
+          console.log('🏆 App: Monthly champion(s) updated:', ids.join(', '));
+          setMonthlyChampionIds(ids);
         } else {
-          setMonthlyChampionId(null);
+          setMonthlyChampionIds([]);
         }
       } else {
-        setMonthlyChampionId(null);
+        setMonthlyChampionIds([]);
       }
     });
 
@@ -2784,7 +2786,7 @@ function App() {
                 <option value="">Tüm Personel</option>
                 {users.map(u => (
                   <option key={u.id} value={u.id}>
-                    {u.name} {monthlyChampionId === u.id ? '🏆' : ''}
+                    {u.name} {monthlyChampionIds.includes(u.id) ? '🏆' : ''}
                   </option>
                 ))}
               </select>
@@ -3037,7 +3039,7 @@ function App() {
                                   onClick={(e) => setViewEventId(e.id)}
                                   isBlurred={isBlurred}
                                   isClickable={isClickable}
-                                  monthlyChampionId={monthlyChampionId}
+                                  monthlyChampionIds={monthlyChampionIds}
                                 />
                               </div>
                             </div>
@@ -3212,7 +3214,7 @@ function App() {
           onDeleteAnnouncement={handleDeleteAnnouncement}
           autoThemeConfig={autoThemeConfig}
           onUpdateAutoThemeConfig={handleUpdateAutoThemeConfig}
-          monthlyChampionId={monthlyChampionId}
+          monthlyChampionIds={monthlyChampionIds}
           analyticsUsers={analyticsUsers}
           onAddAnalyticsUser={handleAddAnalyticsUser}
           onUpdateAnalyticsUser={handleUpdateAnalyticsUser}
@@ -3250,7 +3252,7 @@ function App() {
           isKampanyaYapan={isKampanyaYapan}
           onEdit={handleEditEvent}
           onDelete={handleDeleteEvent}
-          monthlyChampionId={monthlyChampionId}
+          monthlyChampionIds={monthlyChampionIds}
         />
 
         <DepartmentLoginModal
@@ -3345,7 +3347,7 @@ function App() {
           departments={departments}
           users={users}
           onRefresh={handleDashboardRefresh}
-          monthlyChampionId={monthlyChampionId}
+          monthlyChampionIds={monthlyChampionIds}
         />
 
         <AnnouncementPopup

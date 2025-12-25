@@ -123,7 +123,8 @@ export interface Announcement {
 }
 
 export interface MonthlyChampion {
-  userId: string;
+  userId: string; // Deprecated, kept for backwards compatibility
+  userIds: string[]; // Array of winner IDs (supports ties)
   month: string; // Format: YYYY-MM
   campaignCount: number;
   calculatedAt: Date;
