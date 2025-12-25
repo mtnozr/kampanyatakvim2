@@ -42,6 +42,7 @@ import { ReportDetailsModal } from './components/ReportDetailsModal';
 import { AnalyticsCalendarTab } from './components/AnalyticsCalendarTab';
 import { AddAnalyticsTaskModal } from './components/AddAnalyticsTaskModal';
 import { AnalyticsTaskDetailsModal } from './components/AnalyticsTaskDetailsModal';
+import { PhoneDirectory } from './components/PhoneDirectory';
 import { ThemeToggle } from './components/ThemeToggle';
 import { useTheme } from './hooks/useTheme';
 import { setCookie, getCookie, deleteCookie } from './utils/cookies';
@@ -3039,6 +3040,11 @@ function App() {
             </button>
           )}
         </div>
+
+        {/* Phone Directory - Admin Only */}
+        {isDesigner && (
+          <PhoneDirectory users={users} analyticsUsers={analyticsUsers} />
+        )}
 
         <AddEventModal
           isOpen={isAddModalOpen}
