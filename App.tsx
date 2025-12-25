@@ -31,6 +31,7 @@ import { ToastContainer } from './components/Toast';
 import { EventDetailsModal } from './components/EventDetailsModal';
 import { DepartmentLoginModal } from './components/DepartmentLoginModal';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
+import { AdminChangePasswordModal } from './components/AdminChangePasswordModal';
 import { AnnouncementBoard } from './components/AnnouncementBoard';
 import { AnnouncementPopup } from './components/AnnouncementPopup';
 import { ReportsDashboard } from './components/ReportsDashboard';
@@ -151,6 +152,7 @@ function App() {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isMyTasksOpen, setIsMyTasksOpen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [isAdminPasswordOpen, setIsAdminPasswordOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   // Refactor: Store ID instead of object to ensure reactivity
@@ -1468,6 +1470,33 @@ function App() {
     }
   };
 
+  // Admin password change - for super admin (Firebase Auth only)
+  const handleAdminChangePassword = async (currentPassword: string, newPassword: string) => {
+    if (!auth.currentUser || !auth.currentUser.email) {
+      throw new Error("Oturum bilgisi eksik. Lütfen sayfayı yenileyip tekrar giriş yapın.");
+    }
+
+    try {
+      const { updatePassword, EmailAuthProvider, reauthenticateWithCredential } = await import('firebase/auth');
+
+      // Re-authenticate user before changing password
+      const credential = EmailAuthProvider.credential(auth.currentUser.email, currentPassword);
+      await reauthenticateWithCredential(auth.currentUser, credential);
+
+      await updatePassword(auth.currentUser, newPassword);
+      addToast('Admin şifreniz başarıyla güncellendi.', 'success');
+    } catch (error: any) {
+      console.error("Error updating admin password:", error);
+      if (error.code === 'auth/wrong-password') {
+        throw new Error('Mevcut şifre hatalı.');
+      } else if (error.code === 'auth/requires-recent-login') {
+        throw new Error('Güvenlik nedeniyle yeniden giriş yapmalısınız.');
+      } else {
+        throw new Error('Şifre güncellenemedi.');
+      }
+    }
+  };
+
   const handleUpdateAutoThemeConfig = async (config: { enabled: boolean; time: string }) => {
     try {
       await setDoc(doc(db, "system_settings", "theme_config"), config);
@@ -2646,6 +2675,17 @@ function App() {
               <Users size={20} />
             </button>
 
+            {/* Super Admin Password Change Button */}
+            {isSuperAdmin && (
+              <button
+                onClick={() => setIsAdminPasswordOpen(true)}
+                className="p-1.5 text-gray-500 hover:text-amber-600 hover:bg-amber-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-amber-300 dark:hover:bg-amber-900/30"
+                title="Admin Şifre Değiştir"
+              >
+                <Lock size={20} />
+              </button>
+            )}
+
             {isDesigner && (
               <>
                 <div className="relative">
@@ -3184,6 +3224,12 @@ function App() {
           onClose={() => setIsChangePasswordOpen(false)}
           currentUser={loggedInDeptUser}
           onChangePassword={handleChangePassword}
+        />
+
+        <AdminChangePasswordModal
+          isOpen={isAdminPasswordOpen}
+          onClose={() => setIsAdminPasswordOpen(false)}
+          onChangePassword={handleAdminChangePassword}
         />
 
         <DesignerCampaignsModal
