@@ -39,7 +39,7 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users, 
   const [customEnd, setCustomEnd] = useState<string>('');
   const [dateRange, setDateRange] = useState<{ start: Date; end: Date }>({
     start: startOfYear(new Date()),
-    end: new Date()
+    end: endOfYear(new Date()) // Include future campaigns in current year
   });
 
   // URL Persistence
@@ -87,6 +87,7 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users, 
     switch (p) {
       case 'thisYear':
         start = startOfYear(now);
+        end = endOfYear(now); // Include entire year, not just up to today
         break;
       case 'lastYear':
         start = startOfYear(subYears(now, 1));
@@ -98,9 +99,11 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users, 
         break;
       case 'last3Months':
         start = subMonths(now, 3);
+        end = endOfMonth(now); // Include rest of current month
         break;
       case 'last30Days':
         start = subDays(now, 30);
+        end = endOfMonth(now); // Include rest of current month
         break;
       case 'custom':
         return; // Handled separately
