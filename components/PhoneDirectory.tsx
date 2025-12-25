@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { ChevronDown, ChevronUp, Phone, Book, Search, X } from 'lucide-react';
 import { User, AnalyticsUser } from '../types';
 
@@ -10,6 +10,20 @@ interface PhoneDirectoryProps {
 export const PhoneDirectory: React.FC<PhoneDirectoryProps> = ({ users, analyticsUsers }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    // Click outside to close
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (isExpanded && containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                setIsExpanded(false);
+                setSearchQuery('');
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isExpanded]);
 
     // Combine and sort all personnel alphabetically
     const allPersonnel = useMemo(() => [
@@ -75,7 +89,7 @@ export const PhoneDirectory: React.FC<PhoneDirectoryProps> = ({ users, analytics
     if (personnelWithPhone.length === 0) return null;
 
     return (
-        <div className="fixed right-4 top-1/2 -translate-y-1/2 z-30 w-72">
+        <div ref={containerRef} className="fixed right-4 top-1/2 -translate-y-1/2 z-30 w-72">
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 overflow-hidden transition-all duration-300">
                 {/* Header - Click to toggle */}
                 <button
