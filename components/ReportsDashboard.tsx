@@ -174,7 +174,7 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users, 
   const filteredEvents = useMemo(() => {
     return events.filter(event => {
       // Exclude Cancelled events
-      if (event.status === 'İptal Edildi') return;
+      if (event.status === 'İptal Edildi') return false;
 
       // Date Filter
       // We compare dates at the day level to avoid time issues
@@ -460,7 +460,6 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users, 
                         value={d.active + d.completed}
                         max={Math.max(...stats.sortedDeptByTotal.map(x => x.active + x.completed))}
                         color="bg-blue-500"
-                        subValue={`${d.completed} Tamamlandı`}
                       />
                     ))}
                   </div>
@@ -497,7 +496,6 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users, 
                         value={u.active + u.completed}
                         max={Math.max(...stats.sortedUsersByTotal.map(x => x.active + x.completed))}
                         color="bg-indigo-500"
-                        subValue={`${u.completed} Tamamlandı`}
                       />
                     ))}
                     {stats.sortedUsersByTotal.length === 0 && (
