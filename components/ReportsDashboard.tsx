@@ -13,9 +13,12 @@ import {
   parseISO,
   endOfDay,
   startOfDay,
-  subYears
+  subYears,
+  differenceInHours,
+  isValid
 } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import { Timestamp } from 'firebase/firestore';
 
 interface ReportsDashboardProps {
   isOpen: boolean;
@@ -192,8 +195,8 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users, 
     // Initialize counters
     const deptStats: Record<string, { name: string; active: number; completed: number }> = {};
     const userStats: Record<string, { name: string; active: number; completed: number; role: string }> = {};
-    // Monthly activity needs to be dynamic based on range, but for simplicity we'll keep 12 months bucket
-    // If range > 1 year, this chart might be weird, but usually dashboards show "Current View" months
+    const userSpeedStats: Record<string, { name: string; totalHours: number; count: number }> = {};
+    const userHardStats: Record<string, { name: string; hardCount: number }> = {};
     const monthlyActivity = new Array(12).fill(0);
 
     // Fill initial maps
@@ -202,7 +205,20 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users, 
     });
     users.forEach(u => {
       userStats[u.id] = { name: u.name, active: 0, completed: 0, role: u.role };
+      userSpeedStats[u.id] = { name: u.name, totalHours: 0, count: 0 };
+      userHardStats[u.id] = { name: u.name, hardCount: 0 };
     });
+
+    // Helper to convert Firestore Timestamp to Date
+    const toDate = (value: Date | any): Date | null => {
+      if (!value) return null;
+      if (value instanceof Date) return value;
+      if (value?.toDate) return value.toDate();
+      if (typeof value === 'object' && 'seconds' in value) {
+        return new Date(value.seconds * 1000);
+      }
+      return null;
+    };
 
     let totalPeriod = 0;
     let completedPeriod = 0;
@@ -215,13 +231,7 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users, 
       totalPeriod++;
       if (isCompleted) completedPeriod++;
 
-      // Only fill monthly chart if it falls in the standard Jan-Dec view
-      // Or we could map it to relative months?
-      // Let's stick to 0-11 index for the "Year View". 
-      // If "Last 30 Days" spans 2 months, it will show up in those 2 months.
-      if (date.getFullYear() === new Date().getFullYear()) { // Show monthly breakdown only for current year events to avoid confusion?
-        // Or just show all? If I show all, indices 0-11 wrap around.
-        // Let's just map to 0-11 for simplicity, assuming mostly current year analysis.
+      if (date.getFullYear() === new Date().getFullYear()) {
         monthlyActivity[month]++;
       } else if (preset === 'lastYear' && date.getFullYear() === new Date().getFullYear() - 1) {
         monthlyActivity[month]++;
@@ -240,17 +250,48 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users, 
       if (event.assigneeId && userStats[event.assigneeId]) {
         if (isCompleted) {
           userStats[event.assigneeId].completed++;
+
+          // Speed Stats: Calculate completion time
+          const startDate = toDate(event.originalDate) || toDate(event.date);
+          let endDate: Date | null = null;
+          if (event.history && event.history.length > 0) {
+            const completionChange = [...event.history].reverse().find(h => h.newStatus === 'Tamamlandı');
+            if (completionChange?.date) endDate = toDate(completionChange.date);
+          }
+          if (!endDate) endDate = toDate(event.updatedAt);
+
+          if (startDate && endDate && isValid(startDate) && isValid(endDate)) {
+            const hours = differenceInHours(endDate, startDate);
+            if (hours >= 0) {
+              userSpeedStats[event.assigneeId].totalHours += hours;
+              userSpeedStats[event.assigneeId].count++;
+            }
+          }
+
+          // Hard Campaign Stats
+          if (event.difficulty === 'ZOR' || event.difficulty === 'ÇOK ZOR') {
+            userHardStats[event.assigneeId].hardCount++;
+          }
         } else {
           userStats[event.assigneeId].active++;
         }
       }
     });
 
-    // Sort for charts (Active + Completed)
+    // Sort for charts
     const sortedDeptByTotal = Object.values(deptStats).sort((a, b) => (b.active + b.completed) - (a.active + a.completed));
-    const sortedUsersByTotal = Object.values(userStats)
-      // .filter(u => u.role === 'kampanya') // Role filtering disabled until database update
-      .sort((a, b) => (b.active + b.completed) - (a.active + a.completed));
+    const sortedUsersByTotal = Object.values(userStats).sort((a, b) => (b.active + b.completed) - (a.active + a.completed));
+
+    // Speed: Calculate averages and sort by fastest (lowest avg hours)
+    const sortedBySpeed = Object.values(userSpeedStats)
+      .filter(u => u.count >= 1) // At least 1 completed campaign
+      .map(u => ({ name: u.name, avgHours: Math.round(u.totalHours / u.count), count: u.count }))
+      .sort((a, b) => a.avgHours - b.avgHours);
+
+    // Hard Campaigns: Sort by most hard campaigns
+    const sortedByHard = Object.values(userHardStats)
+      .filter(u => u.hardCount > 0)
+      .sort((a, b) => b.hardCount - a.hardCount);
 
     return {
       deptStats,
@@ -258,6 +299,8 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users, 
       monthlyActivity,
       sortedDeptByTotal,
       sortedUsersByTotal,
+      sortedBySpeed,
+      sortedByHard,
       totalPeriod,
       completedPeriod
     };
@@ -521,6 +564,52 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users, 
                     ))}
                     {stats.sortedUsersByTotal.length === 0 && (
                       <p className="text-center text-gray-400 py-4">Veri bulunamadı.</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* 🚀 En Hızlılar Chart */}
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm">
+                  <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
+                    🚀 En Hızlılar
+                    <span className="text-xs font-normal text-gray-400">(Ortalama Tamamlama Süresi)</span>
+                  </h3>
+                  <div className="space-y-1">
+                    {stats.sortedBySpeed.slice(0, 10).map(u => (
+                      <SimpleBar
+                        key={u.name}
+                        label={`${u.name} (${u.count} kamp.)`}
+                        value={u.avgHours}
+                        max={Math.max(...stats.sortedBySpeed.map(x => x.avgHours), 1)}
+                        color="bg-orange-500"
+                        subValue={`${Math.floor(u.avgHours / 24)}g ${u.avgHours % 24}s`}
+                      />
+                    ))}
+                    {stats.sortedBySpeed.length === 0 && (
+                      <p className="text-center text-gray-400 py-4">Veri bulunamadı.</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* 💪 En Zor Kampanya Yapanlar Chart */}
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm">
+                  <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
+                    💪 En Zor Kampanya Yapanlar
+                    <span className="text-xs font-normal text-gray-400">(Zor + Çok Zor)</span>
+                  </h3>
+                  <div className="space-y-1">
+                    {stats.sortedByHard.slice(0, 10).map(u => (
+                      <SimpleBar
+                        key={u.name}
+                        label={u.name}
+                        value={u.hardCount}
+                        max={Math.max(...stats.sortedByHard.map(x => x.hardCount), 1)}
+                        color="bg-red-500"
+                        subValue={`${u.hardCount} zor`}
+                      />
+                    ))}
+                    {stats.sortedByHard.length === 0 && (
+                      <p className="text-center text-gray-400 py-4">Zor/Çok Zor kampanya bulunamadı.</p>
                     )}
                   </div>
                 </div>
