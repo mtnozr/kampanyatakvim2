@@ -3,10 +3,22 @@ import { collection, query, where, getDocs, setDoc, doc, Timestamp, getDoc } fro
 import { CalendarEvent, MonthlyChampion } from '../types';
 import { startOfMonth, endOfMonth, subMonths, format, differenceInHours, isValid } from 'date-fns';
 
+// Helper to convert Firestore Timestamp or Date to Date
+const toDate = (value: Date | Timestamp | undefined | null): Date | null => {
+  if (!value) return null;
+  if (value instanceof Timestamp) return value.toDate();
+  if (value instanceof Date) return value;
+  // Handle plain object with seconds/nanoseconds (Firestore data)
+  if (typeof value === 'object' && 'seconds' in value) {
+    return new Date((value as any).seconds * 1000);
+  }
+  return null;
+};
+
 // Helper to get completion time for an event (in hours)
 const getCompletionTime = (event: CalendarEvent): number | null => {
   // Start date: originalDate or date (first assigned date)
-  const startDate = event.originalDate || event.date;
+  const startDate = toDate(event.originalDate) || toDate(event.date);
   if (!startDate || !isValid(startDate)) return null;
 
   // End date: Find status change to Tamamlandı in history
@@ -16,14 +28,20 @@ const getCompletionTime = (event: CalendarEvent): number | null => {
     const completionChange = [...event.history].reverse().find(
       h => h.newStatus === 'Tamamlandı'
     );
-    if (completionChange?.date && isValid(completionChange.date)) {
-      endDate = completionChange.date;
+    if (completionChange?.date) {
+      const converted = toDate(completionChange.date);
+      if (converted && isValid(converted)) {
+        endDate = converted;
+      }
     }
   }
 
   // Fallback to updatedAt
-  if (!endDate && event.updatedAt && isValid(event.updatedAt)) {
-    endDate = event.updatedAt;
+  if (!endDate) {
+    const converted = toDate(event.updatedAt);
+    if (converted && isValid(converted)) {
+      endDate = converted;
+    }
   }
 
   if (!endDate || !isValid(endDate)) return null;
@@ -72,6 +90,8 @@ export const calculateMonthlyChampion = async (force: boolean = false, reference
     const snapshot = await getDocs(q);
     const events: CalendarEvent[] = snapshot.docs.map(d => ({ ...d.data(), id: d.id } as CalendarEvent));
 
+    console.log(`🏆 Gamification: Found ${events.length} events for ${targetMonthStr}`);
+
     // === BADGE 1: 🏆 Trophy - Most Completed ===
     const userCounts: Record<string, number> = {};
 
@@ -97,11 +117,16 @@ export const calculateMonthlyChampion = async (force: boolean = false, reference
         }
 
         // Power: Count hard campaigns (Zor or Çok Zor)
-        if (event.difficulty === 'ZOR' || event.difficulty === 'ÇOK ZOR') {
+        const difficulty = event.difficulty;
+        if (difficulty === 'ZOR' || difficulty === 'ÇOK ZOR') {
           userHardCounts[userId] = (userHardCounts[userId] || 0) + 1;
         }
       }
     });
+
+    console.log(`🏆 Trophy counts:`, userCounts);
+    console.log(`🚀 Rocket: userCompletedCount:`, userCompletedCount);
+    console.log(`💪 Power: userHardCounts:`, userHardCounts);
 
     // === Calculate Trophy Winners (🏆) ===
     let maxCount = 0;
@@ -120,6 +145,8 @@ export const calculateMonthlyChampion = async (force: boolean = false, reference
         userAvgHours[userId] = total / count;
       }
     });
+
+    console.log(`🚀 Rocket: userAvgHours:`, userAvgHours);
 
     let minAvgHours = Infinity;
     Object.values(userAvgHours).forEach(avg => { if (avg < minAvgHours) minAvgHours = avg; });
