@@ -132,7 +132,7 @@ export const calculateMonthlyChampion = async (force: boolean = false, reference
     let maxCount = 0;
     Object.values(userCounts).forEach(count => { if (count > maxCount) maxCount = count; });
     const trophyWinners = maxCount >= 3
-      ? Object.entries(userCounts).filter(([, c]) => c === maxCount).map(([id]) => id)
+      ? Object.entries(userCounts).filter(([, c]) => c === maxCount).map(([id]) => id).slice(0, 1) // Only 1 winner
       : [];
 
     console.log(`🏆 Trophy: Max ${maxCount}, Winners: ${trophyWinners.join(', ') || 'None'}`);
@@ -151,7 +151,7 @@ export const calculateMonthlyChampion = async (force: boolean = false, reference
     let minAvgHours = Infinity;
     Object.values(userAvgHours).forEach(avg => { if (avg < minAvgHours) minAvgHours = avg; });
     const rocketWinners = minAvgHours < Infinity
-      ? Object.entries(userAvgHours).filter(([, avg]) => avg === minAvgHours).map(([id]) => id)
+      ? Object.entries(userAvgHours).filter(([, avg]) => avg === minAvgHours).map(([id]) => id).slice(0, 1) // Only 1 winner
       : [];
 
     console.log(`🚀 Rocket: Min avg ${minAvgHours}hrs, Winners: ${rocketWinners.join(', ') || 'None'}`);
@@ -160,7 +160,7 @@ export const calculateMonthlyChampion = async (force: boolean = false, reference
     let maxHardCount = 0;
     Object.values(userHardCounts).forEach(count => { if (count > maxHardCount) maxHardCount = count; });
     const powerWinners = maxHardCount >= 3 // Minimum 3 hard campaigns (Zor + Çok Zor)
-      ? Object.entries(userHardCounts).filter(([, c]) => c === maxHardCount).map(([id]) => id)
+      ? Object.entries(userHardCounts).filter(([, c]) => c === maxHardCount).map(([id]) => id).slice(0, 1) // Only 1 winner
       : [];
 
     console.log(`💪 Power: Max ${maxHardCount}, Winners: ${powerWinners.join(', ') || 'None'}`);
