@@ -1598,6 +1598,7 @@ function App() {
     const eventData = {
       title,
       date: Timestamp.fromDate(date),
+      originalDate: Timestamp.fromDate(date), // Store first assigned date for duration calculation
       urgency,
       difficulty: difficulty || 'ORTA',
       assigneeId,

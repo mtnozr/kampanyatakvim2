@@ -29,6 +29,7 @@ export interface EventHistoryItem {
 export interface CalendarEvent {
   id: string;
   date: Date;
+  originalDate?: Date; // First assigned date (for duration calculation, doesn't change on reschedule)
   title: string;
   description?: string;
   urgency: UrgencyLevel; // Changed from platform

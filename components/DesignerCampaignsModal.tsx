@@ -30,15 +30,24 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Helper to format duration
+  // Helper to format duration - counts from the first assigned date on calendar
   const calculateDuration = (event: CalendarEvent): string => {
-    if (!event.createdAt || !isValid(event.createdAt)) return '-';
+    // Use originalDate if available, otherwise use date (for legacy events)
+    const startDate = event.originalDate || event.date;
 
-    const startDate = event.createdAt;
+    if (!startDate || !isValid(startDate)) return '-';
+
+    // For future-dated events that haven't started yet
+    const now = new Date();
+    if (startDate > now && event.status === 'Planlandı') {
+      return 'Henüz başlamadı';
+    }
+
     let endDate: Date | null = null;
 
     if (event.status === 'Planlandı') {
-      endDate = new Date(); 
+      // For active campaigns, count from startDate to now (but only if startDate has passed)
+      endDate = now;
     } else {
       // Find the status change event in history
       if (event.history && event.history.length > 0) {
@@ -47,13 +56,13 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
           h => h.newStatus === event.status
         );
         if (statusChange && statusChange.date && isValid(statusChange.date)) {
-            endDate = statusChange.date;
+          endDate = statusChange.date;
         }
       }
-      
+
       // Fallback to updatedAt if history missing (legacy support)
       if (!endDate && event.updatedAt && isValid(event.updatedAt)) {
-          endDate = event.updatedAt;
+        endDate = event.updatedAt;
       }
     }
 
@@ -65,7 +74,7 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
       const hours = totalHours % 24;
 
       if (event.status === 'Planlandı') {
-          return `${days}g ${hours}s (Geçen)`;
+        return `${days}g ${hours}s (Geçen)`;
       }
 
       return `${days}g ${hours}s`;
@@ -83,15 +92,15 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
 
   const filteredAndSortedEvents = useMemo(() => {
     let result = events.filter(e => {
-        const matchesTab = (e.status || 'Planlandı') === activeTab;
-        const eventTitle = e.title || '';
-        const assigneeName = getAssigneeName(e.assigneeId);
-        
-        const matchesSearch = eventTitle.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                              assigneeName.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesDepartment = filterDepartment ? e.departmentId === filterDepartment : true;
-        
-        return matchesTab && matchesSearch && matchesDepartment;
+      const matchesTab = (e.status || 'Planlandı') === activeTab;
+      const eventTitle = e.title || '';
+      const assigneeName = getAssigneeName(e.assigneeId);
+
+      const matchesSearch = eventTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        assigneeName.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesDepartment = filterDepartment ? e.departmentId === filterDepartment : true;
+
+      return matchesTab && matchesSearch && matchesDepartment;
     });
 
     return result.sort((a, b) => {
@@ -108,12 +117,12 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
           valB = (b.createdAt && isValid(b.createdAt)) ? b.createdAt : new Date(0);
           break;
         case 'duration':
-             // Simplistic duration sort based on creation date for now as calculating all is expensive
-             // Or we can memoize calculations. For now let's sort by createdAt as proxy or disable.
-             // Actually, let's just sort by createdAt for duration proxy.
-             valA = (a.createdAt && isValid(a.createdAt)) ? a.createdAt : new Date(0);
-             valB = (b.createdAt && isValid(b.createdAt)) ? b.createdAt : new Date(0);
-             break;
+          // Simplistic duration sort based on creation date for now as calculating all is expensive
+          // Or we can memoize calculations. For now let's sort by createdAt as proxy or disable.
+          // Actually, let's just sort by createdAt for duration proxy.
+          valA = (a.createdAt && isValid(a.createdAt)) ? a.createdAt : new Date(0);
+          valB = (b.createdAt && isValid(b.createdAt)) ? b.createdAt : new Date(0);
+          break;
       }
 
       if (sortDirection === 'asc') {
@@ -141,7 +150,7 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden border border-gray-100 dark:border-slate-700">
-        
+
         {/* Header */}
         <div className="px-6 py-5 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-900 shrink-0">
           <div>
@@ -153,7 +162,7 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
               Tasarımcılar için detaylı süreç takibi ve performans metrikleri
             </p>
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors text-gray-500 dark:text-gray-400"
           >
@@ -170,8 +179,8 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
                 onClick={() => setActiveTab(status)}
                 className={`
                   px-4 py-2 rounded-lg text-sm font-semibold transition-all
-                  ${activeTab === status 
-                    ? 'bg-white dark:bg-slate-700 text-violet-700 dark:text-white shadow-sm' 
+                  ${activeTab === status
+                    ? 'bg-white dark:bg-slate-700 text-violet-700 dark:text-white shadow-sm'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}
                 `}
               >
@@ -213,29 +222,29 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
               <tr>
                 <th className="px-6 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Kampanya</th>
                 <th className="px-6 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Atanan Kişi</th>
-                <th 
-                    className="px-6 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors group"
-                    onClick={() => handleSort('date')}
+                <th
+                  className="px-6 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors group"
+                  onClick={() => handleSort('date')}
                 >
-                    <div className="flex items-center gap-1">
-                        Takvim Tarihi <SortIcon field="date" />
-                    </div>
+                  <div className="flex items-center gap-1">
+                    Takvim Tarihi <SortIcon field="date" />
+                  </div>
                 </th>
-                <th 
-                    className="px-6 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors group"
-                    onClick={() => handleSort('createdAt')}
+                <th
+                  className="px-6 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors group"
+                  onClick={() => handleSort('createdAt')}
                 >
-                    <div className="flex items-center gap-1">
-                        Atama Tarihi <SortIcon field="createdAt" />
-                    </div>
+                  <div className="flex items-center gap-1">
+                    Atama Tarihi <SortIcon field="createdAt" />
+                  </div>
                 </th>
                 <th className="px-6 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {activeTab === 'Planlandı' ? 'Durum' : 'Tamamlanma/İptal Tarihi'}
+                  {activeTab === 'Planlandı' ? 'Durum' : 'Tamamlanma/İptal Tarihi'}
                 </th>
                 <th className="px-6 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    <div className="flex items-center gap-1">
-                        <Timer size={14} /> Süre
-                    </div>
+                  <div className="flex items-center gap-1">
+                    <Timer size={14} /> Süre
+                  </div>
                 </th>
               </tr>
             </thead>
@@ -250,14 +259,14 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
                 filteredAndSortedEvents.map((event) => {
                   const createdDate = event.createdAt;
                   const calendarDate = event.date;
-                  
+
                   // Find status change date
                   let statusChangeDate: Date | null = null;
                   if (activeTab !== 'Planlandı' && event.history) {
-                      const change = [...event.history].reverse().find(h => h.newStatus === activeTab);
-                      if (change && change.date) {
-                          statusChangeDate = change.date;
-                      }
+                    const change = [...event.history].reverse().find(h => h.newStatus === activeTab);
+                    if (change && change.date) {
+                      statusChangeDate = change.date;
+                    }
                   }
 
                   return (
@@ -265,7 +274,7 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
                       <td className="px-6 py-4">
                         <div className="font-semibold text-gray-900 dark:text-white">{event.title || 'İsimsiz Kampanya'}</div>
                         {event.description && (
-                            <div className="text-xs text-gray-400 truncate max-w-[200px]">{event.description}</div>
+                          <div className="text-xs text-gray-400 truncate max-w-[200px]">{event.description}</div>
                         )}
                       </td>
                       <td className="px-6 py-4">
@@ -284,21 +293,21 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col text-sm text-gray-600 dark:text-gray-400">
-                            <span>{createdDate && isValid(createdDate) ? format(createdDate, 'd MMM yyyy', { locale: tr }) : '-'}</span>
-                            <span className="text-xs text-gray-400">{createdDate && isValid(createdDate) ? format(createdDate, 'HH:mm') : ''}</span>
+                          <span>{createdDate && isValid(createdDate) ? format(createdDate, 'd MMM yyyy', { locale: tr }) : '-'}</span>
+                          <span className="text-xs text-gray-400">{createdDate && isValid(createdDate) ? format(createdDate, 'HH:mm') : ''}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                         {activeTab === 'Planlandı' ? (
-                             <span className="px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-bold dark:bg-blue-900/30 dark:text-blue-300">
-                                 Planlandı
-                             </span>
-                         ) : (
-                            <div className="flex flex-col text-sm text-gray-600 dark:text-gray-400">
-                                <span>{statusChangeDate && isValid(statusChangeDate) ? format(statusChangeDate, 'd MMM yyyy', { locale: tr }) : '-'}</span>
-                                <span className="text-xs text-gray-400">{statusChangeDate && isValid(statusChangeDate) ? format(statusChangeDate, 'HH:mm') : ''}</span>
-                            </div>
-                         )}
+                        {activeTab === 'Planlandı' ? (
+                          <span className="px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-bold dark:bg-blue-900/30 dark:text-blue-300">
+                            Planlandı
+                          </span>
+                        ) : (
+                          <div className="flex flex-col text-sm text-gray-600 dark:text-gray-400">
+                            <span>{statusChangeDate && isValid(statusChangeDate) ? format(statusChangeDate, 'd MMM yyyy', { locale: tr }) : '-'}</span>
+                            <span className="text-xs text-gray-400">{statusChangeDate && isValid(statusChangeDate) ? format(statusChangeDate, 'HH:mm') : ''}</span>
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <span className="font-mono text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -312,11 +321,11 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
             </tbody>
           </table>
         </div>
-        
+
         {/* Footer */}
         <div className="px-6 py-4 border-t border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900 shrink-0 text-xs text-gray-500 dark:text-gray-400 flex justify-between">
-            <span>Toplam {filteredAndSortedEvents.length} kayıt listelendi.</span>
-            <span>* Süre hesaplaması atama anından son durum değişikliğine kadar geçen süreyi baz alır.</span>
+          <span>Toplam {filteredAndSortedEvents.length} kayıt listelendi.</span>
+          <span>* Süre hesaplaması atama anından son durum değişikliğine kadar geçen süreyi baz alır.</span>
         </div>
       </div>
     </div>
