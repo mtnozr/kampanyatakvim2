@@ -159,7 +159,7 @@ export const calculateMonthlyChampion = async (force: boolean = false, reference
     // === Calculate Power Winners (💪) ===
     let maxHardCount = 0;
     Object.values(userHardCounts).forEach(count => { if (count > maxHardCount) maxHardCount = count; });
-    const powerWinners = maxHardCount >= 2 // Minimum 2 hard campaigns
+    const powerWinners = maxHardCount >= 3 // Minimum 3 hard campaigns (Zor + Çok Zor)
       ? Object.entries(userHardCounts).filter(([, c]) => c === maxHardCount).map(([id]) => id)
       : [];
 
