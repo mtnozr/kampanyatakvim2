@@ -391,7 +391,7 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users, 
         </div>
 
         {/* Tabs */}
-        <div className="flex flex-col bg-white dark:bg-slate-800">
+        <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-800">
 
           {/* Date Filter Bar */}
           <div className="flex flex-wrap items-center gap-2 p-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50/30 dark:bg-slate-800/30">
