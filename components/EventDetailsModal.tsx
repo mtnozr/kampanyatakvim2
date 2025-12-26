@@ -15,7 +15,7 @@ interface EventDetailsModalProps {
   onClose: () => void;
   onEdit?: (eventId: string, updates: Partial<CalendarEvent>) => void;
   onDelete?: (eventId: string) => void;
-  monthlyChampionIds?: string[];
+  monthlyBadges?: { trophy: string[], rocket: string[], power: string[] };
 }
 
 export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
@@ -28,7 +28,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   onClose,
   onEdit,
   onDelete,
-  monthlyChampionIds = []
+  monthlyBadges = { trophy: [], rocket: [], power: [] }
 }) => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editTitle, setEditTitle] = useState('');
@@ -339,7 +339,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   <option value="">Atama Yok</option>
                   {users.map(user => (
                     <option key={user.id} value={user.id}>
-                      {user.emoji} {user.name} {monthlyChampionIds.includes(user.id) ? '🏆' : ''}
+                      {user.emoji} {user.name} {monthlyBadges.trophy.includes(user.id) ? '🏆' : ''}{monthlyBadges.rocket.includes(user.id) ? '🚀' : ''}{monthlyBadges.power.includes(user.id) ? '💪' : ''}
                     </option>
                   ))}
                 </select>
@@ -357,7 +357,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                     )}
                     <div>
                       <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                        {assignee.name} {monthlyChampionIds.includes(assignee.id) ? '🏆' : ''}
+                        {assignee.name} {monthlyBadges.trophy.includes(assignee.id) ? '🏆' : ''}{monthlyBadges.rocket.includes(assignee.id) ? '🚀' : ''}{monthlyBadges.power.includes(assignee.id) ? '💪' : ''}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">{assignee.email}</p>
                       {assignee.phone && (

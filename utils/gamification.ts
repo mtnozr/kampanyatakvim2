@@ -1,44 +1,68 @@
 import { db } from '../firebase';
 import { collection, query, where, getDocs, setDoc, doc, Timestamp, getDoc } from 'firebase/firestore';
 import { CalendarEvent, MonthlyChampion } from '../types';
-import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
+import { startOfMonth, endOfMonth, subMonths, format, differenceInHours, isValid } from 'date-fns';
+
+// Helper to get completion time for an event (in hours)
+const getCompletionTime = (event: CalendarEvent): number | null => {
+  // Start date: originalDate or date (first assigned date)
+  const startDate = event.originalDate || event.date;
+  if (!startDate || !isValid(startDate)) return null;
+
+  // End date: Find status change to Tamamlandı in history
+  let endDate: Date | null = null;
+
+  if (event.history && event.history.length > 0) {
+    const completionChange = [...event.history].reverse().find(
+      h => h.newStatus === 'Tamamlandı'
+    );
+    if (completionChange?.date && isValid(completionChange.date)) {
+      endDate = completionChange.date;
+    }
+  }
+
+  // Fallback to updatedAt
+  if (!endDate && event.updatedAt && isValid(event.updatedAt)) {
+    endDate = event.updatedAt;
+  }
+
+  if (!endDate || !isValid(endDate)) return null;
+
+  try {
+    const hours = differenceInHours(endDate, startDate);
+    return hours >= 0 ? hours : null;
+  } catch {
+    return null;
+  }
+};
 
 export const calculateMonthlyChampion = async (force: boolean = false, referenceDate: Date = new Date()): Promise<MonthlyChampion | null> => {
   const now = referenceDate;
-  // We want to calculate the champion for the *previous* month
   const lastMonthDate = subMonths(now, 1);
   const targetMonthStr = format(lastMonthDate, 'yyyy-MM');
 
   console.log(`🏆 Gamification: Checking champion for ${targetMonthStr}... (Force: ${force})`);
 
   try {
-    // 1. Check if we already have a champion calculated for this month
     const settingsRef = doc(db, "system_settings", "monthly_champion");
 
     if (!force) {
       const settingsSnap = await getDoc(settingsRef);
-
       if (settingsSnap.exists()) {
         const data = settingsSnap.data() as MonthlyChampion;
-        // If the stored data matches the target month (last month) OR is newer (e.g. test mode for current month), return it.
-        // This prevents overwriting a "future" test calculation with an "old" automatic calculation.
         if (data.month >= targetMonthStr) {
-          console.log(`🏆 Gamification: Champion already exists or is newer (${data.month} >= ${targetMonthStr}): ${data.userIds?.join(', ') || data.userId}`);
+          console.log(`🏆 Gamification: Data exists for ${data.month}`);
           return data;
         }
       }
     }
 
-    // 2. If not calculated (or old data), calculate it now.
-    console.log(`🏆 Gamification: Calculating new champion for ${targetMonthStr}...`);
+    console.log(`🏆 Gamification: Calculating new champions for ${targetMonthStr}...`);
 
     const start = startOfMonth(lastMonthDate);
     const end = endOfMonth(lastMonthDate);
 
-    // Query events for the previous month
     const eventsRef = collection(db, "events");
-    // Note: Firestore doesn't support multiple inequality filters on different fields easily without composite indexes.
-    // We will query by date range and filter by status in memory (safer for this scale).
     const q = query(
       eventsRef,
       where("date", ">=", Timestamp.fromDate(start)),
@@ -46,65 +70,93 @@ export const calculateMonthlyChampion = async (force: boolean = false, reference
     );
 
     const snapshot = await getDocs(q);
-    const events: CalendarEvent[] = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as CalendarEvent));
+    const events: CalendarEvent[] = snapshot.docs.map(d => ({ ...d.data(), id: d.id } as CalendarEvent));
 
-    // 3. Process events
+    // === BADGE 1: 🏆 Trophy - Most Completed ===
     const userCounts: Record<string, number> = {};
 
+    // === BADGE 2: 🚀 Rocket - Fastest Average ===
+    const userTotalHours: Record<string, number> = {};
+    const userCompletedCount: Record<string, number> = {};
+
+    // === BADGE 3: 💪 Power - Most Hard Campaigns ===
+    const userHardCounts: Record<string, number> = {};
+
     events.forEach(event => {
-      // Only count completed events with an assignee
       if (event.status === 'Tamamlandı' && event.assigneeId) {
-        userCounts[event.assigneeId] = (userCounts[event.assigneeId] || 0) + 1;
+        const userId = event.assigneeId;
+
+        // Trophy: Count completions
+        userCounts[userId] = (userCounts[userId] || 0) + 1;
+
+        // Rocket: Track completion time
+        const hours = getCompletionTime(event);
+        if (hours !== null) {
+          userTotalHours[userId] = (userTotalHours[userId] || 0) + hours;
+          userCompletedCount[userId] = (userCompletedCount[userId] || 0) + 1;
+        }
+
+        // Power: Count hard campaigns (Zor or Çok Zor)
+        if (event.difficulty === 'ZOR' || event.difficulty === 'ÇOK ZOR') {
+          userHardCounts[userId] = (userHardCounts[userId] || 0) + 1;
+        }
       }
     });
 
-    console.log('🏆 Gamification: User Counts:', userCounts);
-
-    // 4. Find the winner(s) - supports ties
+    // === Calculate Trophy Winners (🏆) ===
     let maxCount = 0;
+    Object.values(userCounts).forEach(count => { if (count > maxCount) maxCount = count; });
+    const trophyWinners = maxCount >= 3
+      ? Object.entries(userCounts).filter(([, c]) => c === maxCount).map(([id]) => id)
+      : [];
 
-    // First pass: find the maximum count
-    Object.values(userCounts).forEach(count => {
-      if (count > maxCount) {
-        maxCount = count;
+    console.log(`🏆 Trophy: Max ${maxCount}, Winners: ${trophyWinners.join(', ') || 'None'}`);
+
+    // === Calculate Rocket Winners (🚀) ===
+    const userAvgHours: Record<string, number> = {};
+    Object.entries(userTotalHours).forEach(([userId, total]) => {
+      const count = userCompletedCount[userId] || 1;
+      if (count >= 3) { // Minimum 3 campaigns to qualify
+        userAvgHours[userId] = total / count;
       }
     });
 
-    // Second pass: find all users with the maximum count
-    const winnerIds: string[] = [];
-    Object.entries(userCounts).forEach(([userId, count]) => {
-      if (count === maxCount) {
-        winnerIds.push(userId);
-      }
-    });
+    let minAvgHours = Infinity;
+    Object.values(userAvgHours).forEach(avg => { if (avg < minAvgHours) minAvgHours = avg; });
+    const rocketWinners = minAvgHours < Infinity
+      ? Object.entries(userAvgHours).filter(([, avg]) => avg === minAvgHours).map(([id]) => id)
+      : [];
 
-    console.log(`🏆 Gamification: Max count: ${maxCount}, Winners: ${winnerIds.join(', ')}`);
+    console.log(`🚀 Rocket: Min avg ${minAvgHours}hrs, Winners: ${rocketWinners.join(', ') || 'None'}`);
 
-    // 5. Validation Rules
-    // - Must have at least 3 campaigns
-    const validWinners = maxCount >= 3 ? winnerIds : [];
+    // === Calculate Power Winners (💪) ===
+    let maxHardCount = 0;
+    Object.values(userHardCounts).forEach(count => { if (count > maxHardCount) maxHardCount = count; });
+    const powerWinners = maxHardCount >= 2 // Minimum 2 hard campaigns
+      ? Object.entries(userHardCounts).filter(([, c]) => c === maxHardCount).map(([id]) => id)
+      : [];
 
-    if (maxCount < 3) {
-      console.log('🏆 Gamification: No winner. Max count is less than 3.');
-    } else if (winnerIds.length > 1) {
-      console.log(`🏆 Gamification: Tie! ${winnerIds.length} winners with ${maxCount} campaigns each.`);
-    }
+    console.log(`💪 Power: Max ${maxHardCount}, Winners: ${powerWinners.join(', ') || 'None'}`);
 
-    // 6. Save the result
+    // === Save Results ===
     const championData: MonthlyChampion = {
-      userId: validWinners[0] || '', // Keep for backwards compatibility
-      userIds: validWinners, // New array field
+      userId: trophyWinners[0] || '',
+      userIds: trophyWinners,
+      fastestUserIds: rocketWinners,
+      hardestUserIds: powerWinners,
       month: targetMonthStr,
       campaignCount: maxCount,
+      fastestAvgHours: minAvgHours < Infinity ? Math.round(minAvgHours) : undefined,
+      hardestCount: maxHardCount > 0 ? maxHardCount : undefined,
       calculatedAt: new Date()
     };
 
-    // Store in Firestore so we don't calculate again for this month
     await setDoc(settingsRef, championData);
 
-    console.log(`🏆 Gamification: New champion(s) saved: ${validWinners.length > 0 ? validWinners.join(', ') : 'None'}`);
+    const hasAnyWinner = trophyWinners.length > 0 || rocketWinners.length > 0 || powerWinners.length > 0;
+    console.log(`🏆 Gamification: Saved! Trophy: ${trophyWinners.length}, Rocket: ${rocketWinners.length}, Power: ${powerWinners.length}`);
 
-    return validWinners.length > 0 ? championData : null;
+    return hasAnyWinner ? championData : null;
 
   } catch (error) {
     console.error("🏆 Gamification Error:", error);

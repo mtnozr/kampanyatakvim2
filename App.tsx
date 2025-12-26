@@ -109,7 +109,7 @@ function App() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [requests, setRequests] = useState<WorkRequest[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
-  const [monthlyChampionIds, setMonthlyChampionIds] = useState<string[]>([]);
+  const [monthlyBadges, setMonthlyBadges] = useState<{ trophy: string[], rocket: string[], power: string[] }>({ trophy: [], rocket: [], power: [] });
   const [requestSubmissionEnabled, setRequestSubmissionEnabled] = useState(true);
   const [isAddReportModalOpen, setIsAddReportModalOpen] = useState(false);
   const [selectedReportDate, setSelectedReportDate] = useState<Date | undefined>(undefined);
@@ -510,37 +510,31 @@ function App() {
         // Initial check/calculation only if enabled
         calculateMonthlyChampion();
       } else {
-        setMonthlyChampionIds([]);
+        setMonthlyBadges({ trophy: [], rocket: [], power: [] });
       }
     });
 
-    // 2. Listen for Monthly Champion updates (only relevant if enabled, but we can listen always and filter locally)
+    // 2. Listen for Monthly Champion updates
     const unsubscribeChampion = onSnapshot(doc(db, "system_settings", "monthly_champion"), async (docSnap) => {
-      // Check config again inside this callback or rely on a ref/state if complex.
-      // Simpler: Just fetch config or assume if we get an update, we might want to show it.
-      // BUT, if disabled, we should force null. 
-      // Let's check config one-off here or better, combine logic.
-
       const configSnap = await import('firebase/firestore').then(mod => mod.getDoc(doc(db, "system_settings", "gamification_config")));
       const isEnabled = configSnap.exists() ? configSnap.data()?.enabled : true;
 
       if (!isEnabled) {
-        setMonthlyChampionIds([]);
+        setMonthlyBadges({ trophy: [], rocket: [], power: [] });
         return;
       }
 
       if (docSnap.exists()) {
         const data = docSnap.data();
-        // Support both old userId and new userIds array
-        const ids = data?.userIds || (data?.userId ? [data.userId] : []);
-        if (ids.length > 0) {
-          console.log('🏆 App: Monthly champion(s) updated:', ids.join(', '));
-          setMonthlyChampionIds(ids);
-        } else {
-          setMonthlyChampionIds([]);
-        }
+        const badges = {
+          trophy: data?.userIds || (data?.userId ? [data.userId] : []),
+          rocket: data?.fastestUserIds || [],
+          power: data?.hardestUserIds || []
+        };
+        console.log('🏆 App: Badges updated:', badges);
+        setMonthlyBadges(badges);
       } else {
-        setMonthlyChampionIds([]);
+        setMonthlyBadges({ trophy: [], rocket: [], power: [] });
       }
     });
 
@@ -2787,7 +2781,7 @@ function App() {
                 <option value="">Tüm Personel</option>
                 {users.map(u => (
                   <option key={u.id} value={u.id}>
-                    {u.name} {monthlyChampionIds.includes(u.id) ? '🏆' : ''}
+                    {u.name} {monthlyBadges.trophy.includes(u.id) ? '🏆' : ''}{monthlyBadges.rocket.includes(u.id) ? '🚀' : ''}{monthlyBadges.power.includes(u.id) ? '💪' : ''}
                   </option>
                 ))}
               </select>
@@ -3040,7 +3034,7 @@ function App() {
                                   onClick={(e) => setViewEventId(e.id)}
                                   isBlurred={isBlurred}
                                   isClickable={isClickable}
-                                  monthlyChampionIds={monthlyChampionIds}
+                                  monthlyBadges={monthlyBadges}
                                 />
                               </div>
                             </div>
@@ -3215,7 +3209,7 @@ function App() {
           onDeleteAnnouncement={handleDeleteAnnouncement}
           autoThemeConfig={autoThemeConfig}
           onUpdateAutoThemeConfig={handleUpdateAutoThemeConfig}
-          monthlyChampionIds={monthlyChampionIds}
+          monthlyBadges={monthlyBadges}
           analyticsUsers={analyticsUsers}
           onAddAnalyticsUser={handleAddAnalyticsUser}
           onUpdateAnalyticsUser={handleUpdateAnalyticsUser}
@@ -3253,7 +3247,7 @@ function App() {
           isKampanyaYapan={isKampanyaYapan}
           onEdit={handleEditEvent}
           onDelete={handleDeleteEvent}
-          monthlyChampionIds={monthlyChampionIds}
+          monthlyBadges={monthlyBadges}
         />
 
         <DepartmentLoginModal
@@ -3348,7 +3342,7 @@ function App() {
           departments={departments}
           users={users}
           onRefresh={handleDashboardRefresh}
-          monthlyChampionIds={monthlyChampionIds}
+          monthlyBadges={monthlyBadges}
         />
 
         <AnnouncementPopup

@@ -125,9 +125,13 @@ export interface Announcement {
 
 export interface MonthlyChampion {
   userId: string; // Deprecated, kept for backwards compatibility
-  userIds: string[]; // Array of winner IDs (supports ties)
+  userIds: string[]; // 🏆 Trophy - Most campaigns completed (supports ties)
+  fastestUserIds: string[]; // 🚀 Rocket - Fastest average completion time
+  hardestUserIds: string[]; // 💪 Power - Most Zor + Çok Zor campaigns
   month: string; // Format: YYYY-MM
   campaignCount: number;
+  fastestAvgHours?: number; // Average hours for fastest user(s)
+  hardestCount?: number; // Count of hard campaigns for winner(s)
   calculatedAt: Date;
 }
 

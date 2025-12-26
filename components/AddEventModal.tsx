@@ -16,7 +16,7 @@ interface AddEventModalProps {
   };
   users: User[];
   departments: Department[];
-  monthlyChampionIds?: string[];
+  monthlyBadges?: { trophy: string[], rocket: string[], power: string[] };
   events: CalendarEvent[];
 }
 
@@ -28,7 +28,7 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
   initialData,
   users,
   departments,
-  monthlyChampionIds = [],
+  monthlyBadges = { trophy: [], rocket: [], power: [] },
   events
 }) => {
   const [title, setTitle] = useState('');
@@ -197,7 +197,7 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
                       const indicator = hasPendingEvents ? '🔴' : '🟢';
                       return (
                         <option key={user.id} value={user.id}>
-                          {indicator} {user.name} {monthlyChampionIds.includes(user.id) ? '🏆' : ''}
+                          {indicator} {user.name} {monthlyBadges.trophy.includes(user.id) ? '🏆' : ''}{monthlyBadges.rocket.includes(user.id) ? '🚀' : ''}{monthlyBadges.power.includes(user.id) ? '💪' : ''}
                         </option>
                       );
                     })}
