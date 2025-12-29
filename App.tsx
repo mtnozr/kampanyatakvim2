@@ -256,6 +256,9 @@ function App() {
       });
       setEvents(fetchedEvents);
       setIsEventsLoading(false);
+    }, (error) => {
+      console.error("Firebase events subscription error:", error);
+      setIsEventsLoading(false); // Stop loading even on error
     });
     return () => unsubscribe();
   }, [refreshKey]);
@@ -267,6 +270,9 @@ function App() {
       const fetchedUsers: User[] = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as User));
       setUsers(fetchedUsers);
       setIsUsersLoading(false);
+    }, (error) => {
+      console.error("Firebase users subscription error:", error);
+      setIsUsersLoading(false); // Stop loading even on error
     });
     return () => unsubscribe();
   }, [refreshKey]);
