@@ -97,13 +97,23 @@ export const WeatherWidget: React.FC = () => {
                     <MapPin size={14} className="opacity-80" />
                     <span className="text-xs font-medium">İstanbul</span>
                 </div>
-                <button
-                    onClick={() => window.location.reload()}
-                    className="p-1 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                    title="Sayfayı Yenile"
-                >
-                    <RefreshCw size={12} />
-                </button>
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="p-1 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                        title="Sayfayı Yenile"
+                    >
+                        <RefreshCw size={12} />
+                    </button>
+                    <button
+                        onClick={fetchWeather}
+                        disabled={loading}
+                        className="p-1 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50"
+                        title="Hava Durumunu Yenile"
+                    >
+                        <Cloud size={12} className={loading ? 'animate-pulse' : ''} />
+                    </button>
+                </div>
             </div>
 
             {/* Content */}
