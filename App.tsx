@@ -90,6 +90,7 @@ function App() {
   const { theme, toggleTheme, setTheme } = useTheme();
   const [autoThemeConfig, setAutoThemeConfig] = useState<{ enabled: boolean; time: string }>({ enabled: false, time: '20:00' });
   const [backgroundTheme, setBackgroundTheme] = useState<ThemeType>('none');
+  const [customThemeImage, setCustomThemeImage] = useState<string>('');
 
   // --- STATE MANAGEMENT (Pure Firestore) ---
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -512,10 +513,12 @@ function App() {
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, "system_settings", "background_theme_config"), (docSnap) => {
       if (docSnap.exists()) {
-        const data = docSnap.data() as { theme: ThemeType };
+        const data = docSnap.data() as { theme: ThemeType; customImage?: string };
         setBackgroundTheme(data.theme || 'none');
+        setCustomThemeImage(data.customImage || '');
       } else {
         setBackgroundTheme('none');
+        setCustomThemeImage('');
       }
     });
     return () => unsubscribe();
@@ -2494,7 +2497,7 @@ function App() {
   return (
     <div className="min-h-screen p-4 md:p-8 text-gray-800 dark:text-gray-100 transition-colors duration-300 relative">
       {/* Background Theme Overlay */}
-      <BackgroundTheme activeTheme={backgroundTheme} />
+      <BackgroundTheme activeTheme={backgroundTheme} customImage={customThemeImage} />
 
       <div className="max-w-[1400px] mx-auto flex flex-col h-[calc(100vh-4rem)] relative z-10">
 

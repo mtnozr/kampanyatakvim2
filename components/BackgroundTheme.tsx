@@ -4,6 +4,7 @@ export type ThemeType = 'none' | 'newyear' | 'ramazan' | 'kurban' | 'april23';
 
 interface BackgroundThemeProps {
     activeTheme: ThemeType;
+    customImage?: string;
 }
 
 // Theme configurations
@@ -71,7 +72,7 @@ const generateParticles = (theme: ThemeType, count: number) => {
     }));
 };
 
-export const BackgroundTheme: React.FC<BackgroundThemeProps> = ({ activeTheme }) => {
+export const BackgroundTheme: React.FC<BackgroundThemeProps> = ({ activeTheme, customImage }) => {
     const [particles, setParticles] = useState<any[]>([]);
 
     useEffect(() => {
@@ -85,15 +86,17 @@ export const BackgroundTheme: React.FC<BackgroundThemeProps> = ({ activeTheme })
     if (activeTheme === 'none') return null;
 
     const config = THEME_CONFIGS[activeTheme];
+    // Use custom image if provided, otherwise fall back to default
+    const imageToUse = customImage || config.backgroundImage;
 
     return (
         <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" aria-hidden="true">
             {/* Background Image */}
-            {config.backgroundImage && (
+            {imageToUse && (
                 <div
                     className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.08]"
                     style={{
-                        backgroundImage: `url(${config.backgroundImage})`
+                        backgroundImage: `url(${imageToUse})`
                     }}
                 />
             )}

@@ -6,9 +6,10 @@ import { AVAILABLE_EMOJIS, URGENCY_CONFIGS } from '../constants';
 import { changelog } from '../changelog';
 import { format, addMonths } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { auth, db } from '../firebase';
+import { auth, db, storage } from '../firebase';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc, query, collection, where, getDocs } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 interface AdminModalProps {
   isOpen: boolean;
@@ -146,6 +147,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [gamificationEnabled, setGamificationEnabled] = useState(true);
   const [requestSubmissionEnabled, setRequestSubmissionEnabled] = useState(true);
   const [backgroundTheme, setBackgroundTheme] = useState<'none' | 'newyear' | 'ramazan' | 'kurban' | 'april23'>('none');
+  const [customThemeImage, setCustomThemeImage] = useState<string>('');
+  const [isUploadingThemeImage, setIsUploadingThemeImage] = useState(false);
 
   // Theme options for UI
   const THEME_OPTIONS = [
@@ -180,6 +183,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
           const bgDocSnap = await getDoc(bgDocRef);
           if (bgDocSnap.exists()) {
             setBackgroundTheme(bgDocSnap.data().theme || 'none');
+            setCustomThemeImage(bgDocSnap.data().customImage || '');
           }
         } catch (e) {
           console.error("Failed to fetch settings config", e);
@@ -212,9 +216,46 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const handleBackgroundThemeChange = async (theme: 'none' | 'newyear' | 'ramazan' | 'kurban' | 'april23') => {
     setBackgroundTheme(theme);
     try {
-      await setDoc(doc(db, "system_settings", "background_theme_config"), { theme });
+      await setDoc(doc(db, "system_settings", "background_theme_config"), {
+        theme,
+        customImage: customThemeImage
+      });
     } catch (e) {
       console.error("Failed to save background theme config", e);
+    }
+  };
+
+  const handleThemeImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingThemeImage(true);
+    try {
+      const storageRef = ref(storage, `theme-backgrounds/${backgroundTheme}_${Date.now()}.${file.name.split('.').pop()}`);
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+
+      setCustomThemeImage(downloadURL);
+      await setDoc(doc(db, "system_settings", "background_theme_config"), {
+        theme: backgroundTheme,
+        customImage: downloadURL
+      });
+    } catch (error) {
+      console.error('Tema resmi yüklenirken hata:', error);
+    } finally {
+      setIsUploadingThemeImage(false);
+    }
+  };
+
+  const handleRemoveThemeImage = async () => {
+    setCustomThemeImage('');
+    try {
+      await setDoc(doc(db, "system_settings", "background_theme_config"), {
+        theme: backgroundTheme,
+        customImage: ''
+      });
+    } catch (e) {
+      console.error("Failed to remove theme image", e);
     }
   };
 
@@ -1619,6 +1660,56 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         ))}
                       </select>
                     </div>
+
+                    {/* Theme Image Upload - only show when a theme is selected */}
+                    {backgroundTheme !== 'none' && (
+                      <div className="bg-gray-50 dark:bg-slate-700/50 p-4 rounded-lg border border-gray-100 dark:border-slate-600">
+                        <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Özel Arka Plan Resmi</h5>
+
+                        {customThemeImage ? (
+                          <div className="space-y-3">
+                            <div className="relative rounded-lg overflow-hidden h-24 bg-gray-200 dark:bg-slate-600">
+                              <img
+                                src={customThemeImage}
+                                alt="Tema arka planı"
+                                className="w-full h-full object-cover opacity-50"
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                <span className="text-xs text-white bg-black/50 px-2 py-1 rounded">Önizleme</span>
+                              </div>
+                            </div>
+                            <button
+                              onClick={handleRemoveThemeImage}
+                              className="text-xs text-red-500 hover:text-red-700 dark:text-red-400 flex items-center gap-1"
+                            >
+                              <Trash2 size={12} /> Resmi Kaldır
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="text-center">
+                            <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 rounded-lg text-xs font-medium hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors">
+                              {isUploadingThemeImage ? (
+                                <>
+                                  <span className="animate-spin">⏳</span> Yükleniyor...
+                                </>
+                              ) : (
+                                <>
+                                  <Download size={14} className="rotate-180" /> Resim Yükle
+                                </>
+                              )}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleThemeImageUpload}
+                                disabled={isUploadingThemeImage}
+                                className="hidden"
+                              />
+                            </label>
+                            <p className="text-[10px] text-gray-400 mt-2">Önerilen: 1920x1080 veya daha büyük</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     <div className="flex items-start justify-between">
                       <div>
