@@ -3089,6 +3089,11 @@ function App() {
               isAnalitik={isAnalitik}
             />
           ) : null}
+
+          {/* Minimal Footer */}
+          <p className="text-center text-[10px] text-gray-300 dark:text-gray-600 mt-4 select-none">
+            Metin Özer
+          </p>
         </div> {/* End of printable-calendar */}
 
         {/* Login Button (Bottom Left) - Only show when not logged in */}
@@ -3373,13 +3378,6 @@ function App() {
 
         <ToastContainer toasts={toasts} removeToast={removeToast} />
       </div>
-
-      {/* Footer */}
-      <footer className="mt-8 pb-4 text-center">
-        <p className="text-xs text-gray-400">
-          Designed by <span className="font-medium text-gray-500">Metin Özer</span>
-        </p>
-      </footer>
     </div>
   );
 }
