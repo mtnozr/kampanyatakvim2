@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, User as UserIcon, AlertCircle, AlignLeft, Building, Edit2, Save, XCircle, Trash2, CheckCircle2, XCircle as CancelIcon, Clock, Gauge, StickyNote, Mail, Phone } from 'lucide-react';
+import { X, Calendar, User as UserIcon, AlertCircle, AlignLeft, Building, Edit2, Save, XCircle, Trash2, CheckCircle2, XCircle as CancelIcon, Clock, Gauge, StickyNote, Mail, Phone, Video } from 'lucide-react';
 import { CalendarEvent, User, Department, UrgencyLevel, CampaignStatus, DifficultyLevel } from '../types';
 import { URGENCY_CONFIGS, STATUS_STYLES, DIFFICULTY_CONFIGS } from '../constants';
 import { format } from 'date-fns';
@@ -155,6 +155,15 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
       // Use sip: protocol for Cisco Jabber on desktop
       window.location.href = `sip:${assignee.phone}`;
     }
+  };
+
+  const handleZoomChat = () => {
+    if (!assignee?.email) {
+      alert('Bu kampanya için görevli personel atanmamış veya e-posta adresi bulunmuyor.');
+      return;
+    }
+    // Open Zoom chat with the assignee
+    window.open(`https://zoom.us/chat?contact=${encodeURIComponent(assignee.email)}`, '_blank');
   };
 
   // Helper function to get formatted phone for display
@@ -572,8 +581,17 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 className="flex-1 h-11 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
                 title="Bilgi İste"
               >
-                <Mail size={16} /> Bilgi İste
+                <Mail size={16} /> E-posta
               </button>
+              {assignee?.email && (
+                <button
+                  onClick={handleZoomChat}
+                  className="flex-1 h-11 bg-sky-500 text-white rounded-lg hover:bg-sky-600 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
+                  title="Zoom'da Mesaj Gönder"
+                >
+                  <Video size={16} /> Zoom
+                </button>
+              )}
               {assignee?.phone && (
                 <button
                   onClick={handleCallAssignee}
