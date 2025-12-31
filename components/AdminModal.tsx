@@ -436,6 +436,17 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
   // --- Import / Export Handlers ---
   const handleExportCSV = () => {
+    console.log('Export started, events count:', events.length);
+
+    // Helper to safely convert date (handles both Date and Firestore Timestamp)
+    const toDate = (val: any): Date | null => {
+      if (!val) return null;
+      if (val instanceof Date) return val;
+      if (val.toDate && typeof val.toDate === 'function') return val.toDate();
+      if (typeof val === 'string' || typeof val === 'number') return new Date(val);
+      return null;
+    };
+
     // Header with all fields (semicolon separated for Excel compatibility)
     const headers = [
       "Başlık",
@@ -458,10 +469,16 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     events.forEach(ev => {
       const dept = departments.find(d => d.id === ev.departmentId)?.name || '';
       const user = users.find(u => u.id === ev.assigneeId)?.name || '';
-      const dateStr = format(ev.date, 'yyyy-MM-dd');
-      const originalDateStr = ev.originalDate ? format(ev.originalDate, 'yyyy-MM-dd') : '';
-      const createdAtStr = ev.createdAt ? format(ev.createdAt, 'yyyy-MM-dd HH:mm') : '';
-      const updatedAtStr = ev.updatedAt ? format(ev.updatedAt, 'yyyy-MM-dd HH:mm') : '';
+
+      const evDate = toDate(ev.date);
+      const evOriginalDate = toDate(ev.originalDate);
+      const evCreatedAt = toDate(ev.createdAt);
+      const evUpdatedAt = toDate(ev.updatedAt);
+
+      const dateStr = evDate ? format(evDate, 'yyyy-MM-dd') : '';
+      const originalDateStr = evOriginalDate ? format(evOriginalDate, 'yyyy-MM-dd') : '';
+      const createdAtStr = evCreatedAt ? format(evCreatedAt, 'yyyy-MM-dd HH:mm') : '';
+      const updatedAtStr = evUpdatedAt ? format(evUpdatedAt, 'yyyy-MM-dd HH:mm') : '';
 
       // Escape semicolons and quotes in content
       const escapeField = (str: string) => {
@@ -492,6 +509,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       csvContent += row + "\n";
     });
 
+    console.log('CSV content generated, length:', csvContent.length);
+
     const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
@@ -500,6 +519,9 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    console.log('Download triggered');
   };
 
   const handleImportCSV = async () => {
