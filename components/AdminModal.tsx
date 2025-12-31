@@ -229,19 +229,32 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Dosya boyutu 5MB\'dan küçük olmalıdır.');
+      return;
+    }
+
     setIsUploadingThemeImage(true);
     try {
       const storageRef = ref(storage, `theme-backgrounds/${backgroundTheme}_${Date.now()}.${file.name.split('.').pop()}`);
+      console.log('Uploading to:', storageRef.fullPath);
+
       await uploadBytes(storageRef, file);
+      console.log('Upload complete, getting download URL...');
+
       const downloadURL = await getDownloadURL(storageRef);
+      console.log('Download URL:', downloadURL);
 
       setCustomThemeImage(downloadURL);
       await setDoc(doc(db, "system_settings", "background_theme_config"), {
         theme: backgroundTheme,
         customImage: downloadURL
       });
-    } catch (error) {
+      console.log('Saved to Firestore');
+    } catch (error: any) {
       console.error('Tema resmi yüklenirken hata:', error);
+      alert(`Resim yüklenirken hata oluştu: ${error.message || 'Firebase Storage izinlerini kontrol edin.'}`);
     } finally {
       setIsUploadingThemeImage(false);
     }
