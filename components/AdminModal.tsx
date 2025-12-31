@@ -617,7 +617,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 onClick={() => setActiveTab('users')}
                 className={`flex-1 py-3 px-2 text-xs md:text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === 'users' ? 'border-violet-600 text-violet-600 dark:text-violet-400 bg-violet-50/50 dark:bg-violet-900/20' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
               >
-                <Users size={16} /> Personel
+                <Users size={16} /> Kampanya Personel
               </button>
               <button
                 onClick={() => setActiveTab('analytics-users')}
