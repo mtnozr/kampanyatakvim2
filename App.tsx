@@ -45,6 +45,7 @@ import { AddAnalyticsTaskModal } from './components/AddAnalyticsTaskModal';
 import { AnalyticsTaskDetailsModal } from './components/AnalyticsTaskDetailsModal';
 import { Sidebar } from './components/Sidebar';
 import { ThemeToggle } from './components/ThemeToggle';
+import { BackgroundTheme, ThemeType } from './components/BackgroundTheme';
 import { useTheme } from './hooks/useTheme';
 import { setCookie, getCookie, deleteCookie } from './utils/cookies';
 import { calculateMonthlyChampion } from './utils/gamification';
@@ -88,6 +89,7 @@ function App() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const { theme, toggleTheme, setTheme } = useTheme();
   const [autoThemeConfig, setAutoThemeConfig] = useState<{ enabled: boolean; time: string }>({ enabled: false, time: '20:00' });
+  const [backgroundTheme, setBackgroundTheme] = useState<ThemeType>('none');
 
   // --- STATE MANAGEMENT (Pure Firestore) ---
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -505,6 +507,19 @@ function App() {
     });
     return () => unsubscribe();
   }, []); // Run once on mount
+
+  // 9b. Sync Background Theme Config
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, "system_settings", "background_theme_config"), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data() as { theme: ThemeType };
+        setBackgroundTheme(data.theme || 'none');
+      } else {
+        setBackgroundTheme('none');
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   // 10. Gamification Check (Monthly Champion)
   useEffect(() => {
@@ -2477,8 +2492,11 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen p-4 md:p-8 text-gray-800 dark:text-gray-100 transition-colors duration-300">
-      <div className="max-w-[1400px] mx-auto flex flex-col h-[calc(100vh-4rem)]">
+    <div className="min-h-screen p-4 md:p-8 text-gray-800 dark:text-gray-100 transition-colors duration-300 relative">
+      {/* Background Theme Overlay */}
+      <BackgroundTheme activeTheme={backgroundTheme} />
+
+      <div className="max-w-[1400px] mx-auto flex flex-col h-[calc(100vh-4rem)] relative z-10">
 
         {/* Header Section */}
         <div className="mb-6 flex flex-col xl:flex-row xl:items-start justify-between gap-4">

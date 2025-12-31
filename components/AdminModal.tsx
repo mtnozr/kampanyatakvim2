@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Trash2, Plus, ShieldCheck, Lock, Users, Calendar, AlertTriangle, Building, UserPlus, LogOut, FileText, Download, Megaphone, Settings, Trophy, Activity, History, Edit2, Save } from 'lucide-react';
+import { X, Trash2, Plus, ShieldCheck, Lock, Users, Calendar, AlertTriangle, Building, UserPlus, LogOut, FileText, Download, Megaphone, Settings, Trophy, Activity, History, Edit2, Save, Sparkles } from 'lucide-react';
 import { User, CalendarEvent, Department, DepartmentUser, Announcement, AnalyticsUser } from '../types';
 import { calculateMonthlyChampion } from '../utils/gamification';
 import { AVAILABLE_EMOJIS, URGENCY_CONFIGS } from '../constants';
@@ -145,6 +145,16 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [gamificationMsg, setGamificationMsg] = useState('');
   const [gamificationEnabled, setGamificationEnabled] = useState(true);
   const [requestSubmissionEnabled, setRequestSubmissionEnabled] = useState(true);
+  const [backgroundTheme, setBackgroundTheme] = useState<'none' | 'newyear' | 'ramazan' | 'kurban' | 'april23'>('none');
+
+  // Theme options for UI
+  const THEME_OPTIONS = [
+    { value: 'none', label: 'Kapalı', emoji: '⚪' },
+    { value: 'newyear', label: 'Yılbaşı', emoji: '🎄' },
+    { value: 'ramazan', label: 'Ramazan Bayramı', emoji: '🌙' },
+    { value: 'kurban', label: 'Kurban Bayramı', emoji: '🐏' },
+    { value: 'april23', label: '23 Nisan', emoji: '🎈' }
+  ];
 
   // Fetch initial gamification & request submission config
   useEffect(() => {
@@ -163,6 +173,13 @@ export const AdminModal: React.FC<AdminModalProps> = ({
           const reqDocSnap = await getDoc(reqDocRef);
           if (reqDocSnap.exists()) {
             setRequestSubmissionEnabled(reqDocSnap.data().enabled);
+          }
+
+          // Background Theme Config
+          const bgDocRef = doc(db, "system_settings", "background_theme_config");
+          const bgDocSnap = await getDoc(bgDocRef);
+          if (bgDocSnap.exists()) {
+            setBackgroundTheme(bgDocSnap.data().theme || 'none');
           }
         } catch (e) {
           console.error("Failed to fetch settings config", e);
@@ -189,6 +206,15 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     } catch (e) {
       console.error("Failed to save request submission config", e);
       setRequestSubmissionEnabled(!enabled); // Revert on error
+    }
+  };
+
+  const handleBackgroundThemeChange = async (theme: 'none' | 'newyear' | 'ramazan' | 'kurban' | 'april23') => {
+    setBackgroundTheme(theme);
+    try {
+      await setDoc(doc(db, "system_settings", "background_theme_config"), { theme });
+    } catch (e) {
+      console.error("Failed to save background theme config", e);
     }
   };
 
@@ -1569,6 +1595,29 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                           className="w-5 h-5 text-violet-600 rounded focus:ring-violet-500 border-gray-300 dark:border-slate-600 dark:bg-slate-700"
                         />
                       </div>
+                    </div>
+
+                    <div className="flex items-start justify-between border-b border-gray-100 dark:border-slate-700 pb-6">
+                      <div>
+                        <h4 className="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                          <Sparkles size={18} className="text-pink-500" />
+                          Özel Gün Teması
+                        </h4>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Özel günlerde arka planda animasyonlu tema göster.
+                        </p>
+                      </div>
+                      <select
+                        value={backgroundTheme}
+                        onChange={(e) => handleBackgroundThemeChange(e.target.value as any)}
+                        className="px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                      >
+                        {THEME_OPTIONS.map(option => (
+                          <option key={option.value} value={option.value}>
+                            {option.emoji} {option.label}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     <div className="flex items-start justify-between">
