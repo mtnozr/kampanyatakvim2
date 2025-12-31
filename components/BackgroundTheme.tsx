@@ -13,6 +13,7 @@ const THEME_CONFIGS: Record<ThemeType, {
     particles: string[];
     colors: string[];
     animation: 'snow' | 'float' | 'confetti' | 'none';
+    backgroundImage?: string;
 }> = {
     none: {
         name: 'Kapalı',
@@ -26,28 +27,32 @@ const THEME_CONFIGS: Record<ThemeType, {
         emoji: '🎄',
         particles: ['❄️', '✨', '🎄', '⭐', '🎅'],
         colors: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#6c5ce7'],
-        animation: 'snow'
+        animation: 'snow',
+        backgroundImage: 'https://images.unsplash.com/photo-1482517967863-00e015c9e8af?w=1920&q=80'
     },
     ramazan: {
         name: 'Ramazan Bayramı',
         emoji: '🌙',
         particles: ['🌙', '⭐', '✨', '🕌', '🏮'],
         colors: ['#f1c40f', '#9b59b6', '#1abc9c', '#3498db'],
-        animation: 'float'
+        animation: 'float',
+        backgroundImage: 'https://images.unsplash.com/photo-1564769625905-50e93615e769?w=1920&q=80'
     },
     kurban: {
         name: 'Kurban Bayramı',
         emoji: '🐏',
         particles: ['🐏', '🌙', '⭐', '✨', '🕌'],
         colors: ['#27ae60', '#f39c12', '#8e44ad', '#2980b9'],
-        animation: 'float'
+        animation: 'float',
+        backgroundImage: 'https://images.unsplash.com/photo-1519817650390-64a93db51149?w=1920&q=80'
     },
     april23: {
         name: '23 Nisan',
         emoji: '🎈',
         particles: ['🎈', '🎉', '🎊', '🇹🇷', '⭐'],
         colors: ['#e74c3c', '#ffffff', '#e74c3c', '#f39c12'],
-        animation: 'confetti'
+        animation: 'confetti',
+        backgroundImage: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=1920&q=80'
     }
 };
 
@@ -83,13 +88,23 @@ export const BackgroundTheme: React.FC<BackgroundThemeProps> = ({ activeTheme })
 
     return (
         <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" aria-hidden="true">
+            {/* Background Image */}
+            {config.backgroundImage && (
+                <div
+                    className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.08]"
+                    style={{
+                        backgroundImage: `url(${config.backgroundImage})`
+                    }}
+                />
+            )}
+
             {/* Particles */}
             {particles.map((particle) => (
                 <div
                     key={particle.id}
                     className={`absolute select-none opacity-30 ${config.animation === 'snow' ? 'animate-snow' :
-                            config.animation === 'float' ? 'animate-float' :
-                                config.animation === 'confetti' ? 'animate-confetti' : ''
+                        config.animation === 'float' ? 'animate-float' :
+                            config.animation === 'confetti' ? 'animate-confetti' : ''
                         }`}
                     style={{
                         left: `${particle.left}%`,
