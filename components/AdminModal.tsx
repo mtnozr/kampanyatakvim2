@@ -229,22 +229,35 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Dosya boyutu 5MB\'dan küçük olmalıdır.');
+    // Validate file size (max 10MB for Cloudinary free tier)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Dosya boyutu 10MB\'dan küçük olmalıdır.');
       return;
     }
 
     setIsUploadingThemeImage(true);
     try {
-      const storageRef = ref(storage, `theme-backgrounds/${backgroundTheme}_${Date.now()}.${file.name.split('.').pop()}`);
-      console.log('Uploading to:', storageRef.fullPath);
+      // Cloudinary unsigned upload
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', 'theme_backgrounds');
+      formData.append('folder', 'kampanya-takvim/theme-backgrounds');
 
-      await uploadBytes(storageRef, file);
-      console.log('Upload complete, getting download URL...');
+      const response = await fetch(
+        'https://api.cloudinary.com/v1_1/daezsbrb5/image/upload',
+        {
+          method: 'POST',
+          body: formData
+        }
+      );
 
-      const downloadURL = await getDownloadURL(storageRef);
-      console.log('Download URL:', downloadURL);
+      if (!response.ok) {
+        throw new Error('Cloudinary yükleme başarısız');
+      }
+
+      const data = await response.json();
+      const downloadURL = data.secure_url;
+      console.log('Cloudinary URL:', downloadURL);
 
       setCustomThemeImage(downloadURL);
       await setDoc(doc(db, "system_settings", "background_theme_config"), {
@@ -254,7 +267,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       console.log('Saved to Firestore');
     } catch (error: any) {
       console.error('Tema resmi yüklenirken hata:', error);
-      alert(`Resim yüklenirken hata oluştu: ${error.message || 'Firebase Storage izinlerini kontrol edin.'}`);
+      alert(`Resim yüklenirken hata oluştu: ${error.message}`);
     } finally {
       setIsUploadingThemeImage(false);
     }
