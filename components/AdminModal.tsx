@@ -436,20 +436,60 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
   // --- Import / Export Handlers ---
   const handleExportCSV = () => {
-    // Header
-    let csvContent = "Title,Date,Urgency,Description,Department,Assignee\n";
+    // Header with all fields (semicolon separated for Excel compatibility)
+    const headers = [
+      "Başlık",
+      "Tarih",
+      "Orijinal Tarih",
+      "Aciliyet",
+      "Zorluk",
+      "Açıklama",
+      "Birim",
+      "Atanan Kişi",
+      "Durum",
+      "Not",
+      "Rapor Gerekli",
+      "Oluşturulma Tarihi",
+      "Güncellenme Tarihi"
+    ].join(";");
+
+    let csvContent = headers + "\n";
 
     events.forEach(ev => {
       const dept = departments.find(d => d.id === ev.departmentId)?.name || '';
       const user = users.find(u => u.id === ev.assigneeId)?.name || '';
       const dateStr = format(ev.date, 'yyyy-MM-dd');
-      // Escape commas in content
-      const safeTitle = `"${ev.title.replace(/"/g, '""')}"`;
-      const safeDesc = `"${(ev.description || '').replace(/"/g, '""')}"`;
-      const safeDept = `"${dept.replace(/"/g, '""')}"`;
-      const safeUser = `"${user.replace(/"/g, '""')}"`;
+      const originalDateStr = ev.originalDate ? format(ev.originalDate, 'yyyy-MM-dd') : '';
+      const createdAtStr = ev.createdAt ? format(ev.createdAt, 'yyyy-MM-dd HH:mm') : '';
+      const updatedAtStr = ev.updatedAt ? format(ev.updatedAt, 'yyyy-MM-dd HH:mm') : '';
 
-      csvContent += `${safeTitle},${dateStr},${ev.urgency},${safeDesc},${safeDept},${safeUser}\n`;
+      // Escape semicolons and quotes in content
+      const escapeField = (str: string) => {
+        if (!str) return '';
+        // If field contains semicolon, quote, or newline, wrap in quotes and escape quotes
+        if (str.includes(';') || str.includes('"') || str.includes('\n')) {
+          return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+      };
+
+      const row = [
+        escapeField(ev.title),
+        dateStr,
+        originalDateStr,
+        ev.urgency || '',
+        ev.difficulty || '',
+        escapeField(ev.description || ''),
+        escapeField(dept),
+        escapeField(user),
+        ev.status || 'Planlandı',
+        escapeField(ev.note || ''),
+        ev.requiresReport ? 'Evet' : 'Hayır',
+        createdAtStr,
+        updatedAtStr
+      ].join(";");
+
+      csvContent += row + "\n";
     });
 
     const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
