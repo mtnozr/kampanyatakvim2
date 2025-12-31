@@ -2733,7 +2733,7 @@ function App() {
                   >
                     <Bell size={20} />
                     {notifications.length > 0 && (
-                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800">
+                      <span className="absolute -top-2 -right-2 min-w-5 h-5 px-1 bg-red-500 text-white text-[11px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800">
                         {notifications.length}
                       </span>
                     )}
