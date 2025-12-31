@@ -162,8 +162,8 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
       alert('Bu kampanya için görevli personel atanmamış veya e-posta adresi bulunmuyor.');
       return;
     }
-    // Open Zoom chat with the assignee
-    window.open(`https://zoom.us/chat?contact=${encodeURIComponent(assignee.email)}`, '_blank');
+    // Open Zoom desktop app chat with the assignee using zoommtg:// protocol
+    window.location.href = `zoommtg://zoom.us/chat?contact=${encodeURIComponent(assignee.email)}`;
   };
 
   // Helper function to get formatted phone for display
