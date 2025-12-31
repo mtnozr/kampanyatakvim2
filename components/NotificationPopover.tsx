@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { AppNotification } from '../types';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -12,10 +12,35 @@ interface NotificationPopoverProps {
 }
 
 export const NotificationPopover: React.FC<NotificationPopoverProps> = ({ notifications, isOpen, onClose, onMarkAllRead }) => {
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    // Delay adding listener to prevent immediate close when clicking the bell button
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 0);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="absolute top-16 right-4 md:right-20 z-50 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-2">
+    <div
+      ref={popoverRef}
+      className="absolute top-16 right-4 md:right-20 z-50 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-2"
+    >
       <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
         <h3 className="font-bold text-gray-700">Bildirimler</h3>
         {notifications.length > 0 && (
