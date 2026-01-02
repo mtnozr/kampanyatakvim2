@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Cloud, Sun, CloudRain, CloudSnow, CloudLightning, Wind, Loader2, RefreshCw, MapPin, GripVertical, RotateCcw } from 'lucide-react';
-import { useDraggable } from '../hooks/useDraggable';
+import { Cloud, Sun, CloudRain, CloudSnow, CloudLightning, Wind, Loader2, RefreshCw, MapPin } from 'lucide-react';
 
 interface DayForecast {
     date: Date;
@@ -49,19 +48,6 @@ export const WeatherWidget: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-    const {
-        position,
-        isDragging,
-        handleMouseDown,
-        handleTouchStart,
-        containerRef,
-        resetPosition
-    } = useDraggable({
-        storageKey: 'kampanya_takvim_weather_position',
-        widgetWidth: 288,
-        widgetHeight: 180
-    });
-
     const fetchWeather = async () => {
         setLoading(true);
         setError(null);
@@ -103,117 +89,83 @@ export const WeatherWidget: React.FC = () => {
         return () => clearInterval(interval);
     }, []);
 
-    // Calculate position style
-    const positionStyle: React.CSSProperties = position
-        ? { position: 'fixed', left: position.x, top: position.y, zIndex: 50, width: 288 }
-        : {};
-
     return (
-        <div
-            ref={containerRef}
-            className={`${position ? '' : 'w-full'} ${isDragging ? 'cursor-grabbing' : ''}`}
-            style={positionStyle}
-        >
-            <div className={`bg-gradient-to-br from-sky-500 to-indigo-600 rounded-2xl shadow-xl overflow-hidden ${isDragging ? 'shadow-2xl scale-[1.02]' : ''} transition-shadow`}>
-                {/* Header with drag handle */}
-                <div className="flex items-stretch">
-                    {/* Drag Handle */}
-                    <div
-                        onMouseDown={handleMouseDown}
-                        onTouchStart={handleTouchStart}
-                        className="px-2 flex items-center justify-center cursor-grab active:cursor-grabbing hover:bg-white/10 transition-colors border-r border-white/20 touch-none"
-                        title="Sürükle"
+        <div className="bg-gradient-to-br from-sky-500 to-indigo-600 rounded-2xl shadow-xl overflow-hidden mb-3">
+            {/* Header */}
+            <div className="px-3 py-2 flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-white">
+                    <MapPin size={14} className="opacity-80" />
+                    <span className="text-xs font-medium">İstanbul</span>
+                </div>
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="p-1 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                        title="Sayfayı Yenile"
                     >
-                        <GripVertical size={16} className="text-white/70" />
-                    </div>
-
-                    {/* Header Content */}
-                    <div className="flex-1 px-3 py-2 flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 text-white">
-                            <MapPin size={14} className="opacity-80" />
-                            <span className="text-xs font-medium">İstanbul</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                            {position && (
-                                <button
-                                    onClick={resetPosition}
-                                    className="p-1 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                                    title="Konumu Sıfırla"
-                                >
-                                    <RotateCcw size={12} />
-                                </button>
-                            )}
-                            <button
-                                onClick={() => window.location.reload()}
-                                className="p-1 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                                title="Sayfayı Yenile"
-                            >
-                                <RefreshCw size={12} />
-                            </button>
-                            <button
-                                onClick={fetchWeather}
-                                disabled={loading}
-                                className="p-1 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50"
-                                title="Hava Durumunu Yenile"
-                            >
-                                <Cloud size={12} className={loading ? 'animate-pulse' : ''} />
-                            </button>
-                        </div>
-                    </div>
+                        <RefreshCw size={12} />
+                    </button>
+                    <button
+                        onClick={fetchWeather}
+                        disabled={loading}
+                        className="p-1 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50"
+                        title="Hava Durumunu Yenile"
+                    >
+                        <Cloud size={12} className={loading ? 'animate-pulse' : ''} />
+                    </button>
                 </div>
+            </div>
 
-                {/* Content */}
-                <div className="px-3 pb-3">
-                    {loading && forecast.length === 0 ? (
-                        <div className="flex items-center justify-center py-4">
-                            <Loader2 size={20} className="text-white animate-spin" />
-                        </div>
-                    ) : error ? (
-                        <div className="text-center py-3 text-white/80 text-xs">
-                            {error}
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-5 gap-1">
-                            {forecast.map((day, index) => (
-                                <div
-                                    key={day.date.toISOString()}
-                                    className={`flex flex-col items-center p-1.5 rounded-xl transition-colors ${index === 0
-                                        ? 'bg-white/20'
-                                        : 'hover:bg-white/10'
-                                        }`}
-                                >
-                                    <span className="text-[10px] text-white/90 font-medium mb-1">
-                                        {getDayName(day.date, index)}
-                                    </span>
-                                    <div className="my-1">
-                                        {getWeatherIcon(day.weatherCode, 18)}
-                                    </div>
-                                    <div className="flex flex-col items-center">
-                                        <span className="text-xs font-bold text-white">
-                                            {day.tempMax}°
-                                        </span>
-                                        <span className="text-[10px] text-white/60">
-                                            {day.tempMin}°
-                                        </span>
-                                    </div>
+            {/* Content */}
+            <div className="px-3 pb-3">
+                {loading && forecast.length === 0 ? (
+                    <div className="flex items-center justify-center py-4">
+                        <Loader2 size={20} className="text-white animate-spin" />
+                    </div>
+                ) : error ? (
+                    <div className="text-center py-3 text-white/80 text-xs">
+                        {error}
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-5 gap-1">
+                        {forecast.map((day, index) => (
+                            <div
+                                key={day.date.toISOString()}
+                                className={`flex flex-col items-center p-1.5 rounded-xl transition-colors ${index === 0
+                                    ? 'bg-white/20'
+                                    : 'hover:bg-white/10'
+                                    }`}
+                            >
+                                <span className="text-[10px] text-white/90 font-medium mb-1">
+                                    {getDayName(day.date, index)}
+                                </span>
+                                <div className="my-1">
+                                    {getWeatherIcon(day.weatherCode, 18)}
                                 </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                {/* Last updated */}
-                {lastUpdated && (
-                    <div className="px-3 pb-2">
-                        <p className="text-[9px] text-white/40 text-center">
-                            Son güncelleme: {lastUpdated.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                        </p>
+                                <div className="flex flex-col items-center">
+                                    <span className="text-xs font-bold text-white">
+                                        {day.tempMax}°
+                                    </span>
+                                    <span className="text-[10px] text-white/60">
+                                        {day.tempMin}°
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 )}
             </div>
+
+            {/* Last updated */}
+            {lastUpdated && (
+                <div className="px-3 pb-2">
+                    <p className="text-[9px] text-white/40 text-center">
+                        Son güncelleme: {lastUpdated.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                </div>
+            )}
         </div>
     );
 };
 
 export default WeatherWidget;
-

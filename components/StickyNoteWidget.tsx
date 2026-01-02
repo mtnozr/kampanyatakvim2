@@ -1,115 +1,128 @@
-import React, { useState, useEffect } from 'react';
-import { PenLine, Save, Trash2, GripVertical, RotateCcw } from 'lucide-react';
-import { useDraggable } from '../hooks/useDraggable';
+import React, { useState, useEffect, useRef } from 'react';
+import { StickyNote, Save, Trash2 } from 'lucide-react';
+
+const STORAGE_KEY = 'kampanya_takvim_sticky_note';
 
 export const StickyNoteWidget: React.FC = () => {
     const [note, setNote] = useState('');
-    const [isEditing, setIsEditing] = useState(false);
+    const [isSaved, setIsSaved] = useState(true);
+    const [lastSaved, setLastSaved] = useState<Date | null>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    const {
-        position,
-        isDragging,
-        handleMouseDown,
-        handleTouchStart,
-        containerRef,
-        resetPosition
-    } = useDraggable({
-        storageKey: 'kampanya_takvim_sticky_note_position',
-        widgetWidth: 288,
-        widgetHeight: 200 // Approximate height
-    });
-
+    // Load from localStorage on mount
     useEffect(() => {
-        const savedNote = localStorage.getItem('kampanya_takvim_quick_note');
-        if (savedNote) setNote(savedNote);
+        const savedNote = localStorage.getItem(STORAGE_KEY);
+        if (savedNote) {
+            try {
+                const parsed = JSON.parse(savedNote);
+                setNote(parsed.content || '');
+                if (parsed.savedAt) {
+                    setLastSaved(new Date(parsed.savedAt));
+                }
+            } catch {
+                setNote(savedNote);
+            }
+        }
     }, []);
 
-    const handleSave = () => {
-        localStorage.setItem('kampanya_takvim_quick_note', note);
-        setIsEditing(false);
+    // Auto-save with debounce
+    useEffect(() => {
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+        }
+
+        if (!isSaved) {
+            saveTimeoutRef.current = setTimeout(() => {
+                saveNote();
+            }, 1000);
+        }
+
+        return () => {
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+            }
+        };
+    }, [note, isSaved]);
+
+    const saveNote = () => {
+        const now = new Date();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            content: note,
+            savedAt: now.toISOString()
+        }));
+        setLastSaved(now);
+        setIsSaved(true);
+    };
+
+    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setNote(e.target.value);
+        setIsSaved(false);
     };
 
     const handleClear = () => {
-        setNote('');
-        localStorage.removeItem('kampanya_takvim_quick_note');
-        setIsEditing(false);
+        if (window.confirm('Notu silmek istediğinize emin misiniz?')) {
+            setNote('');
+            localStorage.removeItem(STORAGE_KEY);
+            setLastSaved(null);
+            setIsSaved(true);
+        }
     };
 
-    // Calculate position style
-    const positionStyle: React.CSSProperties = position
-        ? { position: 'fixed', left: position.x, top: position.y, zIndex: 50, width: 288 }
-        : {};
+    // Auto-resize textarea
+    useEffect(() => {
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px';
+        }
+    }, [note]);
 
     return (
-        <div
-            ref={containerRef}
-            className={`${position ? '' : 'w-full'} ${isDragging ? 'cursor-grabbing' : ''}`}
-            style={positionStyle}
-        >
-            <div className={`bg-gradient-to-br from-amber-200 to-yellow-400 dark:from-amber-600 dark:to-yellow-700 rounded-2xl shadow-xl overflow-hidden ${isDragging ? 'shadow-2xl scale-[1.02]' : ''} transition-all`}>
-                {/* Header with drag handle */}
-                <div className="flex items-stretch bg-white/20">
-                    {/* Drag Handle */}
-                    <div
-                        onMouseDown={handleMouseDown}
-                        onTouchStart={handleTouchStart}
-                        className="px-2 flex items-center justify-center cursor-grab active:cursor-grabbing hover:bg-white/10 transition-colors border-r border-black/5 dark:border-white/10 touch-none"
-                        title="Sürükle"
-                    >
-                        <GripVertical size={16} className="text-amber-900/50 dark:text-amber-100/50" />
-                    </div>
-
-                    {/* Header Content */}
-                    <div className="flex-1 px-3 py-2 flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 text-amber-900 dark:text-amber-50">
-                            <PenLine size={14} className="opacity-80" />
-                            <span className="text-xs font-bold">Hızlı Not</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                            {position && (
-                                <button
-                                    onClick={resetPosition}
-                                    className="p-1 text-amber-900/60 dark:text-amber-100/60 hover:text-amber-900 dark:hover:text-amber-50 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-colors"
-                                    title="Konumu Sıfırla"
-                                >
-                                    <RotateCcw size={12} />
-                                </button>
-                            )}
-                            <button
-                                onClick={handleClear}
-                                className="p-1 text-amber-900/60 dark:text-amber-100/60 hover:text-red-600 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                                title="Notu Sil"
-                            >
-                                <Trash2 size={12} />
-                            </button>
-                            <button
-                                onClick={handleSave}
-                                className={`p-1 rounded-lg transition-colors ${isEditing
-                                    ? 'text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 font-medium'
-                                    : 'text-amber-900/60 dark:text-amber-100/60 hover:text-amber-900 dark:hover:text-amber-50 hover:bg-black/5 dark:hover:bg-white/10'
-                                    }`}
-                                title={isEditing ? "Kaydet" : "Kaydedildi"}
-                            >
-                                <Save size={12} />
-                            </button>
-                        </div>
-                    </div>
+        <div className="bg-gradient-to-br from-amber-400 to-yellow-500 rounded-2xl shadow-xl overflow-hidden">
+            {/* Header */}
+            <div className="px-3 py-2 flex items-center justify-between bg-amber-500/30">
+                <div className="flex items-center gap-1.5">
+                    <StickyNote size={14} className="text-amber-900/70" />
+                    <span className="text-xs font-bold text-amber-900/80">Hızlı Not Al</span>
                 </div>
-
-                <div className="p-3">
-                    <textarea
-                        value={note}
-                        onChange={(e) => {
-                            setNote(e.target.value);
-                            setIsEditing(true);
-                        }}
-                        placeholder="Buraya not alabilirsiniz..."
-                        className="w-full h-24 bg-white/40 dark:bg-black/20 text-amber-900 dark:text-amber-50 placeholder-amber-900/40 dark:placeholder-amber-100/40 text-sm rounded-xl p-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-amber-500/30 transition-shadow custom-scrollbar"
-                    />
+                <div className="flex items-center gap-1">
+                    {!isSaved && (
+                        <span className="text-[10px] text-amber-800/60 italic">kaydediliyor...</span>
+                    )}
+                    {note && (
+                        <button
+                            onClick={handleClear}
+                            className="p-1 text-amber-900/50 hover:text-red-600 hover:bg-red-100/50 rounded transition-colors"
+                            title="Notu Sil"
+                        >
+                            <Trash2 size={12} />
+                        </button>
+                    )}
                 </div>
-
-                {/* Last saved footer removed to match previous design preference or keep irrelevant code out */}
             </div>
+
+            {/* Content */}
+            <div className="p-2">
+                <textarea
+                    ref={textareaRef}
+                    value={note}
+                    onChange={handleChange}
+                    placeholder="Notunuzu buraya yazın..."
+                    className="w-full min-h-[60px] max-h-[200px] px-3 py-2 text-sm bg-amber-50/80 dark:bg-amber-100/90 text-amber-900 placeholder-amber-600/50 rounded-xl border-0 resize-none focus:ring-2 focus:ring-amber-600/30 focus:outline-none transition-all font-handwriting"
+                    style={{ fontFamily: "'Caveat', 'Comic Sans MS', cursive" }}
+                />
+            </div>
+
+            {/* Footer - Last saved */}
+            {lastSaved && (
+                <div className="px-3 pb-2 bg-amber-500/20">
+                    <p className="text-[10px] text-amber-900/70 text-center flex items-center justify-center gap-1 font-medium">
+                        <Save size={10} className="text-green-700" />
+                        <span>Kaydedildi:</span>
+                        <span className="font-bold">{lastSaved.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
+                    </p>
+                </div>
+            )}
         </div>
     );
 };
