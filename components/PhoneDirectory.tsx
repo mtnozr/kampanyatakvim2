@@ -1,25 +1,29 @@
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { ChevronDown, Phone, Book, Search, X, GripVertical } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { ChevronDown, Phone, Book, Search, X, GripVertical, RotateCcw } from 'lucide-react';
 import { User, AnalyticsUser } from '../types';
+import { useDraggable } from '../hooks/useDraggable';
 
 interface PhoneDirectoryProps {
     users: User[];
     analyticsUsers: AnalyticsUser[];
 }
 
-interface Position {
-    x: number;
-    y: number;
-}
-
 export const PhoneDirectory: React.FC<PhoneDirectoryProps> = ({ users, analyticsUsers }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [position, setPosition] = useState<Position | null>(null);
-    const [isDragging, setIsDragging] = useState(false);
-    const [dragOffset, setDragOffset] = useState<Position>({ x: 0, y: 0 });
 
-    const containerRef = useRef<HTMLDivElement>(null);
+    const {
+        position,
+        isDragging,
+        handleMouseDown,
+        handleTouchStart,
+        containerRef,
+        resetPosition
+    } = useDraggable({
+        storageKey: 'kampanya_takvim_phone_directory_position',
+        widgetWidth: 288,
+        widgetHeight: 400 // Başlangıç yüksekliği (expand edilince değişir ama drag için ok)
+    });
 
     // Click outside to close (but not while dragging)
     useEffect(() => {
@@ -33,87 +37,7 @@ export const PhoneDirectory: React.FC<PhoneDirectoryProps> = ({ users, analytics
 
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isExpanded, isDragging]);
-
-    // Drag handlers
-    const handleDragStart = useCallback((clientX: number, clientY: number) => {
-        if (!containerRef.current) return;
-
-        const rect = containerRef.current.getBoundingClientRect();
-        setDragOffset({
-            x: clientX - rect.left,
-            y: clientY - rect.top
-        });
-        setIsDragging(true);
-    }, []);
-
-    const handleDragMove = useCallback((clientX: number, clientY: number) => {
-        if (!isDragging) return;
-
-        const newX = clientX - dragOffset.x;
-        const newY = clientY - dragOffset.y;
-
-        // Keep within viewport bounds
-        const maxX = window.innerWidth - 288; // 72 * 4 = 288 (w-72)
-        const maxY = window.innerHeight - 100;
-
-        setPosition({
-            x: Math.max(0, Math.min(newX, maxX)),
-            y: Math.max(0, Math.min(newY, maxY))
-        });
-    }, [isDragging, dragOffset]);
-
-    const handleDragEnd = useCallback(() => {
-        setIsDragging(false);
-    }, []);
-
-    // Mouse events
-    const handleMouseDown = (e: React.MouseEvent) => {
-        e.preventDefault();
-        handleDragStart(e.clientX, e.clientY);
-    };
-
-    useEffect(() => {
-        const handleMouseMove = (e: MouseEvent) => handleDragMove(e.clientX, e.clientY);
-        const handleMouseUp = () => handleDragEnd();
-
-        if (isDragging) {
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-        }
-
-        return () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        };
-    }, [isDragging, handleDragMove, handleDragEnd]);
-
-    // Touch events
-    const handleTouchStart = (e: React.TouchEvent) => {
-        const touch = e.touches[0];
-        handleDragStart(touch.clientX, touch.clientY);
-    };
-
-    const handleTouchMove = useCallback((e: TouchEvent) => {
-        const touch = e.touches[0];
-        handleDragMove(touch.clientX, touch.clientY);
-    }, [handleDragMove]);
-
-    const handleTouchEnd = useCallback(() => {
-        handleDragEnd();
-    }, [handleDragEnd]);
-
-    useEffect(() => {
-        if (isDragging) {
-            document.addEventListener('touchmove', handleTouchMove, { passive: false });
-            document.addEventListener('touchend', handleTouchEnd);
-        }
-
-        return () => {
-            document.removeEventListener('touchmove', handleTouchMove);
-            document.removeEventListener('touchend', handleTouchEnd);
-        };
-    }, [isDragging, handleTouchMove, handleTouchEnd]);
+    }, [isExpanded, isDragging, containerRef]);
 
     // Combine and sort all personnel alphabetically
     const allPersonnel = useMemo(() => [
@@ -178,15 +102,15 @@ export const PhoneDirectory: React.FC<PhoneDirectoryProps> = ({ users, analytics
 
     if (personnelWithPhone.length === 0) return null;
 
-    // Calculate position style - relative to container when not dragged, absolute when dragged
+    // Calculate position style
     const positionStyle: React.CSSProperties = position
-        ? { position: 'fixed', left: position.x, top: position.y, zIndex: 50 }
+        ? { position: 'fixed', left: position.x, top: position.y, zIndex: 50, width: 288 }
         : {};
 
     return (
         <div
             ref={containerRef}
-            className={`w-full ${isDragging ? 'cursor-grabbing' : ''}`}
+            className={`${position ? '' : 'w-full'} ${isDragging ? 'cursor-grabbing' : ''}`}
             style={positionStyle}
         >
             <div className={`bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 overflow-hidden transition-all duration-300 ${isDragging ? 'shadow-3xl scale-[1.02]' : ''}`}>
@@ -196,11 +120,22 @@ export const PhoneDirectory: React.FC<PhoneDirectoryProps> = ({ users, analytics
                     <div
                         onMouseDown={handleMouseDown}
                         onTouchStart={handleTouchStart}
-                        className="px-2 flex items-center justify-center cursor-grab active:cursor-grabbing hover:bg-white/10 transition-colors border-r border-white/20"
+                        className="px-2 flex items-center justify-center cursor-grab active:cursor-grabbing hover:bg-white/10 transition-colors border-r border-white/20 touch-none"
                         title="Sürükle"
                     >
                         <GripVertical size={16} className="text-white/70" />
                     </div>
+
+                    {/* Reset Button (only when dragged) */}
+                    {position && (
+                        <div
+                            onClick={(e) => { e.stopPropagation(); resetPosition(); }}
+                            className="px-2 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors border-r border-white/20"
+                            title="Konumu Sıfırla"
+                        >
+                            <RotateCcw size={14} className="text-white/70" />
+                        </div>
+                    )}
 
                     {/* Toggle Button */}
                     <button
