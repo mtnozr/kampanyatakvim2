@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Settings, Eye, EyeOff } from 'lucide-react';
+import { Settings, Eye, EyeOff } from 'lucide-react';
 import { WeatherWidget } from './WeatherWidget';
 import { StickyNoteWidget } from './StickyNoteWidget';
 import { PhoneDirectory } from './PhoneDirectory';
+import { DraggableWidget } from './DraggableWidget';
 import { User, AnalyticsUser } from '../types';
 
 interface SidebarProps {
@@ -70,8 +71,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ users, analyticsUsers }) => {
                 <button
                     onClick={() => setIsSettingsOpen(!isSettingsOpen)}
                     className={`p-1.5 rounded-lg text-xs flex items-center gap-1 transition-all ${isSettingsOpen
-                            ? 'bg-violet-500 text-white shadow-lg'
-                            : 'bg-white/80 dark:bg-slate-800/80 text-gray-500 dark:text-gray-400 hover:bg-violet-100 dark:hover:bg-violet-900/30 shadow-sm'
+                        ? 'bg-violet-500 text-white shadow-lg'
+                        : 'bg-white/80 dark:bg-slate-800/80 text-gray-500 dark:text-gray-400 hover:bg-violet-100 dark:hover:bg-violet-900/30 shadow-sm'
                         }`}
                     title="Widget Ayarları"
                 >
@@ -90,8 +91,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ users, analyticsUsers }) => {
                                 key={widget.id}
                                 onClick={() => toggleWidget(widget.id)}
                                 className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all ${widget.visible
-                                        ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
-                                        : 'bg-gray-50 dark:bg-slate-700 text-gray-400 dark:text-gray-500'
+                                    ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
+                                    : 'bg-gray-50 dark:bg-slate-700 text-gray-400 dark:text-gray-500'
                                     }`}
                             >
                                 <div className="flex items-center gap-2">
@@ -109,11 +110,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ users, analyticsUsers }) => {
                 </div>
             )}
 
-            {/* Widgets */}
+            {/* Widgets - Each wrapped in DraggableWidget for drag-and-drop */}
             <div className="flex flex-col gap-3">
-                {isVisible('weather') && <WeatherWidget />}
-                {isVisible('notes') && <StickyNoteWidget />}
-                {isVisible('phone') && <PhoneDirectory users={users} analyticsUsers={analyticsUsers} />}
+                {isVisible('weather') && (
+                    <DraggableWidget widgetId="weather" title="Hava Durumu" defaultHeight={180}>
+                        <WeatherWidget />
+                    </DraggableWidget>
+                )}
+                {isVisible('notes') && (
+                    <DraggableWidget widgetId="notes" title="Hızlı Not" defaultHeight={200}>
+                        <StickyNoteWidget />
+                    </DraggableWidget>
+                )}
+                {isVisible('phone') && (
+                    <DraggableWidget widgetId="phone" title="Telefon Rehberi" defaultHeight={400}>
+                        <PhoneDirectory users={users} analyticsUsers={analyticsUsers} />
+                    </DraggableWidget>
+                )}
             </div>
         </div>
     );
