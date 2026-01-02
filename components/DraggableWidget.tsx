@@ -82,12 +82,12 @@ export const DraggableWidget: React.FC<DraggableWidgetProps> = ({
             {/* Static mode - add small drag handle */}
             {!isFloating && (
                 <div
-                    className={`absolute -top-1 left-1/2 -translate-x-1/2 flex items-center gap-0.5 px-2 py-0.5 bg-gray-800/60 dark:bg-gray-700/80 text-white/80 rounded-full text-[10px] opacity-0 hover:opacity-100 transition-opacity z-10 ${isDragging ? 'cursor-grabbing opacity-100' : 'cursor-grab'}`}
+                    className={`absolute -top-2 left-1/2 -translate-x-1/2 flex items-center gap-1 px-3 py-1 bg-violet-500 hover:bg-violet-600 text-white rounded-full text-xs font-medium shadow-lg hover:shadow-xl transition-all z-10 ${isDragging ? 'cursor-grabbing scale-110' : 'cursor-grab hover:scale-105'}`}
                     onMouseDown={handleMouseDown}
                     onTouchStart={handleTouchStart}
                     title="Sürükleyerek taşı"
                 >
-                    <GripVertical size={10} />
+                    <GripVertical size={12} />
                     <span>Taşı</span>
                 </div>
             )}
