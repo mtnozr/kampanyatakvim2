@@ -1,22 +1,16 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause, RotateCcw, Coffee, Focus, GripVertical, Volume2, VolumeX } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Play, Pause, RotateCcw, Coffee, Focus, Volume2, VolumeX } from 'lucide-react';
 
 // Constants
 const WORK_DURATION = 25 * 60; // 25 minutes in seconds
 const BREAK_DURATION = 5 * 60; // 5 minutes in seconds
 const STORAGE_KEY = 'pomodoro_timer_state';
-const POSITION_KEY = 'pomodoro_position';
 
 interface PomodoroState {
     mode: 'work' | 'break';
     remainingSeconds: number;
     isRunning: boolean;
     endTime: number | null;
-}
-
-interface Position {
-    x: number;
-    y: number;
 }
 
 // Circular Progress Component
@@ -64,15 +58,10 @@ export const PomodoroWidget: React.FC = () => {
         endTime: null
     });
     const [soundEnabled, setSoundEnabled] = useState(true);
-    const [position, setPosition] = useState<Position | null>(null);
-    const [isDragging, setIsDragging] = useState(false);
-    const dragOffset = useRef<Position>({ x: 0, y: 0 });
-    const containerRef = useRef<HTMLDivElement>(null);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
     // Load state from localStorage on mount
     useEffect(() => {
-        // Load timer state
         const savedState = localStorage.getItem(STORAGE_KEY);
         if (savedState) {
             try {
@@ -100,17 +89,6 @@ export const PomodoroWidget: React.FC = () => {
             }
         }
 
-        // Load position
-        const savedPosition = localStorage.getItem(POSITION_KEY);
-        if (savedPosition) {
-            try {
-                const pos = JSON.parse(savedPosition);
-                setPosition(pos);
-            } catch {
-                console.error('Failed to parse pomodoro position');
-            }
-        }
-
         // Request notification permission
         if ('Notification' in window && Notification.permission === 'default') {
             Notification.requestPermission();
@@ -121,13 +99,6 @@ export const PomodoroWidget: React.FC = () => {
     useEffect(() => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }, [state]);
-
-    // Save position to localStorage
-    useEffect(() => {
-        if (position) {
-            localStorage.setItem(POSITION_KEY, JSON.stringify(position));
-        }
-    }, [position]);
 
     // Timer interval
     useEffect(() => {
@@ -263,169 +234,80 @@ export const PomodoroWidget: React.FC = () => {
     const totalDuration = state.mode === 'work' ? WORK_DURATION : BREAK_DURATION;
     const progress = state.remainingSeconds / totalDuration;
 
-    // Drag handlers
-    const handleDragStart = useCallback((clientX: number, clientY: number) => {
-        if (!containerRef.current) return;
-        const rect = containerRef.current.getBoundingClientRect();
-        dragOffset.current = { x: clientX - rect.left, y: clientY - rect.top };
-        setIsDragging(true);
-    }, []);
-
-    const handleDragMove = useCallback((clientX: number, clientY: number) => {
-        if (!isDragging) return;
-        const newX = clientX - dragOffset.current.x;
-        const newY = clientY - dragOffset.current.y;
-        const maxX = window.innerWidth - 288;
-        const maxY = window.innerHeight - 200;
-        setPosition({
-            x: Math.max(0, Math.min(newX, maxX)),
-            y: Math.max(0, Math.min(newY, maxY))
-        });
-    }, [isDragging]);
-
-    const handleDragEnd = useCallback(() => {
-        setIsDragging(false);
-    }, []);
-
-    const handleMouseDown = (e: React.MouseEvent) => {
-        e.preventDefault();
-        handleDragStart(e.clientX, e.clientY);
-    };
-
-    const handleTouchStart = (e: React.TouchEvent) => {
-        const touch = e.touches[0];
-        handleDragStart(touch.clientX, touch.clientY);
-    };
-
-    useEffect(() => {
-        if (isDragging) {
-            const handleMouseMove = (e: MouseEvent) => handleDragMove(e.clientX, e.clientY);
-            const handleMouseUp = () => handleDragEnd();
-            const handleTouchMove = (e: TouchEvent) => {
-                e.preventDefault();
-                handleDragMove(e.touches[0].clientX, e.touches[0].clientY);
-            };
-            const handleTouchEnd = () => handleDragEnd();
-
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-            document.addEventListener('touchmove', handleTouchMove, { passive: false });
-            document.addEventListener('touchend', handleTouchEnd);
-            document.body.style.userSelect = 'none';
-
-            return () => {
-                document.removeEventListener('mousemove', handleMouseMove);
-                document.removeEventListener('mouseup', handleMouseUp);
-                document.removeEventListener('touchmove', handleTouchMove);
-                document.removeEventListener('touchend', handleTouchEnd);
-                document.body.style.userSelect = '';
-            };
-        }
-    }, [isDragging, handleDragMove, handleDragEnd]);
-
-    const resetPosition = () => {
-        localStorage.removeItem(POSITION_KEY);
-        setPosition(null);
-    };
-
-    const isFloating = position !== null;
-
-    const containerStyle: React.CSSProperties = isFloating
-        ? { position: 'fixed', left: position.x, top: position.y, zIndex: 50, width: 288 }
-        : { position: 'relative', width: '100%' };
-
     return (
-        <div ref={containerRef} style={containerStyle} className={isDragging ? 'shadow-2xl scale-[1.02]' : ''}>
-            <div className={`bg-gradient-to-br ${state.mode === 'work' ? 'from-red-500 to-orange-500' : 'from-green-500 to-teal-500'} rounded-2xl shadow-xl overflow-hidden transition-colors duration-500`}>
-                {/* Header with drag handle */}
-                <div
-                    className={`px-3 py-2 flex items-center justify-between bg-black/10 ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-                    onMouseDown={handleMouseDown}
-                    onTouchStart={handleTouchStart}
+        <div className={`bg-gradient-to-br ${state.mode === 'work' ? 'from-red-500 to-orange-500' : 'from-green-500 to-teal-500'} rounded-2xl shadow-xl overflow-hidden transition-colors duration-500`}>
+            {/* Header */}
+            <div className="px-3 py-2 flex items-center justify-between bg-black/10">
+                <div className="flex items-center gap-2 text-white">
+                    <span className="text-xs font-bold">🍅 Pomodoro</span>
+                </div>
+                <button
+                    onClick={() => setSoundEnabled(!soundEnabled)}
+                    className="p-1 text-white/70 hover:text-white hover:bg-white/10 rounded transition-colors"
+                    title={soundEnabled ? 'Sesi Kapat' : 'Sesi Aç'}
                 >
-                    <div className="flex items-center gap-2 text-white">
-                        <GripVertical size={14} className="opacity-70" />
-                        <span className="text-xs font-bold">🍅 Pomodoro</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <button
-                            onClick={(e) => { e.stopPropagation(); setSoundEnabled(!soundEnabled); }}
-                            className="p-1 text-white/70 hover:text-white hover:bg-white/10 rounded transition-colors"
-                            title={soundEnabled ? 'Sesi Kapat' : 'Sesi Aç'}
-                        >
-                            {soundEnabled ? <Volume2 size={12} /> : <VolumeX size={12} />}
-                        </button>
-                        {isFloating && (
-                            <button
-                                onClick={(e) => { e.stopPropagation(); resetPosition(); }}
-                                className="p-1 text-white/70 hover:text-white hover:bg-white/10 rounded transition-colors"
-                                title="Varsayılan konuma döndür"
-                            >
-                                <RotateCcw size={12} />
-                            </button>
+                    {soundEnabled ? <Volume2 size={12} /> : <VolumeX size={12} />}
+                </button>
+            </div>
+
+            {/* Timer Display */}
+            <div className="p-4">
+                {/* Mode indicator */}
+                <div className="flex justify-center mb-3">
+                    <button
+                        onClick={handleModeSwitch}
+                        className="flex items-center gap-1.5 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-full text-white text-xs font-medium transition-colors"
+                    >
+                        {state.mode === 'work' ? (
+                            <>
+                                <Focus size={12} />
+                                <span>Odaklanma</span>
+                            </>
+                        ) : (
+                            <>
+                                <Coffee size={12} />
+                                <span>Mola</span>
+                            </>
                         )}
+                    </button>
+                </div>
+
+                {/* Circular timer */}
+                <div className="relative w-32 h-32 mx-auto mb-4">
+                    <CircularProgress progress={progress} mode={state.mode} />
+                    <div className="absolute inset-0 flex items-center justify-center rotate-0">
+                        <span className="text-3xl font-bold text-white font-mono tracking-wider">
+                            {formatTime(state.remainingSeconds)}
+                        </span>
                     </div>
                 </div>
 
-                {/* Timer Display */}
-                <div className="p-4">
-                    {/* Mode indicator */}
-                    <div className="flex justify-center mb-3">
+                {/* Controls */}
+                <div className="flex justify-center gap-2">
+                    {!state.isRunning ? (
                         <button
-                            onClick={handleModeSwitch}
-                            className="flex items-center gap-1.5 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-full text-white text-xs font-medium transition-colors"
+                            onClick={handleStart}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-white text-gray-800 rounded-xl font-medium text-sm hover:bg-gray-100 active:scale-95 transition-all shadow-lg"
                         >
-                            {state.mode === 'work' ? (
-                                <>
-                                    <Focus size={12} />
-                                    <span>Odaklanma</span>
-                                </>
-                            ) : (
-                                <>
-                                    <Coffee size={12} />
-                                    <span>Mola</span>
-                                </>
-                            )}
+                            <Play size={16} fill="currentColor" />
+                            <span>Başlat</span>
                         </button>
-                    </div>
-
-                    {/* Circular timer */}
-                    <div className="relative w-32 h-32 mx-auto mb-4">
-                        <CircularProgress progress={progress} mode={state.mode} />
-                        <div className="absolute inset-0 flex items-center justify-center rotate-0">
-                            <span className="text-3xl font-bold text-white font-mono tracking-wider">
-                                {formatTime(state.remainingSeconds)}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Controls */}
-                    <div className="flex justify-center gap-2">
-                        {!state.isRunning ? (
-                            <button
-                                onClick={handleStart}
-                                className="flex items-center gap-1.5 px-4 py-2 bg-white text-gray-800 rounded-xl font-medium text-sm hover:bg-gray-100 active:scale-95 transition-all shadow-lg"
-                            >
-                                <Play size={16} fill="currentColor" />
-                                <span>Başlat</span>
-                            </button>
-                        ) : (
-                            <button
-                                onClick={handlePause}
-                                className="flex items-center gap-1.5 px-4 py-2 bg-white/90 text-gray-800 rounded-xl font-medium text-sm hover:bg-white active:scale-95 transition-all shadow-lg"
-                            >
-                                <Pause size={16} fill="currentColor" />
-                                <span>Duraklat</span>
-                            </button>
-                        )}
+                    ) : (
                         <button
-                            onClick={handleReset}
-                            className="p-2 bg-white/20 text-white rounded-xl hover:bg-white/30 active:scale-95 transition-all"
-                            title="Sıfırla"
+                            onClick={handlePause}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-white/90 text-gray-800 rounded-xl font-medium text-sm hover:bg-white active:scale-95 transition-all shadow-lg"
                         >
-                            <RotateCcw size={18} />
+                            <Pause size={16} fill="currentColor" />
+                            <span>Duraklat</span>
                         </button>
-                    </div>
+                    )}
+                    <button
+                        onClick={handleReset}
+                        className="p-2 bg-white/20 text-white rounded-xl hover:bg-white/30 active:scale-95 transition-all"
+                        title="Sıfırla"
+                    >
+                        <RotateCcw size={18} />
+                    </button>
                 </div>
             </div>
         </div>
