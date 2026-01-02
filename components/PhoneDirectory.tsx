@@ -1,30 +1,25 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { ChevronDown, Phone, Book, Search, X, GripVertical, RotateCcw } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { ChevronDown, Phone, Book, Search, X, GripVertical } from 'lucide-react';
 import { User, AnalyticsUser } from '../types';
-import { useDraggable } from '../hooks/useDraggable';
 
 interface PhoneDirectoryProps {
     users: User[];
     analyticsUsers: AnalyticsUser[];
 }
 
+interface Position {
+    x: number;
+    y: number;
+}
+
 export const PhoneDirectory: React.FC<PhoneDirectoryProps> = ({ users, analyticsUsers }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const expandedContentRef = useRef<HTMLDivElement>(null);
+    const [position, setPosition] = useState<Position | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragOffset, setDragOffset] = useState<Position>({ x: 0, y: 0 });
 
-    const {
-        position,
-        isDragging,
-        handleMouseDown,
-        handleTouchStart,
-        containerRef,
-        resetPosition
-    } = useDraggable({
-        storageKey: 'kampanya_takvim_phone_directory_position',
-        widgetWidth: 288,
-        widgetHeight: 400
-    });
+    const containerRef = useRef<HTMLDivElement>(null);
 
     // Click outside to close (but not while dragging)
     useEffect(() => {
@@ -38,7 +33,87 @@ export const PhoneDirectory: React.FC<PhoneDirectoryProps> = ({ users, analytics
 
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isExpanded, isDragging, containerRef]);
+    }, [isExpanded, isDragging]);
+
+    // Drag handlers
+    const handleDragStart = useCallback((clientX: number, clientY: number) => {
+        if (!containerRef.current) return;
+
+        const rect = containerRef.current.getBoundingClientRect();
+        setDragOffset({
+            x: clientX - rect.left,
+            y: clientY - rect.top
+        });
+        setIsDragging(true);
+    }, []);
+
+    const handleDragMove = useCallback((clientX: number, clientY: number) => {
+        if (!isDragging) return;
+
+        const newX = clientX - dragOffset.x;
+        const newY = clientY - dragOffset.y;
+
+        // Keep within viewport bounds
+        const maxX = window.innerWidth - 288; // 72 * 4 = 288 (w-72)
+        const maxY = window.innerHeight - 100;
+
+        setPosition({
+            x: Math.max(0, Math.min(newX, maxX)),
+            y: Math.max(0, Math.min(newY, maxY))
+        });
+    }, [isDragging, dragOffset]);
+
+    const handleDragEnd = useCallback(() => {
+        setIsDragging(false);
+    }, []);
+
+    // Mouse events
+    const handleMouseDown = (e: React.MouseEvent) => {
+        e.preventDefault();
+        handleDragStart(e.clientX, e.clientY);
+    };
+
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => handleDragMove(e.clientX, e.clientY);
+        const handleMouseUp = () => handleDragEnd();
+
+        if (isDragging) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+        }
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isDragging, handleDragMove, handleDragEnd]);
+
+    // Touch events
+    const handleTouchStart = (e: React.TouchEvent) => {
+        const touch = e.touches[0];
+        handleDragStart(touch.clientX, touch.clientY);
+    };
+
+    const handleTouchMove = useCallback((e: TouchEvent) => {
+        const touch = e.touches[0];
+        handleDragMove(touch.clientX, touch.clientY);
+    }, [handleDragMove]);
+
+    const handleTouchEnd = useCallback(() => {
+        handleDragEnd();
+    }, [handleDragEnd]);
+
+    useEffect(() => {
+        if (isDragging) {
+            document.addEventListener('touchmove', handleTouchMove, { passive: false });
+            document.addEventListener('touchend', handleTouchEnd);
+        }
+
+        return () => {
+            document.removeEventListener('touchmove', handleTouchMove);
+            document.removeEventListener('touchend', handleTouchEnd);
+        };
+    }, [isDragging, handleTouchMove, handleTouchEnd]);
 
     // Combine and sort all personnel alphabetically
     const allPersonnel = useMemo(() => [
@@ -103,15 +178,15 @@ export const PhoneDirectory: React.FC<PhoneDirectoryProps> = ({ users, analytics
 
     if (personnelWithPhone.length === 0) return null;
 
-    // Calculate position style
+    // Calculate position style - relative to container when not dragged, absolute when dragged
     const positionStyle: React.CSSProperties = position
-        ? { position: 'fixed', left: position.x, top: position.y, zIndex: 50, width: 288 }
+        ? { position: 'fixed', left: position.x, top: position.y, zIndex: 50 }
         : {};
 
     return (
         <div
             ref={containerRef}
-            className={`${position ? '' : 'w-full'} ${isDragging ? 'cursor-grabbing' : ''}`}
+            className={`w-full ${isDragging ? 'cursor-grabbing' : ''}`}
             style={positionStyle}
         >
             <div className={`bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 overflow-hidden transition-all duration-300 ${isDragging ? 'shadow-3xl scale-[1.02]' : ''}`}>
@@ -144,31 +219,14 @@ export const PhoneDirectory: React.FC<PhoneDirectoryProps> = ({ users, analytics
                                 <span className="text-[10px] opacity-80">{personnelWithPhone.length} kişi</span>
                             </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                            {position && (
-                                <div
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        resetPosition();
-                                    }}
-                                    className="p-1 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
-                                    title="Konumu Sıfırla"
-                                >
-                                    <RotateCcw size={12} />
-                                </div>
-                            )}
-                            <div className={`transform transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
-                                <ChevronDown size={20} />
-                            </div>
+                        <div className={`transform transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
+                            <ChevronDown size={20} />
                         </div>
                     </button>
                 </div>
 
                 {/* Expandable Content */}
-                <div
-                    ref={expandedContentRef}
-                    className={`transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'} overflow-hidden`}
-                >
+                <div className={`transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'} overflow-hidden`}>
                     {/* Search Input */}
                     <div className="p-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900/30">
                         <div className="relative">
@@ -260,4 +318,3 @@ export const PhoneDirectory: React.FC<PhoneDirectoryProps> = ({ users, analytics
 };
 
 export default PhoneDirectory;
-
