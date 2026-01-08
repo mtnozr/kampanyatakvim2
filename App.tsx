@@ -85,6 +85,14 @@ const normalizeUrgency = (urgency: any): UrgencyLevel => {
   return validUrgencies.includes(urgency) ? urgency : 'Low';
 };
 
+// Convert HTML to plain text for email bodies
+const stripHtml = (html: string): string => {
+  if (!html) return '';
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
+};
+
 function App() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const { theme, toggleTheme, setTheme } = useTheme();
@@ -1697,7 +1705,7 @@ function App() {
 
         let emailMessage = `${format(date, 'd MMMM yyyy', { locale: tr })} tarihindeki "${title}" kampanyası için görevlendirildiniz.\nAciliyet: ${URGENCY_CONFIGS[urgency].label}`;
         if (difficulty) emailMessage += `\nZorluk Seviyesi: ${DIFFICULTY_CONFIGS[difficulty].label}`;
-        if (description) emailMessage += `\n\nAçıklama:\n${description}`;
+        if (description) emailMessage += `\n\nAçıklama:\n${stripHtml(description)}`;
 
         if (departmentId) {
           const dept = departments.find(d => d.id === departmentId);
@@ -1905,7 +1913,7 @@ function App() {
             if (diff) emailMessage += `\nZorluk Seviyesi: ${DIFFICULTY_CONFIGS[diff].label}`;
 
             const desc = updates.description || currentEvent.description;
-            if (desc) emailMessage += `\n\nAçıklama:\n${desc}`;
+            if (desc) emailMessage += `\n\nAçıklama:\n${stripHtml(desc)}`;
 
             const deptId = updates.departmentId || currentEvent.departmentId;
             if (deptId) {
@@ -3151,6 +3159,7 @@ function App() {
           users={users}
           departments={departments}
           events={events} // Pass events for workload indicators
+          isKampanyaYapan={isKampanyaYapan}
         />
 
         <AddReportModal

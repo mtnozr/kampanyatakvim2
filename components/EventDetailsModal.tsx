@@ -382,51 +382,53 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
           </div>
 
           {/* Difficulty Section */}
-          <div className="flex items-start gap-3">
-            <div className="p-2 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-lg shrink-0">
-              <Gauge size={20} />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Zorluk Seviyesi</p>
-              {isEditMode ? (
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {(Object.keys(DIFFICULTY_CONFIGS) as DifficultyLevel[]).map((level) => {
-                    const config = DIFFICULTY_CONFIGS[level];
-                    const isSelected = editDifficulty === level;
-                    return (
-                      <label
-                        key={level}
-                        className={`
+          {!isKampanyaYapan && (
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-lg shrink-0">
+                <Gauge size={20} />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Zorluk Seviyesi</p>
+                {isEditMode ? (
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {(Object.keys(DIFFICULTY_CONFIGS) as DifficultyLevel[]).map((level) => {
+                      const config = DIFFICULTY_CONFIGS[level];
+                      const isSelected = editDifficulty === level;
+                      return (
+                        <label
+                          key={level}
+                          className={`
                           relative flex items-center gap-2 px-2 py-1.5 rounded-lg border cursor-pointer transition-all select-none
                           ${isSelected
-                            ? 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-700 ring-1 ring-violet-500'
-                            : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600'}
+                              ? 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-700 ring-1 ring-violet-500'
+                              : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600'}
                         `}
-                      >
-                        <input
-                          type="radio"
-                          name="editDifficulty"
-                          value={level}
-                          checked={isSelected}
-                          onChange={() => setEditDifficulty(level)}
-                          className="w-3.5 h-3.5 text-violet-600 border-gray-300 focus:ring-violet-500 dark:bg-slate-600 dark:border-slate-500"
-                        />
-                        <span className={`text-xs font-medium ${isSelected ? config.textColor : 'text-gray-600 dark:text-gray-300'}`}>
-                          {config.label}
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="mt-1 flex items-center gap-2">
-                  <span className={`px-2 py-1 rounded text-xs font-bold ${event.difficulty ? DIFFICULTY_CONFIGS[event.difficulty].color : 'bg-gray-100 text-gray-600'} ${event.difficulty ? DIFFICULTY_CONFIGS[event.difficulty].textColor : ''}`}>
-                    {event.difficulty ? DIFFICULTY_CONFIGS[event.difficulty].label : 'Belirtilmemiş'}
-                  </span>
-                </div>
-              )}
+                        >
+                          <input
+                            type="radio"
+                            name="editDifficulty"
+                            value={level}
+                            checked={isSelected}
+                            onChange={() => setEditDifficulty(level)}
+                            className="w-3.5 h-3.5 text-violet-600 border-gray-300 focus:ring-violet-500 dark:bg-slate-600 dark:border-slate-500"
+                          />
+                          <span className={`text-xs font-medium ${isSelected ? config.textColor : 'text-gray-600 dark:text-gray-300'}`}>
+                            {config.label}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className={`px-2 py-1 rounded text-xs font-bold ${event.difficulty ? DIFFICULTY_CONFIGS[event.difficulty].color : 'bg-gray-100 text-gray-600'} ${event.difficulty ? DIFFICULTY_CONFIGS[event.difficulty].textColor : ''}`}>
+                      {event.difficulty ? DIFFICULTY_CONFIGS[event.difficulty].label : 'Belirtilmemiş'}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Urgency Section */}
           <div className="flex items-start gap-3">
@@ -471,9 +473,10 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 />
               ) : (
                 event.description ? (
-                  <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap leading-relaxed bg-gray-50 dark:bg-slate-700/50 p-3 rounded-lg border border-gray-100 dark:border-slate-700">
-                    {event.description}
-                  </p>
+                  <div
+                    className="text-sm text-gray-700 dark:text-gray-300 mt-1 leading-relaxed bg-gray-50 dark:bg-slate-700/50 p-3 rounded-lg border border-gray-100 dark:border-slate-700 prose prose-sm dark:prose-invert max-w-none"
+                    dangerouslySetInnerHTML={{ __html: event.description }}
+                  />
                 ) : (
                   <p className="text-sm text-gray-400 dark:text-gray-500 italic mt-1">Açıklama eklenmemiş.</p>
                 )

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, UserPlus, AlertCircle, AlignLeft, AlertTriangle, Building, Gauge } from 'lucide-react';
 import { UrgencyLevel, User, Department, DifficultyLevel, CalendarEvent } from '../types';
 import { URGENCY_CONFIGS, TURKISH_HOLIDAYS, DIFFICULTY_CONFIGS } from '../constants';
+import { RichTextEditor } from './RichTextEditor';
 
 interface AddEventModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ interface AddEventModalProps {
   departments: Department[];
   monthlyBadges?: { trophy: string[], rocket: string[], power: string[] };
   events: CalendarEvent[];
+  isKampanyaYapan?: boolean;
 }
 
 export const AddEventModal: React.FC<AddEventModalProps> = ({
@@ -29,7 +31,8 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
   users,
   departments,
   monthlyBadges = { trophy: [], rocket: [], power: [] },
-  events
+  events,
+  isKampanyaYapan = false
 }) => {
   const [title, setTitle] = useState('');
   const [urgency, setUrgency] = useState<UrgencyLevel>('Medium');
@@ -229,40 +232,42 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
-              <Gauge size={14} /> Zorluk Seviyesi
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {(Object.keys(DIFFICULTY_CONFIGS) as DifficultyLevel[]).map((level) => {
-                const config = DIFFICULTY_CONFIGS[level];
-                const isSelected = difficulty === level;
-                return (
-                  <label
-                    key={level}
-                    className={`
+          {!isKampanyaYapan && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
+                <Gauge size={14} /> Zorluk Seviyesi
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {(Object.keys(DIFFICULTY_CONFIGS) as DifficultyLevel[]).map((level) => {
+                  const config = DIFFICULTY_CONFIGS[level];
+                  const isSelected = difficulty === level;
+                  return (
+                    <label
+                      key={level}
+                      className={`
                       relative flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all select-none
                       ${isSelected
-                        ? 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-700 ring-1 ring-violet-500'
-                        : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600'}
+                          ? 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-700 ring-1 ring-violet-500'
+                          : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600'}
                     `}
-                  >
-                    <input
-                      type="radio"
-                      name="difficulty"
-                      value={level}
-                      checked={isSelected}
-                      onChange={() => setDifficulty(level)}
-                      className="w-4 h-4 text-violet-600 border-gray-300 focus:ring-violet-500 dark:bg-slate-600 dark:border-slate-500"
-                    />
-                    <span className={`text-xs font-medium ${isSelected ? config.textColor : 'text-gray-600 dark:text-gray-300'}`}>
-                      {config.label}
-                    </span>
-                  </label>
-                );
-              })}
+                    >
+                      <input
+                        type="radio"
+                        name="difficulty"
+                        value={level}
+                        checked={isSelected}
+                        onChange={() => setDifficulty(level)}
+                        className="w-4 h-4 text-violet-600 border-gray-300 focus:ring-violet-500 dark:bg-slate-600 dark:border-slate-500"
+                      />
+                      <span className={`text-xs font-medium ${isSelected ? config.textColor : 'text-gray-600 dark:text-gray-300'}`}>
+                        {config.label}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
@@ -295,12 +300,10 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
               <AlignLeft size={14} /> Açıklama <span className="text-gray-400 dark:text-gray-500 font-normal text-xs">(İsteğe Bağlı)</span>
             </label>
-            <textarea
+            <RichTextEditor
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={setDescription}
               placeholder="Kampanya detayları, notlar vb..."
-              rows={3}
-              className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-slate-600 focus:border-violet-500 focus:ring-2 focus:ring-violet-200 outline-none transition-all resize-none bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
             />
           </div>
 
