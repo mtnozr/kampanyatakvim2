@@ -15,7 +15,6 @@ import {
 } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { Bell, ChevronLeft, ChevronRight, Plus, Users, ClipboardList, Loader2, Search, Filter, X, LogIn, LogOut, Database, Download, Lock, Megaphone, PieChart, CheckSquare, StickyNote, Trash2, Flag } from 'lucide-react';
-import emailjs from '@emailjs/browser';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { CalendarEvent, UrgencyLevel, User, AppNotification, ToastMessage, ActivityLog, Department, DepartmentUser, Announcement, DifficultyLevel, WorkRequest, Report, AnalyticsUser, AnalyticsTask, CampaignStatus } from './types';
@@ -73,11 +72,6 @@ import {
 import { auth } from './firebase';
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 
-
-// --- EMAILJS CONFIGURATION ---
-const EMAILJS_SERVICE_ID = 'service_q4mufkj';
-const EMAILJS_TEMPLATE_ID = 'template_mtdrews';
-const EMAILJS_PUBLIC_KEY = 'RBWpN3vQtjsZQGEKl';
 
 // Normalize urgency values coming from Firestore to avoid crashes on bad data
 const normalizeUrgency = (urgency: any): UrgencyLevel => {
@@ -776,15 +770,6 @@ function App() {
 
     return () => clearInterval(intervalId);
   }, [loggedInDeptUser?.id]); // Depend on ID to avoid unnecessary re-runs if other fields change
-
-  // --- EmailJS Initialization ---
-  useEffect(() => {
-    try {
-      emailjs.init(EMAILJS_PUBLIC_KEY);
-    } catch (error) {
-      console.warn('EmailJS Init Error:', error);
-    }
-  }, []);
 
   // --- Filter Logic ---
   const filteredEvents = useMemo(() => {
@@ -1657,23 +1642,6 @@ function App() {
         if (assigneeId && convertingRequest.requesterEmail) {
           const formattedRequestDate = format(convertingRequest.createdAt instanceof Timestamp ? convertingRequest.createdAt.toDate() : convertingRequest.createdAt, 'd MMMM yyyy HH:mm', { locale: tr });
           const requesterEmailMessage = `${formattedRequestDate} tarihinde talep ettiğiniz "${title}" kampanya/bilgilendirme için iş planlaması yapılmıştır.`;
-
-          const requesterParams = {
-            to_email: convertingRequest.requesterEmail,
-            cc: 'kampanyayonetimi@vakifbank.com.tr',
-            to_name: "İlgili Kişi",
-            name: "Kampanya Takvimi",
-            email: convertingRequest.requesterEmail,
-            title: "Kampanya/Bilgilendirme Talebiniz Atandı",
-            message: requesterEmailMessage,
-            ref_id: `Ref ID: #${newEventId.substring(0, 6).toUpperCase()}`,
-          };
-
-          // We send this asynchronously without blocking or showing toast for it specifically
-          // to keep the flow smooth, or we can add a small toast.
-          emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, requesterParams, EMAILJS_PUBLIC_KEY)
-            .then(() => console.log('✅ Talep edene mail gönderildi'))
-            .catch((err) => console.error('❌ Talep edene mail gönderilemedi', err));
         }
 
         setConvertingRequest(null);
@@ -1715,51 +1683,14 @@ function App() {
         const footerIdText = `Ref ID: #${newEventId.substring(0, 6).toUpperCase()}`;
         const isVeryHigh = urgency === 'Very High';
         const subjectPrefix = isVeryHigh ? 'ACİL: ' : '';
-        const emailSubject = `${subjectPrefix}${title} - Kampanya Görev Ataması`;
 
-        const templateParams = {
-          to_email: assignedUser.email,
-          cc: 'kampanyayonetimi@vakifbank.com.tr',
-          to_name: assignedUser.name,
-          name: assignedUser.name,
-          email: assignedUser.email,
-          title: emailSubject,
-          message: emailMessage,
-          ref_id: footerIdText,
-        };
+        // Open mailto directly for task assignment
+        const subject = encodeURIComponent(`${subjectPrefix}${title} - Kampanya Görev Ataması`);
+        const body = encodeURIComponent(`Merhaba ${assignedUser.name},\n\n${emailMessage}\n\n----------------\n${footerIdText}`);
+        window.location.href = `mailto:${assignedUser.email}?cc=kampanyayonetimi@vakifbank.com.tr&subject=${subject}&body=${body}`;
 
-        try {
-          console.log('📧 EmailJS Gönderiliyor...', {
-            serviceId: EMAILJS_SERVICE_ID,
-            templateId: EMAILJS_TEMPLATE_ID,
-            publicKey: EMAILJS_PUBLIC_KEY,
-            params: templateParams
-          });
-
-          const response = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY);
-
-          console.log('✅ EmailJS Başarılı:', response);
-          addToast(`✅ E-posta gönderildi: ${assignedUser.email}`, 'success');
-        } catch (error: any) {
-          console.error('❌ EmailJS Hatası:', error);
-          console.error('Hata Detayı:', {
-            message: error.message,
-            text: error.text,
-            status: error.status
-          });
-
-          const errorMsg = error.text || error.message || 'Bilinmeyen hata';
-          addToast(`❌ E-posta hatası: ${errorMsg}`, 'info');
-          addToast('Mail istemcisi açılıyor...', 'info');
-
-          setTimeout(() => {
-            const subject = encodeURIComponent(`${subjectPrefix}Görev Ataması: ${title} - Kampanya Görev Ataması`);
-            const body = encodeURIComponent(`Merhaba ${assignedUser.name},\n\n${emailMessage}\n\n----------------\n${footerIdText}`);
-            window.location.href = `mailto:${assignedUser.email}?cc=kampanyayonetimi@vakifbank.com.tr&subject=${subject}&body=${body}&importance=${isVeryHigh ? 'High' : 'Normal'}`;
-          }, 2000);
-        } finally {
-          setIsSendingEmail(false);
-        }
+        addToast('Mail istemcisi açılıyor...', 'info');
+        setIsSendingEmail(false);
       }
     }
   };
@@ -1877,7 +1808,7 @@ function App() {
           }
         }
 
-        // Check if assignee changed (Send Email to New Assignee)
+        // Check if assignee changed (Send Email to New Assignee via mailto)
         if (updates.assigneeId && updates.assigneeId !== currentEvent.assigneeId) {
           const newAssignee = users.find(u => u.id === updates.assigneeId);
 
@@ -1897,10 +1828,7 @@ function App() {
               timestamp: Timestamp.now()
             });
 
-            // 3. Send Email
-            setIsSendingEmail(true);
-
-            // Find old assignee name
+            // 3. Open mailto for task reassignment
             const oldAssignee = users.find(u => u.id === currentEvent.assigneeId);
             const oldAssigneeName = oldAssignee ? oldAssignee.name : 'Bilinmeyen Kullanıcı';
 
@@ -1922,42 +1850,18 @@ function App() {
             }
 
             const footerIdText = `Ref ID: #${eventId.substring(0, 6).toUpperCase()}`;
-
             const effectiveUrgency = updates.urgency || currentEvent.urgency;
             const isVeryHigh = effectiveUrgency === 'Very High';
             const subjectPrefix = isVeryHigh ? 'ACİL: ' : '';
-            const emailSubject = `${subjectPrefix}${currentEvent.title} - Görev Ataması (Güncelleme)`;
 
-            const templateParams = {
-              to_email: newAssignee.email,
-              cc: 'kampanyayonetimi@vakifbank.com.tr',
-              to_name: newAssignee.name,
-              name: newAssignee.name,
-              email: newAssignee.email,
-              title: emailSubject,
-              message: emailMessage,
-              ref_id: footerIdText,
-            };
+            const subject = encodeURIComponent(`${subjectPrefix}${currentEvent.title} - Görev Ataması (Güncelleme)`);
+            const body = encodeURIComponent(`Merhaba ${newAssignee.name},\n\n${emailMessage}\n\n----------------\n${footerIdText}`);
+            window.location.href = `mailto:${newAssignee.email}?cc=kampanyayonetimi@vakifbank.com.tr&subject=${subject}&body=${body}`;
 
-            try {
-              console.log('📧 (Edit) EmailJS Gönderiliyor...', templateParams);
-              await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY);
-              addToast(`✅ Yeni görevliye e-posta gönderildi: ${newAssignee.name}`, 'success');
-            } catch (error: any) {
-              console.error('❌ (Edit) EmailJS Hatası:', error);
-              addToast(`❌ E-posta hatası: ${error.text || 'Bilinmeyen'}`, 'info');
-
-              // Fallback to mailto
-              setTimeout(() => {
-                const subject = encodeURIComponent(`${subjectPrefix}Görev Ataması: ${currentEvent.title} - Görev Ataması (Güncelleme)`);
-                const body = encodeURIComponent(`Merhaba ${newAssignee.name},\n\n${emailMessage}\n\n----------------\n${footerIdText}`);
-                window.location.href = `mailto:${newAssignee.email}?cc=kampanyayonetimi@vakifbank.com.tr&subject=${subject}&body=${body}&importance=${isVeryHigh ? 'High' : 'Normal'}`;
-              }, 1000);
-            } finally {
-              setIsSendingEmail(false);
-            }
+            addToast('Mail istemcisi açılıyor...', 'info');
           }
         }
+
       }
 
       await setDoc(doc(db, "events", eventId), updateData, { merge: true });
