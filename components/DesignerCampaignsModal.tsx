@@ -173,7 +173,7 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
         {/* Tabs & Filters */}
         <div className="px-6 py-4 bg-gray-50/50 dark:bg-slate-800/30 border-b border-gray-100 dark:border-slate-800 flex flex-col md:flex-row gap-4 justify-between items-center shrink-0">
           <div className="flex bg-gray-200 dark:bg-slate-800 p-1 rounded-xl">
-            {(['Planlandı', 'Tamamlandı', 'İptal Edildi'] as CampaignStatus[]).map((status) => (
+            {(['Planlandı', 'Bekleme', 'Tamamlandı', 'İptal Edildi'] as CampaignStatus[]).map((status) => (
               <button
                 key={status}
                 onClick={() => setActiveTab(status)}

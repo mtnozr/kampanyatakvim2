@@ -16,7 +16,7 @@ export interface Department {
   name: string;
 }
 
-export type CampaignStatus = 'Planlandı' | 'Tamamlandı' | 'İptal Edildi';
+export type CampaignStatus = 'Planlandı' | 'Bekleme' | 'Tamamlandı' | 'İptal Edildi';
 
 export interface EventHistoryItem {
   date: Date;

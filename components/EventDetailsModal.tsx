@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, User as UserIcon, AlertCircle, AlignLeft, Building, Edit2, Save, XCircle, Trash2, CheckCircle2, XCircle as CancelIcon, Clock, Gauge, StickyNote, Mail, Phone } from 'lucide-react';
+import { X, Calendar, User as UserIcon, AlertCircle, AlignLeft, Building, Edit2, Save, XCircle, Trash2, CheckCircle2, XCircle as CancelIcon, Clock, Gauge, StickyNote, Mail, Phone, PauseCircle } from 'lucide-react';
 import { CalendarEvent, User, Department, UrgencyLevel, CampaignStatus, DifficultyLevel } from '../types';
 import { URGENCY_CONFIGS, STATUS_STYLES, DIFFICULTY_CONFIGS } from '../constants';
 import { format } from 'date-fns';
@@ -219,6 +219,16 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   <Clock size={12} /> Planlandı
                 </button>
                 <button
+                  onClick={() => handleStatusChange('Bekleme')}
+                  className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all ${status === 'Bekleme'
+                    ? 'bg-amber-100 text-amber-700 shadow-sm dark:bg-amber-900/30 dark:text-amber-300'
+                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600'
+                    }`}
+                  title="Bekleme"
+                >
+                  <PauseCircle size={12} /> Bekleme
+                </button>
+                <button
                   onClick={() => handleStatusChange('Tamamlandı')}
                   className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all ${status === 'Tamamlandı'
                     ? 'bg-green-500 text-white shadow-sm dark:bg-green-600 dark:text-white'
@@ -245,7 +255,9 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               ? 'bg-green-500 text-white border border-green-600'
               : status === 'İptal Edildi'
                 ? 'bg-red-500 text-white border border-red-600'
-                : 'bg-yellow-400 text-yellow-900 border border-yellow-500'
+                : status === 'Bekleme'
+                  ? 'bg-amber-400 text-amber-900 border border-amber-500'
+                  : 'bg-yellow-400 text-yellow-900 border border-yellow-500'
               } mb-2`}>
               {displayConfig.label}
             </span>

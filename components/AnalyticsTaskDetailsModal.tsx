@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Briefcase, Calendar, User as UserIcon, Trash2, Save, CheckCircle2, Clock, XCircle, Mail, FileText } from 'lucide-react';
+import { X, Briefcase, Calendar, User as UserIcon, Trash2, Save, CheckCircle2, Clock, XCircle, Mail, FileText, PauseCircle } from 'lucide-react';
 import { AnalyticsTask, AnalyticsUser, UrgencyLevel, CampaignStatus } from '../types';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -342,7 +342,7 @@ export const AnalyticsTaskDetailsModal: React.FC<AnalyticsTaskDetailsModalProps>
                             <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                                 Durumu Değiştir
                             </div>
-                            <div className="grid grid-cols-3 gap-2">
+                            <div className="grid grid-cols-4 gap-2">
                                 <button
                                     onClick={() => handleStatusChange('Planlandı')}
                                     disabled={isUpdatingStatus || status === 'Planlandı'}
@@ -350,6 +350,14 @@ export const AnalyticsTaskDetailsModal: React.FC<AnalyticsTaskDetailsModalProps>
                                 >
                                     <Clock size={16} />
                                     Planlandı
+                                </button>
+                                <button
+                                    onClick={() => handleStatusChange('Bekleme')}
+                                    disabled={isUpdatingStatus || status === 'Bekleme'}
+                                    className={`px-3 py-2 rounded-lg text-xs font-medium transition-all flex flex-col items-center gap-1 ${status === 'Bekleme' ? 'bg-amber-200 text-amber-800 cursor-default' : 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400'}`}
+                                >
+                                    <PauseCircle size={16} />
+                                    Bekleme
                                 </button>
                                 <button
                                     onClick={() => handleStatusChange('Tamamlandı')}
