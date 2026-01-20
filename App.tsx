@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   format,
   addMonths,
+  addWeeks,
   addDays,
   endOfMonth,
   endOfWeek,
@@ -89,6 +90,7 @@ const stripHtml = (html: string): string => {
 
 function App() {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
   const { theme, toggleTheme, setTheme } = useTheme();
   const [autoThemeConfig, setAutoThemeConfig] = useState<{ enabled: boolean; time: string }>({ enabled: false, time: '20:00' });
   const [backgroundTheme, setBackgroundTheme] = useState<ThemeType>('none');
@@ -845,8 +847,54 @@ function App() {
     });
   }, [currentDate]);
 
-  const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
-  const prevMonth = () => setCurrentDate(addMonths(currentDate, -1));
+  // Weekly view days calculation
+  const weekDays = useMemo(() => {
+    const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
+    return eachDayOfInterval({ start: weekStart, end: weekEnd });
+  }, [currentDate]);
+
+  // Display days based on viewMode
+  const displayDays = viewMode === 'week' ? weekDays : calendarDays;
+
+  // Navigation functions
+  const nextPeriod = () => {
+    if (viewMode === 'week') {
+      setCurrentDate(addWeeks(currentDate, 1));
+    } else {
+      setCurrentDate(addMonths(currentDate, 1));
+    }
+  };
+  const prevPeriod = () => {
+    if (viewMode === 'week') {
+      setCurrentDate(addWeeks(currentDate, -1));
+    } else {
+      setCurrentDate(addMonths(currentDate, -1));
+    }
+  };
+
+  // Swipe gesture state and handlers
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartX(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX === null) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const diff = touchStartX - touchEndX;
+    const threshold = 50;
+
+    if (Math.abs(diff) > threshold) {
+      if (diff > 0) {
+        nextPeriod(); // Swipe left → next
+      } else {
+        prevPeriod(); // Swipe right → prev
+      }
+    }
+    setTouchStartX(null);
+  };
 
   // Ref for today cell to enable scrolling
   const todayCellRef = React.useRef<HTMLDivElement>(null);
@@ -2531,18 +2579,45 @@ function App() {
           {/* Right Column: Toolbar */}
           <div className="flex items-center gap-1 bg-white/50 dark:bg-slate-800/50 p-1 rounded-2xl backdrop-blur-sm shadow-sm flex-wrap relative z-20 transition-colors justify-end">
             <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
+
+            {/* View Mode Toggle */}
+            <div className="flex items-center bg-gray-100 dark:bg-slate-700 rounded-lg p-0.5">
+              <button
+                onClick={() => setViewMode('month')}
+                className={`px-2 py-1 text-xs font-semibold rounded-md transition-colors ${
+                  viewMode === 'month'
+                    ? 'bg-white dark:bg-slate-600 text-violet-700 dark:text-violet-300 shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                }`}
+              >
+                Ay
+              </button>
+              <button
+                onClick={() => setViewMode('week')}
+                className={`px-2 py-1 text-xs font-semibold rounded-md transition-colors ${
+                  viewMode === 'week'
+                    ? 'bg-white dark:bg-slate-600 text-violet-700 dark:text-violet-300 shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                }`}
+              >
+                Hafta
+              </button>
+            </div>
+
             <button onClick={resetToToday} className="bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 dark:border dark:border-violet-700/50 px-3 py-1.5 rounded-lg text-sm font-semibold hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors">
               Bugün
             </button>
 
             <div className="flex items-center gap-1">
-              <button onClick={prevMonth} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-full transition-colors text-gray-600 dark:text-gray-300">
+              <button onClick={prevPeriod} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-full transition-colors text-gray-600 dark:text-gray-300">
                 <ChevronLeft size={20} />
               </button>
               <h2 className="text-lg md:text-xl font-bold min-w-[140px] text-center tabular-nums capitalize text-gray-800 dark:text-gray-100">
-                {format(currentDate, 'MMMM yyyy', { locale: tr })}
+                {viewMode === 'week'
+                  ? `${format(weekDays[0], 'd')}-${format(weekDays[6], 'd MMMM yyyy', { locale: tr })}`
+                  : format(currentDate, 'MMMM yyyy', { locale: tr })}
               </h2>
-              <button onClick={nextMonth} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-full transition-colors text-gray-600 dark:text-gray-300">
+              <button onClick={nextPeriod} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-full transition-colors text-gray-600 dark:text-gray-300">
                 <ChevronRight size={20} />
               </button>
             </div>
@@ -2848,9 +2923,14 @@ function App() {
               </div>
 
               {/* Calendar Grid Body */}
-              <div className="grid grid-cols-7 gap-4 flex-1 content-start">
-                {calendarDays.map((day) => {
-                  const isCurrentMonth = isSameMonth(day, currentDate);
+              <div
+                className="grid grid-cols-7 gap-4 flex-1 content-start"
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+              >
+                {displayDays.map((day) => {
+                  // In weekly view, all days are "current" (no fading)
+                  const isCurrentMonth = viewMode === 'week' ? true : isSameMonth(day, currentDate);
                   const isTodayDate = isToday(day);
                   const isDayWeekend = isWeekend(day);
                   const dayEvents = getEventsForDay(day);
@@ -2876,7 +2956,7 @@ function App() {
                         }
                       }}
                       className={`
-                  relative min-h-[140px] p-4 rounded-xl border-2 transition-all duration-200 group
+                  relative ${viewMode === 'week' ? 'min-h-[400px]' : 'min-h-[140px]'} p-4 rounded-xl border-2 transition-all duration-200 group
                   flex flex-col
                   ${isCurrentMonth
                           ? (isHoliday
