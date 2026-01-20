@@ -257,18 +257,26 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users, 
 
     let totalPeriod = 0;
     let completedPeriod = 0;
+    let beklemePeriod = 0;
+    let unassignedCount = 0;
+
+    // Get the year range for monthly chart (support cross-year ranges)
+    const rangeStartYear = dateRange.start.getFullYear();
+    const rangeEndYear = dateRange.end.getFullYear();
 
     filteredEvents.forEach(event => {
       const date = new Date(event.date);
       const month = date.getMonth();
+      const eventYear = date.getFullYear();
       const isCompleted = event.status === 'Tamamlandı';
+      const isBekleme = event.status === 'Bekleme';
 
       totalPeriod++;
       if (isCompleted) completedPeriod++;
+      if (isBekleme) beklemePeriod++;
 
-      if (date.getFullYear() === new Date().getFullYear()) {
-        monthlyActivity[month]++;
-      } else if (preset === 'lastYear' && date.getFullYear() === new Date().getFullYear() - 1) {
+      // Monthly chart: count all events within the date range (not just current/last year)
+      if (eventYear >= rangeStartYear && eventYear <= rangeEndYear) {
         monthlyActivity[month]++;
       }
 
@@ -281,8 +289,10 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users, 
         }
       }
 
-      // User Stats
-      if (event.assigneeId && userStats[event.assigneeId]) {
+      // User Stats - handle unassigned campaigns
+      if (!event.assigneeId) {
+        unassignedCount++;
+      } else if (userStats[event.assigneeId]) {
         if (isCompleted) {
           userStats[event.assigneeId].completed++;
 
@@ -339,9 +349,11 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users, 
       sortedBySpeed,
       sortedByHard,
       totalPeriod,
-      completedPeriod
+      completedPeriod,
+      beklemePeriod,
+      unassignedCount
     };
-  }, [filteredEvents, departments, users, preset]);
+  }, [filteredEvents, departments, users, dateRange]);
 
   if (!isOpen) return null;
 
@@ -404,7 +416,7 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users, 
               Kampanya Raporları & Dashboard
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {new Date().getFullYear()} yılı performans özeti ve istatistikler
+              {format(dateRange.start, 'd MMM yyyy', { locale: tr })} - {format(dateRange.end, 'd MMM yyyy', { locale: tr })} arası performans özeti
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -497,23 +509,41 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users, 
             {activeTab === 'overview' && (
               <div className="space-y-6">
                 {/* Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm">
                     <div className="text-sm text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider mb-1">
-                      {preset === 'thisMonth' ? 'Bu Ay' : 'Seçili Dönem'} Yapılan Kampanya
+                      Toplam Kampanya
                     </div>
                     <div className="text-4xl font-black text-violet-600 dark:text-violet-400">{stats.totalPeriod}</div>
                     <div className="text-xs text-gray-400 mt-2">
-                      {format(dateRange.start, 'd MMM yyyy', { locale: tr })} - {format(dateRange.end, 'd MMM yyyy', { locale: tr })}
+                      Seçili dönem
                     </div>
                   </div>
                   <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm">
                     <div className="text-sm text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider mb-1">
-                      {preset === 'thisMonth' ? 'Bu Ay' : 'Seçili Dönem'} Tamamlanan
+                      Tamamlanan
                     </div>
-                    <div className="text-4xl font-black text-indigo-600 dark:text-indigo-400">{stats.completedPeriod}</div>
+                    <div className="text-4xl font-black text-emerald-600 dark:text-emerald-400">{stats.completedPeriod}</div>
                     <div className="text-xs text-gray-400 mt-2">
-                      Toplam {stats.totalPeriod} kampanyadan
+                      %{stats.totalPeriod > 0 ? Math.round((stats.completedPeriod / stats.totalPeriod) * 100) : 0} başarı oranı
+                    </div>
+                  </div>
+                  <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm">
+                    <div className="text-sm text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider mb-1">
+                      Beklemede
+                    </div>
+                    <div className="text-4xl font-black text-amber-600 dark:text-amber-400">{stats.beklemePeriod}</div>
+                    <div className="text-xs text-gray-400 mt-2">
+                      Askıya alınmış
+                    </div>
+                  </div>
+                  <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm">
+                    <div className="text-sm text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider mb-1">
+                      Atanmamış
+                    </div>
+                    <div className="text-4xl font-black text-rose-600 dark:text-rose-400">{stats.unassignedCount}</div>
+                    <div className="text-xs text-gray-400 mt-2">
+                      Personel atanmamış
                     </div>
                   </div>
                 </div>
@@ -609,19 +639,23 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users, 
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm">
                   <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
                     🚀 En Hızlılar
-                    <span className="text-xs font-normal text-gray-400">(Ortalama Tamamlama Süresi)</span>
+                    <span className="text-xs font-normal text-gray-400">(Ortalama Tamamlama Süresi - Kısa süre = Uzun çubuk)</span>
                   </h3>
                   <div className="space-y-1">
-                    {stats.sortedBySpeed.slice(0, 10).map(u => (
-                      <SimpleBar
-                        key={u.name}
-                        label={`${u.name} (${u.count} kamp.)`}
-                        value={u.avgHours}
-                        max={Math.max(...stats.sortedBySpeed.map(x => x.avgHours), 1)}
-                        color="bg-orange-500"
-                        subValue={`${Math.floor(u.avgHours / 24)}g ${u.avgHours % 24}s`}
-                      />
-                    ))}
+                    {(() => {
+                      const speedData = stats.sortedBySpeed.slice(0, 10);
+                      const maxHours = Math.max(...speedData.map(x => x.avgHours), 1);
+                      return speedData.map((u, index) => (
+                        <SimpleBar
+                          key={u.name}
+                          label={`#${index + 1} ${u.name} (${u.count} kamp.)`}
+                          value={maxHours - u.avgHours + 1}
+                          max={maxHours + 1}
+                          color="bg-orange-500"
+                          subValue={`${Math.floor(u.avgHours / 24)}g ${u.avgHours % 24}s`}
+                        />
+                      ));
+                    })()}
                     {stats.sortedBySpeed.length === 0 && (
                       <p className="text-center text-gray-400 py-4">Veri bulunamadı.</p>
                     )}
