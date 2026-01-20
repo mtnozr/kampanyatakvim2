@@ -377,6 +377,29 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users, 
     </div>
   );
 
+  // Speed bar with campaign count badge
+  const SpeedBar = ({ rank, name, avgHours, count, value, max }: { rank: number, name: string, avgHours: number, count: number, value: number, max: number }) => (
+    <div className="flex items-center gap-3 mb-3">
+      <div className="w-8 text-lg font-black text-orange-500">#{rank}</div>
+      <div className="w-28 text-sm font-medium text-gray-600 dark:text-gray-300 truncate" title={name}>
+        {name}
+      </div>
+      <div className="flex-1 h-10 bg-gray-100 dark:bg-slate-700 rounded-lg overflow-hidden relative">
+        <div
+          className="h-full bg-gradient-to-r from-orange-500 to-amber-400 transition-all duration-500 flex items-center justify-between px-3"
+          style={{ width: `${max > 0 ? (value / max) * 100 : 0}%`, minWidth: '120px' }}
+        >
+          <span className="text-sm font-bold text-white drop-shadow-md">
+            {Math.floor(avgHours / 24)}g {avgHours % 24}s
+          </span>
+          <span className="bg-white/30 backdrop-blur-sm text-white text-xs font-bold px-2 py-0.5 rounded-full">
+            {count} kampanya
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+
   const MonthChart = () => {
     const maxVal = Math.max(...stats.monthlyActivity);
     const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -639,20 +662,21 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users, 
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm">
                   <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
                     🚀 En Hızlılar
-                    <span className="text-xs font-normal text-gray-400">(Ortalama Tamamlama Süresi - Kısa süre = Uzun çubuk)</span>
+                    <span className="text-xs font-normal text-gray-400">(Ortalama Tamamlama Süresi)</span>
                   </h3>
                   <div className="space-y-1">
                     {(() => {
                       const speedData = stats.sortedBySpeed.slice(0, 10);
                       const maxHours = Math.max(...speedData.map(x => x.avgHours), 1);
                       return speedData.map((u, index) => (
-                        <SimpleBar
+                        <SpeedBar
                           key={u.name}
-                          label={`#${index + 1} ${u.name} (${u.count} kamp.)`}
+                          rank={index + 1}
+                          name={u.name}
+                          avgHours={u.avgHours}
+                          count={u.count}
                           value={maxHours - u.avgHours + 1}
                           max={maxHours + 1}
-                          color="bg-orange-500"
-                          subValue={`${Math.floor(u.avgHours / 24)}g ${u.avgHours % 24}s`}
                         />
                       ));
                     })()}
