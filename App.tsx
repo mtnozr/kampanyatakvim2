@@ -10,12 +10,14 @@ import {
   isSameMonth,
   isSameDay,
   isToday,
+  isTomorrow,
   isWeekend,
   startOfMonth,
-  startOfWeek
+  startOfWeek,
+  startOfDay
 } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Bell, ChevronLeft, ChevronRight, Plus, Users, ClipboardList, Loader2, Search, Filter, X, LogIn, LogOut, Database, Download, Lock, Megaphone, PieChart, CheckSquare, StickyNote, Trash2, Flag } from 'lucide-react';
+import { Bell, BellRing, BellOff, ChevronLeft, ChevronRight, Plus, Users, ClipboardList, Loader2, Search, Filter, X, LogIn, LogOut, Database, Download, Lock, Megaphone, PieChart, CheckSquare, StickyNote, Trash2, Flag } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { CalendarEvent, UrgencyLevel, User, AppNotification, ToastMessage, ActivityLog, Department, DepartmentUser, Announcement, DifficultyLevel, WorkRequest, Report, AnalyticsUser, AnalyticsTask, CampaignStatus } from './types';
@@ -47,6 +49,7 @@ import { Sidebar } from './components/Sidebar';
 import { ThemeToggle } from './components/ThemeToggle';
 import { BackgroundTheme, ThemeType } from './components/BackgroundTheme';
 import { useTheme } from './hooks/useTheme';
+import { useBrowserNotifications } from './hooks/useBrowserNotifications';
 import { setCookie, getCookie, deleteCookie } from './utils/cookies';
 import { calculateMonthlyChampion } from './utils/gamification';
 import { calculateReportDueDate } from './utils/businessDays';
@@ -95,6 +98,16 @@ function App() {
     return saved === 'week' ? 'week' : 'month';
   });
   const { theme, toggleTheme, setTheme } = useTheme();
+  const {
+    permission: notificationPermission,
+    isSupported: notificationsSupported,
+    isGranted: notificationsGranted,
+    requestPermission: requestNotificationPermission,
+    notifyNewCampaign,
+    notifyTaskAssignment,
+    notifyNewAnnouncement,
+    notifyCampaignReminder,
+  } = useBrowserNotifications();
 
   // Persist viewMode to localStorage
   useEffect(() => {
@@ -938,6 +951,43 @@ function App() {
     return () => clearTimeout(timer);
   }, [isEventsLoading, isUsersLoading]);
 
+  // Campaign reminder notifications (1 day before)
+  useEffect(() => {
+    if (!notificationsGranted || isEventsLoading || events.length === 0) return;
+
+    // Check once when events load and then every hour
+    const checkReminders = () => {
+      const notifiedKey = 'notified_campaign_reminders';
+      const notifiedIds: string[] = JSON.parse(localStorage.getItem(notifiedKey) || '[]');
+      const today = startOfDay(new Date());
+
+      events.forEach(event => {
+        // Skip if already notified
+        if (notifiedIds.includes(event.id)) return;
+
+        const eventDate = event.date instanceof Timestamp
+          ? event.date.toDate()
+          : new Date(event.date);
+
+        // Check if event is tomorrow
+        if (isTomorrow(eventDate)) {
+          notifyCampaignReminder(event.title, 1);
+          notifiedIds.push(event.id);
+        }
+      });
+
+      // Save notified IDs (clean up old ones monthly)
+      localStorage.setItem(notifiedKey, JSON.stringify(notifiedIds.slice(-100)));
+    };
+
+    // Initial check
+    checkReminders();
+
+    // Check every hour
+    const interval = setInterval(checkReminders, 60 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [notificationsGranted, isEventsLoading, events, notifyCampaignReminder]);
+
   const getHolidayName = (date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     return TURKISH_HOLIDAYS[dateStr];
@@ -1263,6 +1313,9 @@ function App() {
       });
 
       addToast('Duyuru yayınlandı.', 'success');
+
+      // Browser notification for new announcement
+      notifyNewAnnouncement(title);
     } catch (e) {
       addToast('Duyuru eklenemedi.', 'info');
     }
@@ -1692,6 +1745,9 @@ function App() {
       newEventId = docRef.id;
       addToast('Kampanya oluşturuldu.', 'success');
 
+      // Browser notification for new campaign
+      notifyNewCampaign(title);
+
       // Check if we are converting a request
       if (convertingRequest) {
         const reqRef = doc(db, "work_requests", convertingRequest.id);
@@ -1722,6 +1778,9 @@ function App() {
           isRead: false,
           type: 'email'
         });
+
+        // Browser notification for task assignment
+        notifyTaskAssignment(title, loggedInDeptUser?.username || 'Sistem');
 
         await addDoc(collection(db, "logs"), {
           message: `${title} kampanyası için ${assignedUser.name} kişiye görev ataması yapıldı (ID: ${newEventId})`,
@@ -2587,6 +2646,36 @@ function App() {
           {/* Right Column: Toolbar */}
           <div className="flex items-center gap-1 bg-white/50 dark:bg-slate-800/50 p-1 rounded-2xl backdrop-blur-sm shadow-sm flex-wrap relative z-20 transition-colors justify-end">
             <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
+
+            {/* Browser Notification Toggle */}
+            {notificationsSupported && (
+              <button
+                onClick={requestNotificationPermission}
+                className={`p-1.5 transition-colors rounded-lg shadow-sm border ${
+                  notificationsGranted
+                    ? 'text-green-600 bg-green-50 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700/50'
+                    : notificationPermission === 'denied'
+                    ? 'text-red-400 bg-red-50 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700/50 cursor-not-allowed'
+                    : 'bg-white border-gray-100 text-gray-500 hover:text-violet-600 hover:bg-violet-50 dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-slate-700'
+                }`}
+                title={
+                  notificationsGranted
+                    ? 'Bildirimler aktif'
+                    : notificationPermission === 'denied'
+                    ? 'Bildirimler engellendi (tarayıcı ayarlarından izin verin)'
+                    : 'Bildirimleri etkinleştir'
+                }
+                disabled={notificationPermission === 'denied'}
+              >
+                {notificationsGranted ? (
+                  <BellRing size={20} />
+                ) : notificationPermission === 'denied' ? (
+                  <BellOff size={20} />
+                ) : (
+                  <Bell size={20} />
+                )}
+              </button>
+            )}
 
             {/* View Mode Toggle */}
             <div className="flex items-center bg-gray-100 dark:bg-slate-700 rounded-lg p-0.5">
