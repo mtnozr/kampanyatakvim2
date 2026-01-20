@@ -983,8 +983,8 @@ function App() {
     // Initial check
     checkReminders();
 
-    // Check every hour
-    const interval = setInterval(checkReminders, 60 * 60 * 1000);
+    // Check every 5 minutes
+    const interval = setInterval(checkReminders, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [notificationsGranted, isEventsLoading, events, notifyCampaignReminder]);
 
