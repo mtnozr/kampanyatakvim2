@@ -861,6 +861,9 @@ function App() {
 
   // Auto-scroll to today when page loads
   useEffect(() => {
+    // Only scroll after loading is complete
+    if (isEventsLoading || isUsersLoading) return;
+
     // Retry mechanism to ensure DOM is ready
     let attempts = 0;
     const maxAttempts = 10;
@@ -877,7 +880,7 @@ function App() {
     // Start after initial render
     const timer = setTimeout(scrollToToday, 300);
     return () => clearTimeout(timer);
-  }, []);
+  }, [isEventsLoading, isUsersLoading]);
 
   const getHolidayName = (date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
