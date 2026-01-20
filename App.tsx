@@ -17,7 +17,7 @@ import {
   startOfDay
 } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Bell, BellRing, BellOff, ChevronLeft, ChevronRight, Plus, Users, ClipboardList, Loader2, Search, Filter, X, LogIn, LogOut, Database, Download, Lock, Megaphone, PieChart, CheckSquare, StickyNote, Trash2, Flag } from 'lucide-react';
+import { Bell, Smartphone, SmartphoneNfc, ChevronLeft, ChevronRight, Plus, Users, ClipboardList, Loader2, Search, Filter, X, LogIn, LogOut, Database, Download, Lock, Megaphone, PieChart, CheckSquare, StickyNote, Trash2, Flag } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { CalendarEvent, UrgencyLevel, User, AppNotification, ToastMessage, ActivityLog, Department, DepartmentUser, Announcement, DifficultyLevel, WorkRequest, Report, AnalyticsUser, AnalyticsTask, CampaignStatus } from './types';
@@ -2668,11 +2668,9 @@ function App() {
                 disabled={notificationPermission === 'denied'}
               >
                 {notificationsGranted ? (
-                  <BellRing size={20} />
-                ) : notificationPermission === 'denied' ? (
-                  <BellOff size={20} />
+                  <SmartphoneNfc size={20} />
                 ) : (
-                  <Bell size={20} />
+                  <Smartphone size={20} />
                 )}
               </button>
             )}
