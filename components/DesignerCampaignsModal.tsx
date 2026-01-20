@@ -30,6 +30,41 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
 
   if (!isOpen) return null;
 
+  // Helper to calculate time spent in Bekleme status (in hours)
+  const calculateBeklemeTime = (event: CalendarEvent, endDate: Date): number => {
+    if (!event.history || event.history.length === 0) return 0;
+
+    let beklemeHours = 0;
+    let beklemeStartDate: Date | null = null;
+
+    // Sort history by date
+    const sortedHistory = [...event.history].sort((a, b) => {
+      const dateA = a.date instanceof Date ? a.date : new Date(a.date);
+      const dateB = b.date instanceof Date ? b.date : new Date(b.date);
+      return dateA.getTime() - dateB.getTime();
+    });
+
+    for (const historyItem of sortedHistory) {
+      const itemDate = historyItem.date instanceof Date ? historyItem.date : new Date(historyItem.date);
+
+      if (historyItem.newStatus === 'Bekleme') {
+        // Started waiting
+        beklemeStartDate = itemDate;
+      } else if (beklemeStartDate && historyItem.oldStatus === 'Bekleme') {
+        // Ended waiting
+        beklemeHours += differenceInHours(itemDate, beklemeStartDate);
+        beklemeStartDate = null;
+      }
+    }
+
+    // If still in Bekleme status, calculate until endDate
+    if (beklemeStartDate && event.status === 'Bekleme') {
+      beklemeHours += differenceInHours(endDate, beklemeStartDate);
+    }
+
+    return beklemeHours;
+  };
+
   // Helper to format duration - counts from the first assigned date on calendar
   const calculateDuration = (event: CalendarEvent): string => {
     // Use originalDate if available, otherwise use date (for legacy events)
@@ -45,8 +80,8 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
 
     let endDate: Date | null = null;
 
-    if (event.status === 'Planlandı') {
-      // For active campaigns, count from startDate to now (but only if startDate has passed)
+    if (event.status === 'Planlandı' || event.status === 'Bekleme') {
+      // For active or waiting campaigns, count from startDate to now (but only if startDate has passed)
       endDate = now;
     } else {
       // Find the status change event in history
@@ -70,11 +105,25 @@ export const DesignerCampaignsModal: React.FC<DesignerCampaignsModalProps> = ({
 
     try {
       const totalHours = differenceInHours(endDate, startDate);
-      const days = Math.floor(totalHours / 24);
-      const hours = totalHours % 24;
+      const beklemeHours = calculateBeklemeTime(event, endDate);
+      const activeHours = totalHours - beklemeHours;
+
+      const days = Math.floor(activeHours / 24);
+      const hours = activeHours % 24;
 
       if (event.status === 'Planlandı') {
         return `${days}g ${hours}s (Geçen)`;
+      }
+
+      if (event.status === 'Bekleme') {
+        return `${days}g ${hours}s (Beklemede)`;
+      }
+
+      // Show bekleme time if any was subtracted
+      if (beklemeHours > 0) {
+        const beklemeDays = Math.floor(beklemeHours / 24);
+        const beklemeHrs = beklemeHours % 24;
+        return `${days}g ${hours}s (${beklemeDays}g ${beklemeHrs}s bekleme hariç)`;
       }
 
       return `${days}g ${hours}s`;

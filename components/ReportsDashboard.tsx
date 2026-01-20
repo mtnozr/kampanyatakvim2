@@ -220,6 +220,41 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users, 
       return null;
     };
 
+    // Helper to calculate time spent in Bekleme status (in hours)
+    const calculateBeklemeTime = (event: CalendarEvent, endDate: Date): number => {
+      if (!event.history || event.history.length === 0) return 0;
+
+      let beklemeHours = 0;
+      let beklemeStartDate: Date | null = null;
+
+      // Sort history by date
+      const sortedHistory = [...event.history].sort((a, b) => {
+        const dateA = toDate(a.date);
+        const dateB = toDate(b.date);
+        if (!dateA || !dateB) return 0;
+        return dateA.getTime() - dateB.getTime();
+      });
+
+      for (const historyItem of sortedHistory) {
+        const itemDate = toDate(historyItem.date);
+        if (!itemDate) continue;
+
+        if (historyItem.newStatus === 'Bekleme') {
+          beklemeStartDate = itemDate;
+        } else if (beklemeStartDate && historyItem.oldStatus === 'Bekleme') {
+          beklemeHours += differenceInHours(itemDate, beklemeStartDate);
+          beklemeStartDate = null;
+        }
+      }
+
+      // If still in Bekleme status, calculate until endDate
+      if (beklemeStartDate && event.status === 'Bekleme') {
+        beklemeHours += differenceInHours(endDate, beklemeStartDate);
+      }
+
+      return beklemeHours;
+    };
+
     let totalPeriod = 0;
     let completedPeriod = 0;
 
@@ -261,9 +296,11 @@ export function ReportsDashboard({ isOpen, onClose, events, departments, users, 
           if (!endDate) endDate = toDate(event.updatedAt);
 
           if (startDate && endDate && isValid(startDate) && isValid(endDate)) {
-            const hours = differenceInHours(endDate, startDate);
-            if (hours >= 0) {
-              userSpeedStats[event.assigneeId].totalHours += hours;
+            const totalHours = differenceInHours(endDate, startDate);
+            const beklemeHours = calculateBeklemeTime(event, endDate);
+            const activeHours = totalHours - beklemeHours;
+            if (activeHours >= 0) {
+              userSpeedStats[event.assigneeId].totalHours += activeHours;
               userSpeedStats[event.assigneeId].count++;
             }
           }
