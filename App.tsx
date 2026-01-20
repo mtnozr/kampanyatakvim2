@@ -90,8 +90,16 @@ const stripHtml = (html: string): string => {
 
 function App() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
+  const [viewMode, setViewMode] = useState<'month' | 'week'>(() => {
+    const saved = localStorage.getItem('calendarViewMode');
+    return saved === 'week' ? 'week' : 'month';
+  });
   const { theme, toggleTheme, setTheme } = useTheme();
+
+  // Persist viewMode to localStorage
+  useEffect(() => {
+    localStorage.setItem('calendarViewMode', viewMode);
+  }, [viewMode]);
   const [autoThemeConfig, setAutoThemeConfig] = useState<{ enabled: boolean; time: string }>({ enabled: false, time: '20:00' });
   const [backgroundTheme, setBackgroundTheme] = useState<ThemeType>('none');
   const [customThemeImage, setCustomThemeImage] = useState<string>('');
