@@ -1264,7 +1264,7 @@ function App() {
         const eventsPerColumn = Math.floor((cellHeight - 6) / (eventHeight + 0.5));
         const useDoubleColumn = !hasWeekendEvents && actualCellWidth > 50;
         const maxEvents = useDoubleColumn ? eventsPerColumn * 2 : eventsPerColumn;
-        const colWidth = useDoubleColumn ? (actualCellWidth - 3) / 2 : actualCellWidth - 2;
+        const colWidth = useDoubleColumn ? (actualCellWidth - 2) / 2 : actualCellWidth - 1;
 
         dayEvents.slice(0, maxEvents).forEach((ev, evIndex) => {
           const status = ev.status || 'Planlandı';
@@ -1294,11 +1294,11 @@ function App() {
 
           // Truncate title to fit column width
           let title = toAscii(ev.title || '');
-          const maxChars = Math.floor((colWidth - 4) / 1.2);
+          const maxChars = Math.floor((colWidth - 2) / 1.1);
           if (title.length > maxChars) {
             title = title.substring(0, maxChars - 1) + '..';
           }
-          pdf.text(title, eventX + 2, eventY + 2.2);
+          pdf.text(title, eventX + 1.5, eventY + 2.2);
         });
 
         // Show "+X" if there are more events
