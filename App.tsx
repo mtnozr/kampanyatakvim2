@@ -18,7 +18,6 @@ import {
 } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { Bell, Smartphone, SmartphoneNfc, ChevronLeft, ChevronRight, Plus, Users, ClipboardList, Loader2, Search, Filter, X, LogIn, LogOut, Database, Download, Lock, Megaphone, PieChart, CheckSquare, StickyNote, Trash2, Flag } from 'lucide-react';
-import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { CalendarEvent, UrgencyLevel, User, AppNotification, ToastMessage, ActivityLog, Department, DepartmentUser, Announcement, DifficultyLevel, WorkRequest, Report, AnalyticsUser, AnalyticsTask, CampaignStatus } from './types';
 import { INITIAL_EVENTS, DAYS_OF_WEEK, INITIAL_USERS, URGENCY_CONFIGS, TURKISH_HOLIDAYS, INITIAL_DEPARTMENTS, DIFFICULTY_CONFIGS } from './constants';
@@ -1122,172 +1121,182 @@ function App() {
   };
 
   const handleExportPdf = async () => {
-    const calendarElement = document.getElementById('printable-calendar');
-    if (!calendarElement) {
-      addToast('Takvim alanı bulunamadı.', 'info');
-      return;
-    }
-
     try {
       addToast('PDF hazırlanıyor...', 'info');
 
-      // 1. Create a clone to manipulate for export
-      const clone = calendarElement.cloneNode(true) as HTMLElement;
-
-      // 2. Wrap it in a container that forces a large width (for landscape) 
-      //    and white background.
-      const container = document.createElement('div');
-      container.style.width = '1600px';
-      // Chrome Fix: Use fixed position at top-left but behind everything (z-index) 
-      // instead of 'top: -9999px' which causes rendering optimization issues in Chrome
-      container.style.position = 'fixed';
-      container.style.top = '0';
-      container.style.left = '0';
-      container.style.zIndex = '-9999';
-      container.style.backgroundColor = '#ffffff';
-      container.style.padding = '20px';
-      container.style.fontFamily = 'Arial, Helvetica, sans-serif'; // Use system font for Turkish char support
-
-      // 3. Add Corporate Header
-      const header = document.createElement('div');
-      header.style.display = 'flex';
-      header.style.justifyContent = 'space-between';
-      header.style.alignItems = 'flex-end';
-      header.style.marginBottom = '30px';
-      header.style.borderBottom = '2px solid #e5e7eb';
-      header.style.paddingBottom = '20px';
-
-      // Left side: Title and Month
-      const headerLeft = document.createElement('div');
-
-      const title = document.createElement('h1');
-      title.innerText = 'KAMPANYA YÖNETİMİ TAKVİMİ';
-      title.style.fontSize = '28px';
-      title.style.fontWeight = '800';
-      title.style.color = '#111827';
-      title.style.margin = '0';
-      title.style.lineHeight = '1.2';
-
-      const subtitle = document.createElement('div');
-      subtitle.innerText = format(currentDate, 'MMMM yyyy', { locale: tr }).toLocaleUpperCase('tr-TR');
-      subtitle.style.fontSize = '20px';
-      subtitle.style.fontWeight = '600';
-      subtitle.style.color = '#374151';
-      subtitle.style.marginTop = '8px';
-
-      headerLeft.appendChild(title);
-      headerLeft.appendChild(subtitle);
-
-      // Right side: Meta info
-      const headerRight = document.createElement('div');
-      headerRight.style.textAlign = 'right';
-
-      const createdDate = document.createElement('div');
-      createdDate.innerText = `Oluşturulma: ${format(new Date(), 'dd.MM.yyyy HH:mm')}`;
-      createdDate.style.fontSize = '14px';
-      createdDate.style.color = '#6b7280';
-      createdDate.style.marginBottom = '4px';
-
-      const confidential = document.createElement('div');
-      confidential.innerText = 'KURUMSAL / GİZLİ';
-      confidential.style.fontSize = '12px';
-      confidential.style.fontWeight = 'bold';
-      confidential.style.color = '#ef4444';
-      confidential.style.letterSpacing = '1px';
-
-      headerRight.appendChild(createdDate);
-      headerRight.appendChild(confidential);
-
-      header.appendChild(headerLeft);
-      header.appendChild(headerRight);
-
-      container.appendChild(header);
-      container.appendChild(clone);
-      document.body.appendChild(container);
-
-      // Force Arial font on all cloned elements to ensure Turkish chars render correctly
-      const allElements = clone.querySelectorAll('*');
-      allElements.forEach((el) => {
-        (el as HTMLElement).style.fontFamily = 'Arial, Helvetica, sans-serif';
-      });
-
-      // 4. Force full height for all scrollable containers in the clone
-      const scrollables = clone.querySelectorAll('.event-scroll');
-      scrollables.forEach((el) => {
-        (el as HTMLElement).style.overflow = 'visible';
-        (el as HTMLElement).style.height = 'auto';
-        (el as HTMLElement).style.maxHeight = 'none';
-      });
-
-      // 5. Expand text truncation for export (Remove line-clamp and truncate)
-      const clampedTexts = clone.querySelectorAll('.line-clamp-2, .truncate');
-      clampedTexts.forEach((el) => {
-        el.classList.remove('line-clamp-2');
-        el.classList.remove('truncate');
-        (el as HTMLElement).style.display = 'block';
-        (el as HTMLElement).style.overflow = 'visible';
-        (el as HTMLElement).style.whiteSpace = 'normal'; // Allow wrapping
-      });
-
-      // 6. Fix Emoji Alignment for PDF Export
-      // html2canvas sometimes misaligns flex items with text/emojis.
-      // We force explicit flex centering and line-height.
-      const emojiAvatars = clone.querySelectorAll('[role="img"][aria-label="avatar"]');
-      emojiAvatars.forEach((el) => {
-        (el as HTMLElement).style.display = 'none';
-      });
-
-      // Chrome Fix: Wait for fonts to load and give layout engine time to settle
-      await document.fonts.ready;
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // 6. Capture the container
-      const canvas = await html2canvas(container, {
-        scale: 1.5, // Reduced from 2 to 1.5 for smaller file size while maintaining readability
-        backgroundColor: '#ffffff',
-        useCORS: true,
-        logging: false,
-        windowWidth: 1600, // Force specific window width context
-        scrollY: 0, // Reset scroll position for capture
-        scrollX: 0
-      });
-
-      // 6. Clean up
-      document.body.removeChild(container);
-
-      // 7. Generate PDF
-      // Optimize: Use JPEG with 0.8 quality instead of PNG
-      const imgData = canvas.toDataURL('image/jpeg', 0.8);
+      // Create PDF in landscape A4
       const pdf = new jsPDF({
-        orientation: 'l',
+        orientation: 'landscape',
         unit: 'mm',
         format: 'a4',
-        compress: true // Enable internal PDF compression
+        compress: true
       });
 
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const pageWidth = pdf.internal.pageSize.getWidth(); // 297mm
+      const pageHeight = pdf.internal.pageSize.getHeight(); // 210mm
+      const margin = 10;
+      const usableWidth = pageWidth - (2 * margin);
+      const cellWidth = usableWidth / 7;
 
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
+      // Colors
+      const urgencyColors: Record<string, { bg: number[], text: number[] }> = {
+        'High': { bg: [254, 226, 226], text: [185, 28, 28] },
+        'Medium': { bg: [254, 243, 199], text: [180, 83, 9] },
+        'Low': { bg: [220, 252, 231], text: [22, 101, 52] }
+      };
 
-      // Calculate ratio to fit width with minimal margins (5mm each side)
-      const marginX = 5;
-      const availableWidth = pdfWidth - (2 * marginX);
-      const ratio = Math.min(availableWidth / imgWidth, pdfHeight / imgHeight);
+      // Header
+      pdf.setFillColor(139, 92, 246); // violet-500
+      pdf.rect(0, 0, pageWidth, 25, 'F');
 
-      // Center it horizontally if height is the limiting factor, otherwise use marginX
-      const imgX = (pdfWidth - imgWidth * ratio) / 2;
-      const imgY = 10; // Top margin
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(18);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('KAMPANYA TAKVIMI', margin, 12);
 
-      // Use JPEG compression alias 'FAST' (which corresponds to moderate compression) or just specify format
-      pdf.addImage(imgData, 'JPEG', imgX, imgY, imgWidth * ratio, imgHeight * ratio, undefined, 'FAST');
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'normal');
+      const monthYearText = format(currentDate, 'MMMM yyyy', { locale: tr }).toUpperCase();
+      pdf.text(monthYearText, margin, 20);
 
+      // Right side info
+      pdf.setFontSize(9);
+      pdf.text(`Olusturulma: ${format(new Date(), 'dd.MM.yyyy HH:mm')}`, pageWidth - margin, 12, { align: 'right' });
+      pdf.text('KURUMSAL / GIZLI', pageWidth - margin, 18, { align: 'right' });
+
+      // Day headers
+      const dayHeaderY = 32;
+      const dayNames = ['Pazartesi', 'Sali', 'Carsamba', 'Persembe', 'Cuma', 'Cumartesi', 'Pazar'];
+
+      pdf.setFillColor(249, 250, 251); // gray-50
+      pdf.rect(margin, dayHeaderY - 5, usableWidth, 8, 'F');
+
+      pdf.setTextColor(107, 114, 128); // gray-500
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'bold');
+
+      dayNames.forEach((day, i) => {
+        const x = margin + (i * cellWidth) + (cellWidth / 2);
+        pdf.text(day, x, dayHeaderY, { align: 'center' });
+      });
+
+      // Calculate calendar days (same logic as displayDays)
+      const monthStart = startOfMonth(currentDate);
+      const monthEnd = endOfMonth(currentDate);
+      const calStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+      const calEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+      const days = eachDayOfInterval({ start: calStart, end: calEnd });
+
+      // Grid settings
+      const gridStartY = 40;
+      const numRows = Math.ceil(days.length / 7);
+      const cellHeight = (pageHeight - gridStartY - margin) / numRows;
+
+      // Draw calendar grid
+      days.forEach((day, index) => {
+        const col = index % 7;
+        const row = Math.floor(index / 7);
+        const x = margin + (col * cellWidth);
+        const y = gridStartY + (row * cellHeight);
+        const isCurrentMonth = isSameMonth(day, currentDate);
+        const isTodayDate = isToday(day);
+        const isWeekendDay = isWeekend(day);
+
+        // Cell background
+        if (!isCurrentMonth) {
+          pdf.setFillColor(243, 244, 246); // gray-100
+        } else if (isTodayDate) {
+          pdf.setFillColor(237, 233, 254); // violet-100
+        } else if (isWeekendDay) {
+          pdf.setFillColor(254, 242, 242); // red-50
+        } else {
+          pdf.setFillColor(255, 255, 255);
+        }
+        pdf.rect(x, y, cellWidth, cellHeight, 'F');
+
+        // Cell border
+        pdf.setDrawColor(229, 231, 235); // gray-200
+        pdf.setLineWidth(0.2);
+        pdf.rect(x, y, cellWidth, cellHeight, 'S');
+
+        // Day number
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', isTodayDate ? 'bold' : 'normal');
+        pdf.setTextColor(isTodayDate ? 139 : (isCurrentMonth ? 55 : 156), isTodayDate ? 92 : (isCurrentMonth ? 65 : 163), isTodayDate ? 246 : (isCurrentMonth ? 81 : 175));
+        pdf.text(format(day, 'd'), x + 2, y + 5);
+
+        // Get events for this day
+        const dayEvents = events.filter(ev => {
+          const evDate = ev.date instanceof Date ? ev.date : (ev.date as any).toDate();
+          return isSameDay(evDate, day);
+        });
+
+        // Draw events (max 4 per cell for readability)
+        let eventY = y + 9;
+        const maxEvents = 4;
+        const eventHeight = 4.5;
+
+        dayEvents.slice(0, maxEvents).forEach((ev) => {
+          const colors = urgencyColors[ev.urgency || 'Low'] || urgencyColors['Low'];
+
+          // Event background
+          pdf.setFillColor(colors.bg[0], colors.bg[1], colors.bg[2]);
+          pdf.roundedRect(x + 1, eventY, cellWidth - 2, eventHeight, 0.5, 0.5, 'F');
+
+          // Event text
+          pdf.setTextColor(colors.text[0], colors.text[1], colors.text[2]);
+          pdf.setFontSize(6);
+          pdf.setFont('helvetica', 'normal');
+
+          // Truncate title to fit
+          let title = ev.title || '';
+          const maxChars = Math.floor((cellWidth - 4) / 1.5);
+          if (title.length > maxChars) {
+            title = title.substring(0, maxChars - 2) + '..';
+          }
+          pdf.text(title, x + 2, eventY + 3.2);
+
+          eventY += eventHeight + 0.5;
+        });
+
+        // Show "+X more" if there are more events
+        if (dayEvents.length > maxEvents) {
+          pdf.setTextColor(107, 114, 128);
+          pdf.setFontSize(5);
+          pdf.text(`+${dayEvents.length - maxEvents} daha`, x + 2, eventY + 2);
+        }
+      });
+
+      // Legend at bottom
+      const legendY = pageHeight - 6;
+      pdf.setFontSize(7);
+      pdf.setFont('helvetica', 'normal');
+
+      let legendX = margin;
+      const legendItems = [
+        { label: 'Yuksek Oncelik', color: urgencyColors['High'] },
+        { label: 'Orta Oncelik', color: urgencyColors['Medium'] },
+        { label: 'Dusuk Oncelik', color: urgencyColors['Low'] }
+      ];
+
+      legendItems.forEach((item) => {
+        pdf.setFillColor(item.color.bg[0], item.color.bg[1], item.color.bg[2]);
+        pdf.roundedRect(legendX, legendY - 3, 4, 4, 0.5, 0.5, 'F');
+        pdf.setTextColor(75, 85, 99);
+        pdf.text(item.label, legendX + 5, legendY);
+        legendX += 35;
+      });
+
+      // Total events count
+      pdf.setTextColor(107, 114, 128);
+      pdf.text(`Toplam: ${events.length} kampanya`, pageWidth - margin, legendY, { align: 'right' });
+
+      // Save
       pdf.save(`kampanya-takvimi-${format(currentDate, 'yyyy-MM')}.pdf`);
       addToast('PDF indirildi.', 'success');
     } catch (error) {
       console.error('PDF Export Error:', error);
-      addToast('PDF oluşturulurken hata oluştu.', 'info');
+      addToast('PDF olusturulurken hata olustu.', 'info');
     }
   };
 
