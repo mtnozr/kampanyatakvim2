@@ -1150,11 +1150,12 @@ function App() {
       const usableWidth = pageWidth - (2 * margin);
       const cellWidth = usableWidth / 7;
 
-      // Colors
-      const urgencyColors: Record<string, { bg: number[], text: number[] }> = {
-        'High': { bg: [254, 226, 226], text: [185, 28, 28] },
-        'Medium': { bg: [254, 243, 199], text: [180, 83, 9] },
-        'Low': { bg: [220, 252, 231], text: [22, 101, 52] }
+      // Status colors
+      const statusColors: Record<string, { bg: number[], text: number[] }> = {
+        'Planlandı': { bg: [219, 234, 254], text: [30, 64, 175] },      // blue
+        'Bekleme': { bg: [254, 243, 199], text: [180, 83, 9] },         // amber
+        'Tamamlandı': { bg: [220, 252, 231], text: [22, 101, 52] },     // green
+        'İptal Edildi': { bg: [254, 226, 226], text: [185, 28, 28] }    // red
       };
 
       // Header - compact
@@ -1245,7 +1246,8 @@ function App() {
         const eventHeight = 3;
 
         dayEvents.slice(0, maxEvents).forEach((ev) => {
-          const colors = urgencyColors[ev.urgency || 'Low'] || urgencyColors['Low'];
+          const status = ev.status || 'Planlandı';
+          const colors = statusColors[status] || statusColors['Planlandı'];
 
           // Small color indicator line
           pdf.setFillColor(colors.text[0], colors.text[1], colors.text[2]);
@@ -1283,9 +1285,10 @@ function App() {
 
       let legendX = margin;
       const legendItems = [
-        { label: 'Yuksek', color: urgencyColors['High'] },
-        { label: 'Orta', color: urgencyColors['Medium'] },
-        { label: 'Dusuk', color: urgencyColors['Low'] }
+        { label: 'Planlandi', color: statusColors['Planlandı'] },
+        { label: 'Bekleme', color: statusColors['Bekleme'] },
+        { label: 'Tamamlandi', color: statusColors['Tamamlandı'] },
+        { label: 'Iptal', color: statusColors['İptal Edildi'] }
       ];
 
       legendItems.forEach((item) => {
@@ -1293,7 +1296,7 @@ function App() {
         pdf.rect(legendX, legendY - 2, 2, 2, 'F');
         pdf.setTextColor(100, 100, 100);
         pdf.text(item.label, legendX + 3, legendY);
-        legendX += 18;
+        legendX += 22;
       });
 
       // Total events count
