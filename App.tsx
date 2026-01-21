@@ -1259,33 +1259,46 @@ function App() {
           return isSameDay(evDate, day);
         });
 
-        // Draw events - compact style
-        let eventY = y + 2;
-        const maxEvents = Math.floor((cellHeight - 4) / 3.5);
+        // Draw events - use 2 columns when we have 5-day layout (wider cells)
         const eventHeight = 3;
+        const eventsPerColumn = Math.floor((cellHeight - 6) / (eventHeight + 0.5));
+        const useDoubleColumn = !hasWeekendEvents && actualCellWidth > 50;
+        const maxEvents = useDoubleColumn ? eventsPerColumn * 2 : eventsPerColumn;
+        const colWidth = useDoubleColumn ? (actualCellWidth - 3) / 2 : actualCellWidth - 2;
 
-        dayEvents.slice(0, maxEvents).forEach((ev) => {
+        dayEvents.slice(0, maxEvents).forEach((ev, evIndex) => {
           const status = ev.status || 'Planlandı';
           const colors = statusColors[status] || statusColors['Planlandı'];
 
+          // Calculate position based on single or double column layout
+          let eventX: number;
+          let eventY: number;
+          if (useDoubleColumn) {
+            const col = evIndex < eventsPerColumn ? 0 : 1;
+            const rowInCol = evIndex < eventsPerColumn ? evIndex : evIndex - eventsPerColumn;
+            eventX = x + 1 + (col * (colWidth + 1));
+            eventY = y + 2 + (rowInCol * (eventHeight + 0.5));
+          } else {
+            eventX = x + 1;
+            eventY = y + 2 + (evIndex * (eventHeight + 0.5));
+          }
+
           // Small color indicator line
           pdf.setFillColor(colors.text[0], colors.text[1], colors.text[2]);
-          pdf.rect(x + 1, eventY, 1, eventHeight, 'F');
+          pdf.rect(eventX, eventY, 1, eventHeight, 'F');
 
           // Event text - dark gray for readability
           pdf.setTextColor(50, 50, 50);
-          pdf.setFontSize(5.5);
+          pdf.setFontSize(5);
           pdf.setFont('helvetica', 'normal');
 
-          // Truncate title to fit
+          // Truncate title to fit column width
           let title = toAscii(ev.title || '');
-          const maxChars = Math.floor((actualCellWidth - 6) / 1.3);
+          const maxChars = Math.floor((colWidth - 4) / 1.2);
           if (title.length > maxChars) {
             title = title.substring(0, maxChars - 1) + '..';
           }
-          pdf.text(title, x + 3, eventY + 2.2);
-
-          eventY += eventHeight + 0.5;
+          pdf.text(title, eventX + 2, eventY + 2.2);
         });
 
         // Show "+X" if there are more events
