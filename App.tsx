@@ -1615,7 +1615,7 @@ function App() {
         isBusinessUnit: isBusinessUnitRole,
         isAnalitik: isAnalitikRole,
         email: userEmail,
-        hasDefaultPassword: cleanPassword === '123456', // Flag for default password
+        hasDefaultPassword: cleanPassword === '12345678', // Flag for default password
         createdAt: Timestamp.now()
       });
       addToast(`${username} kullanıcısı eklendi. (Server: ${serverProjectId})`, 'success');
