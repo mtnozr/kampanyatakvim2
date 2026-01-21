@@ -196,10 +196,17 @@ function App() {
   const [selectedEventIdForNote, setSelectedEventIdForNote] = useState<string | null>(null);
   const [noteContent, setNoteContent] = useState('');
 
-  // Birthday State
+  // Birthday State - check localStorage for today's date
+  const todayKey = format(new Date(), 'yyyy-MM-dd');
   const [showBirthdayAnimation, setShowBirthdayAnimation] = useState(false);
-  const [birthdayAnimationShown, setBirthdayAnimationShown] = useState(false);
-  const [birthdayReminderDismissed, setBirthdayReminderDismissed] = useState(false);
+  const [birthdayAnimationShown, setBirthdayAnimationShown] = useState(() => {
+    const stored = localStorage.getItem('birthdayAnimationShown');
+    return stored === todayKey;
+  });
+  const [birthdayReminderDismissed, setBirthdayReminderDismissed] = useState(() => {
+    const stored = localStorage.getItem('birthdayReminderDismissed');
+    return stored === todayKey;
+  });
 
   // Derived state for viewEvent
   const viewEvent = useMemo(() => {
@@ -242,17 +249,25 @@ function App() {
     return people;
   }, [departmentUsers, analyticsUsers, todayMMDD, loggedInDeptUser]);
 
-  // Show birthday animation on login if it's user's birthday
+  // Show birthday animation if it's user's birthday (shown once per day)
   useEffect(() => {
     if (isMyBirthday && loggedInDeptUser && !birthdayAnimationShown) {
       // Small delay to let the UI settle
       const timer = setTimeout(() => {
         setShowBirthdayAnimation(true);
         setBirthdayAnimationShown(true);
-      }, 1000);
+        localStorage.setItem('birthdayAnimationShown', todayKey);
+      }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [isMyBirthday, loggedInDeptUser, birthdayAnimationShown]);
+  }, [isMyBirthday, loggedInDeptUser, birthdayAnimationShown, todayKey]);
+
+  // Save reminder dismissed state to localStorage
+  useEffect(() => {
+    if (birthdayReminderDismissed) {
+      localStorage.setItem('birthdayReminderDismissed', todayKey);
+    }
+  }, [birthdayReminderDismissed, todayKey]);
 
   // --- FIREBASE LISTENERS (REAL-TIME SYNC) ---
 
