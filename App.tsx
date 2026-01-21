@@ -1124,6 +1124,18 @@ function App() {
     try {
       addToast('PDF hazırlanıyor...', 'info');
 
+      // Turkish character to ASCII converter for PDF compatibility
+      const toAscii = (text: string): string => {
+        if (!text) return '';
+        return text
+          .replace(/ğ/g, 'g').replace(/Ğ/g, 'G')
+          .replace(/ü/g, 'u').replace(/Ü/g, 'U')
+          .replace(/ş/g, 's').replace(/Ş/g, 'S')
+          .replace(/ı/g, 'i').replace(/İ/g, 'I')
+          .replace(/ö/g, 'o').replace(/Ö/g, 'O')
+          .replace(/ç/g, 'c').replace(/Ç/g, 'C');
+      };
+
       // Create PDF in landscape A4
       const pdf = new jsPDF({
         orientation: 'landscape',
@@ -1152,7 +1164,7 @@ function App() {
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(11);
       pdf.setFont('helvetica', 'bold');
-      const monthYearText = format(currentDate, 'MMMM yyyy', { locale: tr }).toUpperCase();
+      const monthYearText = toAscii(format(currentDate, 'MMMM yyyy', { locale: tr }).toUpperCase());
       pdf.text(`KAMPANYA TAKVIMI - ${monthYearText}`, margin, 10);
 
       // Right side info
@@ -1245,7 +1257,7 @@ function App() {
           pdf.setFont('helvetica', 'normal');
 
           // Truncate title to fit
-          let title = ev.title || '';
+          let title = toAscii(ev.title || '');
           const maxChars = Math.floor((cellWidth - 6) / 1.3);
           if (title.length > maxChars) {
             title = title.substring(0, maxChars - 1) + '..';
