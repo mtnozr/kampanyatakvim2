@@ -96,6 +96,7 @@ export interface DepartmentUser {
   isAnalitik?: boolean; // Analytics role - can manage analytics tasks
   email?: string; // Contact email for notifications
   hasDefaultPassword?: boolean; // True if user hasn't changed from default password
+  birthday?: string; // Format: MM-DD (e.g., "03-15" for March 15)
   createdAt: Date;
   lastSeen?: Date; // For tracking online status
 }
@@ -158,6 +159,7 @@ export interface AnalyticsUser {
   email: string;
   emoji?: string;
   phone?: string;  // Phone number for contact
+  birthday?: string; // Format: MM-DD (e.g., "03-15" for March 15)
 }
 
 // Analytics Task - for analytics calendar

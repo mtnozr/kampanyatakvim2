@@ -111,6 +111,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [newAnalyticsEmail, setNewAnalyticsEmail] = useState('');
   const [newAnalyticsPhone, setNewAnalyticsPhone] = useState('');
   const [selectedAnalyticsEmoji, setSelectedAnalyticsEmoji] = useState('');
+  const [newAnalyticsBirthday, setNewAnalyticsBirthday] = useState('');
 
   // Analytics Personnel Edit States
   const [editingAnalyticsUser, setEditingAnalyticsUser] = useState<AnalyticsUser | null>(null);
@@ -118,6 +119,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [editAnalyticsEmail, setEditAnalyticsEmail] = useState('');
   const [editAnalyticsPhone, setEditAnalyticsPhone] = useState('');
   const [editAnalyticsEmoji, setEditAnalyticsEmoji] = useState('');
+  const [editAnalyticsBirthday, setEditAnalyticsBirthday] = useState('');
 
   // Announcement Form States
   const [newAnnTitle, setNewAnnTitle] = useState('');
@@ -136,6 +138,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [newDeptUserIsKampanyaYapan, setNewDeptUserIsKampanyaYapan] = useState(false);
   const [newDeptUserIsBusinessUnit, setNewDeptUserIsBusinessUnit] = useState(false);
   const [newDeptUserIsAnalitik, setNewDeptUserIsAnalitik] = useState(false);
+  const [newDeptUserBirthday, setNewDeptUserBirthday] = useState('');
 
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
 
@@ -446,6 +449,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     setNewDeptUserIsKampanyaYapan(!!user.isKampanyaYapan);
     setNewDeptUserIsBusinessUnit(!!user.isBusinessUnit);
     setNewDeptUserIsAnalitik(!!user.isAnalitik);
+    setNewDeptUserBirthday(user.birthday || '');
     setNewDeptPassword(''); // Clear password field
     setError('');
   };
@@ -460,6 +464,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     setNewDeptUserIsKampanyaYapan(false);
     setNewDeptUserIsBusinessUnit(false);
     setNewDeptUserIsAnalitik(false);
+    setNewDeptUserBirthday('');
     setError('');
   };
 
@@ -495,7 +500,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
           isKampanyaYapan: newDeptUserIsKampanyaYapan,
           isBusinessUnit: newDeptUserIsBusinessUnit,
           isAnalitik: newDeptUserIsAnalitik,
-          email: finalEmail
+          email: finalEmail,
+          birthday: newDeptUserBirthday || null
         };
         if (newDeptPassword.trim()) {
           updates.password = newDeptPassword.trim();
@@ -523,6 +529,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       setNewDeptUserIsKampanyaYapan(false);
       setNewDeptUserIsBusinessUnit(false);
       setNewDeptUserIsAnalitik(false);
+      setNewDeptUserBirthday('');
       setError('');
     }
   };
@@ -1162,6 +1169,17 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                               <option key={d.id} value={d.id}>{d.name}</option>
                             ))}
                           </select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Doğum Günü</label>
+                          <input
+                            type="text"
+                            value={newDeptUserBirthday}
+                            onChange={(e) => setNewDeptUserBirthday(e.target.value)}
+                            placeholder="AA-GG (örn: 03-15)"
+                            maxLength={5}
+                            className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-colors"
+                          />
                         </div>
                       </div>
                       <div className="flex flex-col gap-2">

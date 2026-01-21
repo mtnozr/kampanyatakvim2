@@ -47,6 +47,8 @@ import { AnalyticsTaskDetailsModal } from './components/AnalyticsTaskDetailsModa
 import { Sidebar } from './components/Sidebar';
 import { ThemeToggle } from './components/ThemeToggle';
 import { BackgroundTheme, ThemeType } from './components/BackgroundTheme';
+import { BirthdayAnimation } from './components/BirthdayAnimation';
+import { BirthdayReminder } from './components/BirthdayReminder';
 import { useTheme } from './hooks/useTheme';
 import { useBrowserNotifications } from './hooks/useBrowserNotifications';
 import { setCookie, getCookie, deleteCookie } from './utils/cookies';
@@ -194,6 +196,11 @@ function App() {
   const [selectedEventIdForNote, setSelectedEventIdForNote] = useState<string | null>(null);
   const [noteContent, setNoteContent] = useState('');
 
+  // Birthday State
+  const [showBirthdayAnimation, setShowBirthdayAnimation] = useState(false);
+  const [birthdayAnimationShown, setBirthdayAnimationShown] = useState(false);
+  const [birthdayReminderDismissed, setBirthdayReminderDismissed] = useState(false);
+
   // Derived state for viewEvent
   const viewEvent = useMemo(() => {
     return events.find(e => e.id === viewEventId) || null;
@@ -204,6 +211,48 @@ function App() {
     if (!loggedInDeptUser || !loggedInDeptUser.email) return null;
     return users.find(u => u.email?.trim().toLowerCase() === loggedInDeptUser.email?.trim().toLowerCase());
   }, [loggedInDeptUser, users]);
+
+  // Birthday Check - get today's date in MM-DD format
+  const todayMMDD = format(new Date(), 'MM-dd');
+
+  // Check if logged in user has birthday today
+  const isMyBirthday = useMemo(() => {
+    if (!loggedInDeptUser?.birthday) return false;
+    return loggedInDeptUser.birthday === todayMMDD;
+  }, [loggedInDeptUser, todayMMDD]);
+
+  // Get all people with birthdays today (excluding current user)
+  const birthdayPeopleToday = useMemo(() => {
+    const people: Array<{ name: string; emoji?: string }> = [];
+
+    // Check department users
+    departmentUsers.forEach(user => {
+      if (user.birthday === todayMMDD && user.id !== loggedInDeptUser?.id) {
+        people.push({ name: user.username });
+      }
+    });
+
+    // Check analytics users
+    analyticsUsers.forEach(user => {
+      if (user.birthday === todayMMDD) {
+        people.push({ name: user.name, emoji: user.emoji });
+      }
+    });
+
+    return people;
+  }, [departmentUsers, analyticsUsers, todayMMDD, loggedInDeptUser]);
+
+  // Show birthday animation on login if it's user's birthday
+  useEffect(() => {
+    if (isMyBirthday && loggedInDeptUser && !birthdayAnimationShown) {
+      // Small delay to let the UI settle
+      const timer = setTimeout(() => {
+        setShowBirthdayAnimation(true);
+        setBirthdayAnimationShown(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [isMyBirthday, loggedInDeptUser, birthdayAnimationShown]);
 
   // --- FIREBASE LISTENERS (REAL-TIME SYNC) ---
 
@@ -3542,6 +3591,22 @@ function App() {
         />
 
         <ToastContainer toasts={toasts} removeToast={removeToast} />
+
+        {/* Birthday Animation - shown to the birthday person */}
+        {showBirthdayAnimation && loggedInDeptUser && (
+          <BirthdayAnimation
+            userName={loggedInDeptUser.username}
+            onClose={() => setShowBirthdayAnimation(false)}
+          />
+        )}
+
+        {/* Birthday Reminder - shown to others when someone has a birthday */}
+        {birthdayPeopleToday.length > 0 && !birthdayReminderDismissed && loggedInDeptUser && (
+          <BirthdayReminder
+            birthdayPeople={birthdayPeopleToday}
+            onDismiss={() => setBirthdayReminderDismissed(true)}
+          />
+        )}
       </div>
     </div>
   );
