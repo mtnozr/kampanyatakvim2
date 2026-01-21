@@ -933,6 +933,13 @@ function App() {
     return null;
   }, [loggedInDeptUser, auth.currentUser]);
 
+  // Count unread announcements for badge
+  const unreadAnnouncementCount = useMemo(() => {
+    if (!loggedInDeptUser) return 0;
+    const userId = loggedInDeptUser.id;
+    return filteredAnnouncements.filter(ann => !ann.readBy || !ann.readBy.includes(userId)).length;
+  }, [filteredAnnouncements, loggedInDeptUser]);
+
   // --- Calendar Logic ---
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
@@ -2895,10 +2902,15 @@ function App() {
                     handleMarkAsRead(allIds);
                   }
                 }}
-                className="p-1.5 text-gray-500 hover:text-violet-600 hover:bg-violet-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-violet-900/30"
+                className="p-1.5 text-gray-500 hover:text-violet-600 hover:bg-violet-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm relative dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-violet-900/30"
                 title="Duyurular"
               >
                 <Megaphone size={20} />
+                {unreadAnnouncementCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800">
+                    {unreadAnnouncementCount}
+                  </span>
+                )}
               </button>
             )}
 
