@@ -196,17 +196,40 @@ function App() {
   const [selectedEventIdForNote, setSelectedEventIdForNote] = useState<string | null>(null);
   const [noteContent, setNoteContent] = useState('');
 
-  // Birthday State - check localStorage for today's date
-  const todayKey = format(new Date(), 'yyyy-MM-dd');
+  // Birthday State - reactive date tracking for automatic midnight updates
+  const [todayDateStr, setTodayDateStr] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const [showBirthdayAnimation, setShowBirthdayAnimation] = useState(false);
   const [birthdayAnimationShown, setBirthdayAnimationShown] = useState(() => {
     const stored = localStorage.getItem('birthdayAnimationShown');
-    return stored === todayKey;
+    return stored === format(new Date(), 'yyyy-MM-dd');
   });
   const [birthdayReminderDismissed, setBirthdayReminderDismissed] = useState(() => {
     const stored = localStorage.getItem('birthdayReminderDismissed');
-    return stored === todayKey;
+    return stored === format(new Date(), 'yyyy-MM-dd');
   });
+
+  // Derived values from todayDateStr
+  const todayKey = todayDateStr;
+  const todayMMDD = todayDateStr.slice(5); // Extract MM-dd from yyyy-MM-dd
+
+  // Check for date change every minute (handles midnight transition automatically)
+  useEffect(() => {
+    const checkDateChange = () => {
+      const newDate = format(new Date(), 'yyyy-MM-dd');
+      if (newDate !== todayDateStr) {
+        setTodayDateStr(newDate);
+        // Reset birthday states for new day
+        const storedAnimation = localStorage.getItem('birthdayAnimationShown');
+        const storedReminder = localStorage.getItem('birthdayReminderDismissed');
+        setBirthdayAnimationShown(storedAnimation === newDate);
+        setBirthdayReminderDismissed(storedReminder === newDate);
+      }
+    };
+
+    // Check every minute
+    const interval = setInterval(checkDateChange, 60000);
+    return () => clearInterval(interval);
+  }, [todayDateStr]);
 
   // Derived state for viewEvent
   const viewEvent = useMemo(() => {
@@ -218,9 +241,6 @@ function App() {
     if (!loggedInDeptUser || !loggedInDeptUser.email) return null;
     return users.find(u => u.email?.trim().toLowerCase() === loggedInDeptUser.email?.trim().toLowerCase());
   }, [loggedInDeptUser, users]);
-
-  // Birthday Check - get today's date in MM-DD format
-  const todayMMDD = format(new Date(), 'MM-dd');
 
   // Check if logged in user has birthday today
   const isMyBirthday = useMemo(() => {
