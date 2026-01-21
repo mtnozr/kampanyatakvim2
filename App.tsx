@@ -1148,7 +1148,7 @@ function App() {
       const pageHeight = pdf.internal.pageSize.getHeight(); // 210mm
       const margin = 10;
       const usableWidth = pageWidth - (2 * margin);
-      const cellWidth = usableWidth / 7;
+      // cellWidth will be recalculated after checking weekend events
 
       // Status colors
       const statusColors: Record<string, { bg: number[], text: number[] }> = {
@@ -1173,9 +1173,35 @@ function App() {
       pdf.setFont('helvetica', 'normal');
       pdf.text(`${format(new Date(), 'dd.MM.yyyy HH:mm')}`, pageWidth - margin, 10, { align: 'right' });
 
+      // Calculate calendar days first
+      const monthStart = startOfMonth(currentDate);
+      const monthEnd = endOfMonth(currentDate);
+      const calStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+      const calEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+      const allDays = eachDayOfInterval({ start: calStart, end: calEnd });
+
+      // Check if there are any weekend events in this month's view
+      const hasWeekendEvents = events.some(ev => {
+        const evDate = ev.date instanceof Date ? ev.date : (ev.date as any).toDate();
+        return isWeekend(evDate) && allDays.some(d => isSameDay(d, evDate));
+      });
+
+      // Determine columns - 5 if no weekend events, 7 otherwise
+      const numCols = hasWeekendEvents ? 7 : 5;
+      const dayNames = hasWeekendEvents
+        ? ['Pzt', 'Sal', 'Car', 'Per', 'Cum', 'Cmt', 'Paz']
+        : ['Pzt', 'Sal', 'Car', 'Per', 'Cum'];
+
+      // Filter out weekends if not needed
+      const days = hasWeekendEvents
+        ? allDays
+        : allDays.filter(d => !isWeekend(d));
+
+      // Recalculate cell width based on columns
+      const actualCellWidth = usableWidth / numCols;
+
       // Day headers
       const dayHeaderY = 22;
-      const dayNames = ['Pzt', 'Sal', 'Car', 'Per', 'Cum', 'Cmt', 'Paz'];
 
       pdf.setFillColor(249, 250, 251); // gray-50
       pdf.rect(margin, dayHeaderY - 4, usableWidth, 6, 'F');
@@ -1185,27 +1211,20 @@ function App() {
       pdf.setFont('helvetica', 'bold');
 
       dayNames.forEach((day, i) => {
-        const x = margin + (i * cellWidth) + (cellWidth / 2);
+        const x = margin + (i * actualCellWidth) + (actualCellWidth / 2);
         pdf.text(day, x, dayHeaderY, { align: 'center' });
       });
 
-      // Calculate calendar days (same logic as displayDays)
-      const monthStart = startOfMonth(currentDate);
-      const monthEnd = endOfMonth(currentDate);
-      const calStart = startOfWeek(monthStart, { weekStartsOn: 1 });
-      const calEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
-      const days = eachDayOfInterval({ start: calStart, end: calEnd });
-
       // Grid settings
       const gridStartY = 26;
-      const numRows = Math.ceil(days.length / 7);
+      const numRows = Math.ceil(days.length / numCols);
       const cellHeight = (pageHeight - gridStartY - 8) / numRows;
 
       // Draw calendar grid
       days.forEach((day, index) => {
-        const col = index % 7;
-        const row = Math.floor(index / 7);
-        const x = margin + (col * cellWidth);
+        const col = index % numCols;
+        const row = Math.floor(index / numCols);
+        const x = margin + (col * actualCellWidth);
         const y = gridStartY + (row * cellHeight);
         const isCurrentMonth = isSameMonth(day, currentDate);
         const isTodayDate = isToday(day);
@@ -1221,18 +1240,18 @@ function App() {
         } else {
           pdf.setFillColor(255, 255, 255);
         }
-        pdf.rect(x, y, cellWidth, cellHeight, 'F');
+        pdf.rect(x, y, actualCellWidth, cellHeight, 'F');
 
         // Cell border
         pdf.setDrawColor(229, 231, 235); // gray-200
         pdf.setLineWidth(0.2);
-        pdf.rect(x, y, cellWidth, cellHeight, 'S');
+        pdf.rect(x, y, actualCellWidth, cellHeight, 'S');
 
         // Day number - small, top right corner
         pdf.setFontSize(7);
         pdf.setFont('helvetica', isTodayDate ? 'bold' : 'normal');
         pdf.setTextColor(isTodayDate ? 139 : (isCurrentMonth ? 80 : 180), isTodayDate ? 92 : (isCurrentMonth ? 80 : 180), isTodayDate ? 246 : (isCurrentMonth ? 80 : 180));
-        pdf.text(format(day, 'd'), x + cellWidth - 2, y + 4, { align: 'right' });
+        pdf.text(format(day, 'd'), x + actualCellWidth - 2, y + 4, { align: 'right' });
 
         // Get events for this day
         const dayEvents = events.filter(ev => {
@@ -1260,7 +1279,7 @@ function App() {
 
           // Truncate title to fit
           let title = toAscii(ev.title || '');
-          const maxChars = Math.floor((cellWidth - 6) / 1.3);
+          const maxChars = Math.floor((actualCellWidth - 6) / 1.3);
           if (title.length > maxChars) {
             title = title.substring(0, maxChars - 1) + '..';
           }
@@ -1274,7 +1293,7 @@ function App() {
           pdf.setTextColor(139, 92, 246);
           pdf.setFontSize(5);
           pdf.setFont('helvetica', 'bold');
-          pdf.text(`+${dayEvents.length - maxEvents}`, x + cellWidth - 2, y + cellHeight - 1, { align: 'right' });
+          pdf.text(`+${dayEvents.length - maxEvents}`, x + actualCellWidth - 2, y + cellHeight - 1, { align: 'right' });
         }
       });
 
