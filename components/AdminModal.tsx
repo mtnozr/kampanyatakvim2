@@ -573,6 +573,20 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       const createdAtStr = evCreatedAt ? format(evCreatedAt, 'yyyy-MM-dd HH:mm') : '';
       const updatedAtStr = evUpdatedAt ? format(evUpdatedAt, 'yyyy-MM-dd HH:mm') : '';
 
+      // Strip HTML tags from rich text content
+      const stripHtml = (html: string) => {
+        if (!html) return '';
+        return html
+          .replace(/<[^>]*>/g, '') // Remove HTML tags
+          .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
+          .replace(/&amp;/g, '&')  // Replace &amp; with &
+          .replace(/&lt;/g, '<')   // Replace &lt; with <
+          .replace(/&gt;/g, '>')   // Replace &gt; with >
+          .replace(/&quot;/g, '"') // Replace &quot; with "
+          .replace(/\s+/g, ' ')    // Normalize whitespace
+          .trim();
+      };
+
       // Escape semicolons and quotes in content
       const escapeField = (str: string) => {
         if (!str) return '';
@@ -589,7 +603,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         originalDateStr,
         ev.urgency || '',
         ev.difficulty || '',
-        escapeField(ev.description || ''),
+        escapeField(stripHtml(ev.description || '')),
         escapeField(dept),
         escapeField(user),
         ev.status || 'Planlandı',
