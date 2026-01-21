@@ -139,6 +139,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [newDeptUserIsBusinessUnit, setNewDeptUserIsBusinessUnit] = useState(false);
   const [newDeptUserIsAnalitik, setNewDeptUserIsAnalitik] = useState(false);
   const [newDeptUserBirthday, setNewDeptUserBirthday] = useState('');
+  const [newDeptUserHasDefaultPassword, setNewDeptUserHasDefaultPassword] = useState(false);
 
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
 
@@ -450,6 +451,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     setNewDeptUserIsBusinessUnit(!!user.isBusinessUnit);
     setNewDeptUserIsAnalitik(!!user.isAnalitik);
     setNewDeptUserBirthday(user.birthday || '');
+    setNewDeptUserHasDefaultPassword(!!user.hasDefaultPassword);
     setNewDeptPassword(''); // Clear password field
     setError('');
   };
@@ -465,6 +467,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     setNewDeptUserIsBusinessUnit(false);
     setNewDeptUserIsAnalitik(false);
     setNewDeptUserBirthday('');
+    setNewDeptUserHasDefaultPassword(false);
     setError('');
   };
 
@@ -501,10 +504,13 @@ export const AdminModal: React.FC<AdminModalProps> = ({
           isBusinessUnit: newDeptUserIsBusinessUnit,
           isAnalitik: newDeptUserIsAnalitik,
           email: finalEmail,
-          birthday: newDeptUserBirthday.trim() || deleteField()
+          birthday: newDeptUserBirthday.trim() || deleteField(),
+          hasDefaultPassword: newDeptUserHasDefaultPassword
         };
         if (newDeptPassword.trim()) {
           updates.password = newDeptPassword.trim();
+          // If password is changed, update hasDefaultPassword based on new password
+          updates.hasDefaultPassword = newDeptPassword.trim() === '123456';
         }
         onUpdateDepartmentUser(editingUserId, updates);
         handleCancelEdit(); // Reset form
@@ -530,6 +536,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       setNewDeptUserIsBusinessUnit(false);
       setNewDeptUserIsAnalitik(false);
       setNewDeptUserBirthday('');
+      setNewDeptUserHasDefaultPassword(false);
       setError('');
     }
   };
@@ -1231,6 +1238,20 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                           <span className="text-sm text-gray-700 dark:text-gray-300">Analitik Yetkisi Ver</span>
                           <span className="text-[10px] text-gray-400 dark:text-gray-500">(Analitik görevleri görüntüleme izni)</span>
                         </label>
+                        {editingUserId && (
+                          <label className="flex items-center gap-2 cursor-pointer mt-2 pt-2 border-t dark:border-slate-600">
+                            <input
+                              type="checkbox"
+                              checked={newDeptUserHasDefaultPassword}
+                              onChange={(e) => {
+                                setNewDeptUserHasDefaultPassword(e.target.checked);
+                              }}
+                              className="w-4 h-4 rounded border-gray-300 dark:border-slate-600 text-red-600 focus:ring-red-500 bg-white dark:bg-slate-700"
+                            />
+                            <span className="text-sm text-red-600 dark:text-red-400">⚠️ Varsayılan Şifre (123456)</span>
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500">(Şifre değiştirmedi uyarısı)</span>
+                          </label>
+                        )}
                       </div>
                       <div className="flex justify-between items-center">
                         <p className="text-red-500 text-xs h-4">{error}</p>
