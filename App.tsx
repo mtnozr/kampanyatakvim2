@@ -1145,34 +1145,30 @@ function App() {
         'Low': { bg: [220, 252, 231], text: [22, 101, 52] }
       };
 
-      // Header
+      // Header - compact
       pdf.setFillColor(139, 92, 246); // violet-500
-      pdf.rect(0, 0, pageWidth, 25, 'F');
+      pdf.rect(0, 0, pageWidth, 16, 'F');
 
       pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(18);
+      pdf.setFontSize(11);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('KAMPANYA TAKVIMI', margin, 12);
-
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'normal');
       const monthYearText = format(currentDate, 'MMMM yyyy', { locale: tr }).toUpperCase();
-      pdf.text(monthYearText, margin, 20);
+      pdf.text(`KAMPANYA TAKVIMI - ${monthYearText}`, margin, 10);
 
       // Right side info
-      pdf.setFontSize(9);
-      pdf.text(`Olusturulma: ${format(new Date(), 'dd.MM.yyyy HH:mm')}`, pageWidth - margin, 12, { align: 'right' });
-      pdf.text('KURUMSAL / GIZLI', pageWidth - margin, 18, { align: 'right' });
+      pdf.setFontSize(7);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`${format(new Date(), 'dd.MM.yyyy HH:mm')}`, pageWidth - margin, 10, { align: 'right' });
 
       // Day headers
-      const dayHeaderY = 32;
-      const dayNames = ['Pazartesi', 'Sali', 'Carsamba', 'Persembe', 'Cuma', 'Cumartesi', 'Pazar'];
+      const dayHeaderY = 22;
+      const dayNames = ['Pzt', 'Sal', 'Car', 'Per', 'Cum', 'Cmt', 'Paz'];
 
       pdf.setFillColor(249, 250, 251); // gray-50
-      pdf.rect(margin, dayHeaderY - 5, usableWidth, 8, 'F');
+      pdf.rect(margin, dayHeaderY - 4, usableWidth, 6, 'F');
 
-      pdf.setTextColor(107, 114, 128); // gray-500
-      pdf.setFontSize(8);
+      pdf.setTextColor(100, 100, 100);
+      pdf.setFontSize(7);
       pdf.setFont('helvetica', 'bold');
 
       dayNames.forEach((day, i) => {
@@ -1188,9 +1184,9 @@ function App() {
       const days = eachDayOfInterval({ start: calStart, end: calEnd });
 
       // Grid settings
-      const gridStartY = 40;
+      const gridStartY = 26;
       const numRows = Math.ceil(days.length / 7);
-      const cellHeight = (pageHeight - gridStartY - margin) / numRows;
+      const cellHeight = (pageHeight - gridStartY - 8) / numRows;
 
       // Draw calendar grid
       days.forEach((day, index) => {
@@ -1219,11 +1215,11 @@ function App() {
         pdf.setLineWidth(0.2);
         pdf.rect(x, y, cellWidth, cellHeight, 'S');
 
-        // Day number
-        pdf.setFontSize(10);
+        // Day number - small, top right corner
+        pdf.setFontSize(7);
         pdf.setFont('helvetica', isTodayDate ? 'bold' : 'normal');
-        pdf.setTextColor(isTodayDate ? 139 : (isCurrentMonth ? 55 : 156), isTodayDate ? 92 : (isCurrentMonth ? 65 : 163), isTodayDate ? 246 : (isCurrentMonth ? 81 : 175));
-        pdf.text(format(day, 'd'), x + 2, y + 5);
+        pdf.setTextColor(isTodayDate ? 139 : (isCurrentMonth ? 80 : 180), isTodayDate ? 92 : (isCurrentMonth ? 80 : 180), isTodayDate ? 246 : (isCurrentMonth ? 80 : 180));
+        pdf.text(format(day, 'd'), x + cellWidth - 2, y + 4, { align: 'right' });
 
         // Get events for this day
         const dayEvents = events.filter(ev => {
@@ -1231,65 +1227,66 @@ function App() {
           return isSameDay(evDate, day);
         });
 
-        // Draw events (max 4 per cell for readability)
-        let eventY = y + 9;
-        const maxEvents = 4;
-        const eventHeight = 4.5;
+        // Draw events - compact style
+        let eventY = y + 2;
+        const maxEvents = Math.floor((cellHeight - 4) / 3.5);
+        const eventHeight = 3;
 
         dayEvents.slice(0, maxEvents).forEach((ev) => {
           const colors = urgencyColors[ev.urgency || 'Low'] || urgencyColors['Low'];
 
-          // Event background
-          pdf.setFillColor(colors.bg[0], colors.bg[1], colors.bg[2]);
-          pdf.roundedRect(x + 1, eventY, cellWidth - 2, eventHeight, 0.5, 0.5, 'F');
+          // Small color indicator line
+          pdf.setFillColor(colors.text[0], colors.text[1], colors.text[2]);
+          pdf.rect(x + 1, eventY, 1, eventHeight, 'F');
 
-          // Event text
-          pdf.setTextColor(colors.text[0], colors.text[1], colors.text[2]);
-          pdf.setFontSize(6);
+          // Event text - dark gray for readability
+          pdf.setTextColor(50, 50, 50);
+          pdf.setFontSize(5.5);
           pdf.setFont('helvetica', 'normal');
 
           // Truncate title to fit
           let title = ev.title || '';
-          const maxChars = Math.floor((cellWidth - 4) / 1.5);
+          const maxChars = Math.floor((cellWidth - 6) / 1.3);
           if (title.length > maxChars) {
-            title = title.substring(0, maxChars - 2) + '..';
+            title = title.substring(0, maxChars - 1) + '..';
           }
-          pdf.text(title, x + 2, eventY + 3.2);
+          pdf.text(title, x + 3, eventY + 2.2);
 
           eventY += eventHeight + 0.5;
         });
 
-        // Show "+X more" if there are more events
+        // Show "+X" if there are more events
         if (dayEvents.length > maxEvents) {
-          pdf.setTextColor(107, 114, 128);
+          pdf.setTextColor(139, 92, 246);
           pdf.setFontSize(5);
-          pdf.text(`+${dayEvents.length - maxEvents} daha`, x + 2, eventY + 2);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(`+${dayEvents.length - maxEvents}`, x + cellWidth - 2, y + cellHeight - 1, { align: 'right' });
         }
       });
 
-      // Legend at bottom
-      const legendY = pageHeight - 6;
-      pdf.setFontSize(7);
+      // Legend at bottom - minimal
+      const legendY = pageHeight - 3;
+      pdf.setFontSize(6);
       pdf.setFont('helvetica', 'normal');
 
       let legendX = margin;
       const legendItems = [
-        { label: 'Yuksek Oncelik', color: urgencyColors['High'] },
-        { label: 'Orta Oncelik', color: urgencyColors['Medium'] },
-        { label: 'Dusuk Oncelik', color: urgencyColors['Low'] }
+        { label: 'Yuksek', color: urgencyColors['High'] },
+        { label: 'Orta', color: urgencyColors['Medium'] },
+        { label: 'Dusuk', color: urgencyColors['Low'] }
       ];
 
       legendItems.forEach((item) => {
-        pdf.setFillColor(item.color.bg[0], item.color.bg[1], item.color.bg[2]);
-        pdf.roundedRect(legendX, legendY - 3, 4, 4, 0.5, 0.5, 'F');
-        pdf.setTextColor(75, 85, 99);
-        pdf.text(item.label, legendX + 5, legendY);
-        legendX += 35;
+        pdf.setFillColor(item.color.text[0], item.color.text[1], item.color.text[2]);
+        pdf.rect(legendX, legendY - 2, 2, 2, 'F');
+        pdf.setTextColor(100, 100, 100);
+        pdf.text(item.label, legendX + 3, legendY);
+        legendX += 18;
       });
 
       // Total events count
-      pdf.setTextColor(107, 114, 128);
-      pdf.text(`Toplam: ${events.length} kampanya`, pageWidth - margin, legendY, { align: 'right' });
+      pdf.setTextColor(100, 100, 100);
+      pdf.text(`${events.length} kampanya`, pageWidth - margin, legendY, { align: 'right' });
 
       // Save
       pdf.save(`kampanya-takvimi-${format(currentDate, 'yyyy-MM')}.pdf`);
