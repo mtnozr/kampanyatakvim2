@@ -233,9 +233,15 @@ function App() {
     const people: Array<{ name: string; emoji?: string }> = [];
 
     // Check department users
-    departmentUsers.forEach(user => {
-      if (user.birthday === todayMMDD && user.id !== loggedInDeptUser?.id) {
-        people.push({ name: user.username });
+    departmentUsers.forEach(deptUser => {
+      if (deptUser.birthday === todayMMDD && deptUser.id !== loggedInDeptUser?.id) {
+        // Find connected personnel user by email to get full name
+        const personnelUser = deptUser.email
+          ? users.find(u => u.email?.trim().toLowerCase() === deptUser.email?.trim().toLowerCase())
+          : null;
+        const displayName = personnelUser?.name || deptUser.username;
+        const emoji = personnelUser?.emoji;
+        people.push({ name: displayName, emoji });
       }
     });
 
@@ -247,7 +253,7 @@ function App() {
     });
 
     return people;
-  }, [departmentUsers, analyticsUsers, todayMMDD, loggedInDeptUser]);
+  }, [departmentUsers, analyticsUsers, users, todayMMDD, loggedInDeptUser]);
 
   // Show birthday animation if it's user's birthday (shown once per day)
   useEffect(() => {
@@ -3610,7 +3616,7 @@ function App() {
         {/* Birthday Animation - shown to the birthday person */}
         {showBirthdayAnimation && loggedInDeptUser && (
           <BirthdayAnimation
-            userName={loggedInDeptUser.username}
+            userName={connectedPersonnelUser?.name || loggedInDeptUser.username}
             onClose={() => setShowBirthdayAnimation(false)}
           />
         )}
