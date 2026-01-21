@@ -8,7 +8,7 @@ import { format, addMonths } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { auth, db, storage } from '../firebase';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, setDoc, query, collection, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, query, collection, where, getDocs, deleteField } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 interface AdminModalProps {
@@ -501,7 +501,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
           isBusinessUnit: newDeptUserIsBusinessUnit,
           isAnalitik: newDeptUserIsAnalitik,
           email: finalEmail,
-          birthday: newDeptUserBirthday || null
+          birthday: newDeptUserBirthday.trim() || deleteField()
         };
         if (newDeptPassword.trim()) {
           updates.password = newDeptPassword.trim();
