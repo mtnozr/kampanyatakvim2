@@ -1,30 +1,47 @@
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { ChevronDown, Phone, Book, Search, X, GripVertical } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { ChevronDown, Phone, Book, Search, X, GripHorizontal, RotateCcw } from 'lucide-react';
 import { User, AnalyticsUser } from '../types';
 
 interface PhoneDirectoryProps {
     users: User[];
     analyticsUsers: AnalyticsUser[];
+    isFloating?: boolean;
+    onClose?: () => void;
 }
 
-interface Position {
-    x: number;
-    y: number;
-}
+const POSITION_KEY = 'phone_directory_position';
 
-export const PhoneDirectory: React.FC<PhoneDirectoryProps> = ({ users, analyticsUsers }) => {
+export const PhoneDirectory: React.FC<PhoneDirectoryProps> = ({ users, analyticsUsers, isFloating = false, onClose }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [position, setPosition] = useState<Position | null>(null);
-    const [isDragging, setIsDragging] = useState(false);
-    const [dragOffset, setDragOffset] = useState<Position>({ x: 0, y: 0 });
 
     const containerRef = useRef<HTMLDivElement>(null);
+
+    // Drag state - using refs to avoid re-renders during drag
+    const isDragging = useRef(false);
+    const dragStart = useRef({ x: 0, y: 0 });
+    const currentPos = useRef({ x: 0, y: 0 });
+
+    // Load position on mount (only for floating mode)
+    useEffect(() => {
+        if (isFloating && containerRef.current) {
+            const saved = localStorage.getItem(POSITION_KEY);
+            if (saved) {
+                try {
+                    const pos = JSON.parse(saved);
+                    currentPos.current = pos;
+                    containerRef.current.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+                } catch {
+                    // Use default position
+                }
+            }
+        }
+    }, [isFloating]);
 
     // Click outside to close (but not while dragging)
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (isDragging) return;
+            if (isDragging.current) return;
             if (isExpanded && containerRef.current && !containerRef.current.contains(event.target as Node)) {
                 setIsExpanded(false);
                 setSearchQuery('');
@@ -33,87 +50,112 @@ export const PhoneDirectory: React.FC<PhoneDirectoryProps> = ({ users, analytics
 
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isExpanded, isDragging]);
+    }, [isExpanded]);
 
-    // Drag handlers
-    const handleDragStart = useCallback((clientX: number, clientY: number) => {
-        if (!containerRef.current) return;
+    // Drag event handlers (only for floating mode)
+    useEffect(() => {
+        if (!isFloating) return;
 
-        const rect = containerRef.current.getBoundingClientRect();
-        setDragOffset({
-            x: clientX - rect.left,
-            y: clientY - rect.top
-        });
-        setIsDragging(true);
-    }, []);
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isDragging.current || !containerRef.current) return;
 
-    const handleDragMove = useCallback((clientX: number, clientY: number) => {
-        if (!isDragging) return;
+            const deltaX = e.clientX - dragStart.current.x;
+            const deltaY = e.clientY - dragStart.current.y;
 
-        const newX = clientX - dragOffset.x;
-        const newY = clientY - dragOffset.y;
+            const newX = currentPos.current.x + deltaX;
+            const newY = currentPos.current.y + deltaY;
 
-        // Keep within viewport bounds
-        const maxX = window.innerWidth - 288; // 72 * 4 = 288 (w-72)
-        const maxY = window.innerHeight - 100;
+            containerRef.current.style.transform = `translate(${newX}px, ${newY}px)`;
+        };
 
-        setPosition({
-            x: Math.max(0, Math.min(newX, maxX)),
-            y: Math.max(0, Math.min(newY, maxY))
-        });
-    }, [isDragging, dragOffset]);
+        const handleMouseUp = () => {
+            if (!isDragging.current || !containerRef.current) return;
 
-    const handleDragEnd = useCallback(() => {
-        setIsDragging(false);
-    }, []);
+            isDragging.current = false;
+            containerRef.current.style.cursor = '';
 
-    // Mouse events
-    const handleMouseDown = (e: React.MouseEvent) => {
+            // Get final position from transform
+            const style = containerRef.current.style.transform;
+            const match = style.match(/translate\((-?\d+(?:\.\d+)?)px,\s*(-?\d+(?:\.\d+)?)px\)/);
+            if (match) {
+                currentPos.current = { x: parseFloat(match[1]), y: parseFloat(match[2]) };
+                localStorage.setItem(POSITION_KEY, JSON.stringify(currentPos.current));
+            }
+        };
+
+        const handleTouchMove = (e: TouchEvent) => {
+            if (!isDragging.current || !containerRef.current) return;
+
+            const touch = e.touches[0];
+            const deltaX = touch.clientX - dragStart.current.x;
+            const deltaY = touch.clientY - dragStart.current.y;
+
+            const newX = currentPos.current.x + deltaX;
+            const newY = currentPos.current.y + deltaY;
+
+            containerRef.current.style.transform = `translate(${newX}px, ${newY}px)`;
+        };
+
+        const handleTouchEnd = () => {
+            if (!isDragging.current || !containerRef.current) return;
+
+            isDragging.current = false;
+
+            // Get final position from transform
+            const style = containerRef.current.style.transform;
+            const match = style.match(/translate\((-?\d+(?:\.\d+)?)px,\s*(-?\d+(?:\.\d+)?)px\)/);
+            if (match) {
+                currentPos.current = { x: parseFloat(match[1]), y: parseFloat(match[2]) };
+                localStorage.setItem(POSITION_KEY, JSON.stringify(currentPos.current));
+            }
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+        window.addEventListener('touchmove', handleTouchMove, { passive: true });
+        window.addEventListener('touchend', handleTouchEnd);
+
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+            window.removeEventListener('touchmove', handleTouchMove);
+            window.removeEventListener('touchend', handleTouchEnd);
+        };
+    }, [isFloating]);
+
+    const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+        if (!isFloating) return;
+
         e.preventDefault();
-        handleDragStart(e.clientX, e.clientY);
-    };
+        isDragging.current = true;
 
-    useEffect(() => {
-        const handleMouseMove = (e: MouseEvent) => handleDragMove(e.clientX, e.clientY);
-        const handleMouseUp = () => handleDragEnd();
-
-        if (isDragging) {
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
+        if (containerRef.current) {
+            containerRef.current.style.cursor = 'grabbing';
         }
 
-        return () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        };
-    }, [isDragging, handleDragMove, handleDragEnd]);
-
-    // Touch events
-    const handleTouchStart = (e: React.TouchEvent) => {
-        const touch = e.touches[0];
-        handleDragStart(touch.clientX, touch.clientY);
-    };
-
-    const handleTouchMove = useCallback((e: TouchEvent) => {
-        const touch = e.touches[0];
-        handleDragMove(touch.clientX, touch.clientY);
-    }, [handleDragMove]);
-
-    const handleTouchEnd = useCallback(() => {
-        handleDragEnd();
-    }, [handleDragEnd]);
-
-    useEffect(() => {
-        if (isDragging) {
-            document.addEventListener('touchmove', handleTouchMove, { passive: false });
-            document.addEventListener('touchend', handleTouchEnd);
+        // Get current position from transform
+        if (containerRef.current) {
+            const style = containerRef.current.style.transform;
+            const match = style.match(/translate\((-?\d+(?:\.\d+)?)px,\s*(-?\d+(?:\.\d+)?)px\)/);
+            if (match) {
+                currentPos.current = { x: parseFloat(match[1]), y: parseFloat(match[2]) };
+            }
         }
 
-        return () => {
-            document.removeEventListener('touchmove', handleTouchMove);
-            document.removeEventListener('touchend', handleTouchEnd);
-        };
-    }, [isDragging, handleTouchMove, handleTouchEnd]);
+        if ('touches' in e) {
+            dragStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        } else {
+            dragStart.current = { x: e.clientX, y: e.clientY };
+        }
+    };
+
+    const handleResetPosition = () => {
+        if (containerRef.current) {
+            containerRef.current.style.transform = 'translate(0px, 0px)';
+            currentPos.current = { x: 0, y: 0 };
+            localStorage.removeItem(POSITION_KEY);
+        }
+    };
 
     // Combine and sort all personnel alphabetically
     const allPersonnel = useMemo(() => [
@@ -178,29 +220,30 @@ export const PhoneDirectory: React.FC<PhoneDirectoryProps> = ({ users, analytics
 
     if (personnelWithPhone.length === 0) return null;
 
-    // Calculate position style - relative to container when not dragged, absolute when dragged
-    const positionStyle: React.CSSProperties = position
-        ? { position: 'fixed', left: position.x, top: position.y, zIndex: 50 }
-        : {};
+    const floatingClasses = isFloating
+        ? 'fixed z-[9998] w-72 shadow-2xl'
+        : 'w-full';
 
     return (
         <div
             ref={containerRef}
-            className={`w-full ${isDragging ? 'cursor-grabbing' : ''}`}
-            style={positionStyle}
+            className={floatingClasses}
+            style={isFloating ? { top: '100px', right: '240px' } : undefined}
         >
-            <div className={`bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 overflow-hidden transition-all duration-300 ${isDragging ? 'shadow-3xl scale-[1.02]' : ''}`}>
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 overflow-hidden transition-all duration-300">
                 {/* Header with drag handle */}
                 <div className="flex items-stretch bg-gradient-to-r from-teal-500 to-cyan-500">
-                    {/* Drag Handle */}
-                    <div
-                        onMouseDown={handleMouseDown}
-                        onTouchStart={handleTouchStart}
-                        className="px-2 flex items-center justify-center cursor-grab active:cursor-grabbing hover:bg-white/10 transition-colors border-r border-white/20"
-                        title="Sürükle"
-                    >
-                        <GripVertical size={16} className="text-white/70" />
-                    </div>
+                    {/* Drag Handle - only for floating mode */}
+                    {isFloating && (
+                        <div
+                            onMouseDown={handleDragStart}
+                            onTouchStart={handleDragStart}
+                            className="px-2 flex items-center justify-center cursor-grab active:cursor-grabbing hover:bg-white/10 transition-colors border-r border-white/20"
+                            title="Sürükle"
+                        >
+                            <GripHorizontal size={16} className="text-white/70" />
+                        </div>
+                    )}
 
                     {/* Toggle Button */}
                     <button
@@ -223,6 +266,28 @@ export const PhoneDirectory: React.FC<PhoneDirectoryProps> = ({ users, analytics
                             <ChevronDown size={20} />
                         </div>
                     </button>
+
+                    {/* Action buttons for floating mode */}
+                    {isFloating && (
+                        <div className="flex items-center border-l border-white/20">
+                            <button
+                                onClick={handleResetPosition}
+                                className="px-2 h-full flex items-center justify-center hover:bg-white/10 transition-colors text-white/70 hover:text-white"
+                                title="Konumu Sıfırla"
+                            >
+                                <RotateCcw size={14} />
+                            </button>
+                            {onClose && (
+                                <button
+                                    onClick={onClose}
+                                    className="px-2 h-full flex items-center justify-center hover:bg-white/10 transition-colors text-white/70 hover:text-white"
+                                    title="Kapat"
+                                >
+                                    <X size={14} />
+                                </button>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Expandable Content */}

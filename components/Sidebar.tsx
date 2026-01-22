@@ -115,12 +115,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ users, analyticsUsers }) => {
             <div className="flex flex-col gap-3">
                 {isVisible('weather') && <WeatherWidget />}
                 {isVisible('notes') && <StickyNoteWidget />}
-                {isVisible('phone') && <PhoneDirectory users={users} analyticsUsers={analyticsUsers} />}
             </div>
 
-            {/* Floating Pomodoro Widget - rendered outside sidebar flow */}
+            {/* Floating Widgets - rendered outside sidebar flow */}
             {isVisible('pomodoro') && (
                 <PomodoroWidget isFloating={true} onClose={() => toggleWidget('pomodoro')} />
+            )}
+            {isVisible('phone') && (
+                <PhoneDirectory users={users} analyticsUsers={analyticsUsers} isFloating={true} onClose={() => toggleWidget('phone')} />
             )}
         </div>
     );
