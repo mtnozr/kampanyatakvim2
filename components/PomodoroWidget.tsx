@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, Coffee, Focus, Volume2, VolumeX } from 'lucide-react';
+import { Play, Pause, RotateCcw, Coffee, Focus, Volume2, VolumeX, GripHorizontal, X } from 'lucide-react';
 
 // Constants
 const WORK_DURATION = 25 * 60; // 25 minutes in seconds
 const BREAK_DURATION = 5 * 60; // 5 minutes in seconds
 const STORAGE_KEY = 'pomodoro_timer_state';
+const POSITION_KEY = 'pomodoro_widget_position';
 
 interface PomodoroState {
     mode: 'work' | 'break';
@@ -50,7 +51,12 @@ const CircularProgress: React.FC<{ progress: number; mode: 'work' | 'break' }> =
     );
 };
 
-export const PomodoroWidget: React.FC = () => {
+interface PomodoroWidgetProps {
+    isFloating?: boolean;
+    onClose?: () => void;
+}
+
+export const PomodoroWidget: React.FC<PomodoroWidgetProps> = ({ isFloating = false, onClose }) => {
     const [state, setState] = useState<PomodoroState>({
         mode: 'work',
         remainingSeconds: WORK_DURATION,
@@ -59,6 +65,28 @@ export const PomodoroWidget: React.FC = () => {
     });
     const [soundEnabled, setSoundEnabled] = useState(true);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Drag state - using refs to avoid re-renders during drag
+    const widgetRef = useRef<HTMLDivElement>(null);
+    const isDragging = useRef(false);
+    const dragStart = useRef({ x: 0, y: 0 });
+    const currentPos = useRef({ x: 0, y: 0 });
+
+    // Load position on mount (only for floating mode)
+    useEffect(() => {
+        if (isFloating && widgetRef.current) {
+            const saved = localStorage.getItem(POSITION_KEY);
+            if (saved) {
+                try {
+                    const pos = JSON.parse(saved);
+                    currentPos.current = pos;
+                    widgetRef.current.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+                } catch {
+                    // Use default position
+                }
+            }
+        }
+    }, [isFloating]);
 
     // Load state from localStorage on mount
     useEffect(() => {
@@ -133,6 +161,103 @@ export const PomodoroWidget: React.FC = () => {
             }
         };
     }, [state.isRunning]);
+
+    // Drag event handlers (only for floating mode)
+    useEffect(() => {
+        if (!isFloating) return;
+
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isDragging.current || !widgetRef.current) return;
+
+            const deltaX = e.clientX - dragStart.current.x;
+            const deltaY = e.clientY - dragStart.current.y;
+
+            const newX = currentPos.current.x + deltaX;
+            const newY = currentPos.current.y + deltaY;
+
+            widgetRef.current.style.transform = `translate(${newX}px, ${newY}px)`;
+        };
+
+        const handleMouseUp = () => {
+            if (!isDragging.current || !widgetRef.current) return;
+
+            isDragging.current = false;
+            widgetRef.current.style.cursor = 'grab';
+
+            // Get final position from transform
+            const style = widgetRef.current.style.transform;
+            const match = style.match(/translate\((-?\d+(?:\.\d+)?)px,\s*(-?\d+(?:\.\d+)?)px\)/);
+            if (match) {
+                currentPos.current = { x: parseFloat(match[1]), y: parseFloat(match[2]) };
+                localStorage.setItem(POSITION_KEY, JSON.stringify(currentPos.current));
+            }
+        };
+
+        const handleTouchMove = (e: TouchEvent) => {
+            if (!isDragging.current || !widgetRef.current) return;
+
+            const touch = e.touches[0];
+            const deltaX = touch.clientX - dragStart.current.x;
+            const deltaY = touch.clientY - dragStart.current.y;
+
+            const newX = currentPos.current.x + deltaX;
+            const newY = currentPos.current.y + deltaY;
+
+            widgetRef.current.style.transform = `translate(${newX}px, ${newY}px)`;
+        };
+
+        const handleTouchEnd = () => {
+            if (!isDragging.current || !widgetRef.current) return;
+
+            isDragging.current = false;
+
+            // Get final position from transform
+            const style = widgetRef.current.style.transform;
+            const match = style.match(/translate\((-?\d+(?:\.\d+)?)px,\s*(-?\d+(?:\.\d+)?)px\)/);
+            if (match) {
+                currentPos.current = { x: parseFloat(match[1]), y: parseFloat(match[2]) };
+                localStorage.setItem(POSITION_KEY, JSON.stringify(currentPos.current));
+            }
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+        window.addEventListener('touchmove', handleTouchMove, { passive: true });
+        window.addEventListener('touchend', handleTouchEnd);
+
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+            window.removeEventListener('touchmove', handleTouchMove);
+            window.removeEventListener('touchend', handleTouchEnd);
+        };
+    }, [isFloating]);
+
+    const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+        if (!isFloating) return;
+
+        e.preventDefault();
+        isDragging.current = true;
+
+        if (widgetRef.current) {
+            widgetRef.current.style.cursor = 'grabbing';
+        }
+
+        // Get current position from transform
+        if (widgetRef.current) {
+            const style = widgetRef.current.style.transform;
+            const match = style.match(/translate\((-?\d+(?:\.\d+)?)px,\s*(-?\d+(?:\.\d+)?)px\)/);
+            if (match) {
+                currentPos.current = { x: parseFloat(match[1]), y: parseFloat(match[2]) };
+            }
+        }
+
+        if ('touches' in e) {
+            dragStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        } else {
+            dragStart.current = { x: e.clientX, y: e.clientY };
+        }
+    };
 
     const handleTimerComplete = (completedMode: 'work' | 'break') => {
         // Play sound
@@ -234,20 +359,44 @@ export const PomodoroWidget: React.FC = () => {
     const totalDuration = state.mode === 'work' ? WORK_DURATION : BREAK_DURATION;
     const progress = state.remainingSeconds / totalDuration;
 
+    const floatingClasses = isFloating
+        ? 'fixed z-[9999] w-52 shadow-2xl'
+        : '';
+
     return (
-        <div className={`bg-gradient-to-br ${state.mode === 'work' ? 'from-red-500 to-orange-500' : 'from-green-500 to-teal-500'} rounded-2xl shadow-xl overflow-hidden transition-colors duration-500`}>
+        <div
+            ref={widgetRef}
+            className={`bg-gradient-to-br ${state.mode === 'work' ? 'from-red-500 to-orange-500' : 'from-green-500 to-teal-500'} rounded-2xl shadow-xl overflow-hidden transition-colors duration-500 ${floatingClasses}`}
+            style={isFloating ? { top: '100px', right: '20px' } : undefined}
+        >
             {/* Header */}
-            <div className="px-3 py-2 flex items-center justify-between bg-black/10">
+            <div
+                className={`px-3 py-2 flex items-center justify-between bg-black/10 ${isFloating ? 'cursor-grab select-none' : ''}`}
+                onMouseDown={isFloating ? handleDragStart : undefined}
+                onTouchStart={isFloating ? handleDragStart : undefined}
+            >
                 <div className="flex items-center gap-2 text-white">
+                    {isFloating && <GripHorizontal size={14} className="text-white/60" />}
                     <span className="text-xs font-bold">🍅 Pomodoro</span>
                 </div>
-                <button
-                    onClick={() => setSoundEnabled(!soundEnabled)}
-                    className="p-1 text-white/70 hover:text-white hover:bg-white/10 rounded transition-colors"
-                    title={soundEnabled ? 'Sesi Kapat' : 'Sesi Aç'}
-                >
-                    {soundEnabled ? <Volume2 size={12} /> : <VolumeX size={12} />}
-                </button>
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={(e) => { e.stopPropagation(); setSoundEnabled(!soundEnabled); }}
+                        className="p-1 text-white/70 hover:text-white hover:bg-white/10 rounded transition-colors"
+                        title={soundEnabled ? 'Sesi Kapat' : 'Sesi Aç'}
+                    >
+                        {soundEnabled ? <Volume2 size={12} /> : <VolumeX size={12} />}
+                    </button>
+                    {isFloating && onClose && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onClose(); }}
+                            className="p-1 text-white/70 hover:text-white hover:bg-white/10 rounded transition-colors"
+                            title="Kapat"
+                        >
+                            <X size={12} />
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Timer Display */}
