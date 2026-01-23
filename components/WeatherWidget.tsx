@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Cloud, Sun, CloudRain, CloudSnow, CloudLightning, Wind, Loader2, RefreshCw, MapPin } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Cloud, Sun, CloudRain, CloudSnow, CloudLightning, Loader2, RefreshCw, MapPin, GripHorizontal, RotateCcw, X } from 'lucide-react';
 
 interface DayForecast {
     date: Date;
@@ -7,6 +7,13 @@ interface DayForecast {
     tempMin: number;
     weatherCode: number;
 }
+
+interface WeatherWidgetProps {
+    isFloating?: boolean;
+    onClose?: () => void;
+}
+
+const POSITION_KEY = 'weather_widget_position';
 
 // Weather code to icon mapping (WMO Weather interpretation codes)
 // Using bright colors for visibility on gradient background
@@ -42,11 +49,139 @@ const getDayName = (date: Date, index: number): string => {
     return date.toLocaleDateString('tr-TR', { weekday: 'short' });
 };
 
-export const WeatherWidget: React.FC = () => {
+export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ isFloating = false, onClose }) => {
     const [forecast, setForecast] = useState<DayForecast[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    // Drag state - using refs to avoid re-renders during drag
+    const isDragging = useRef(false);
+    const dragStart = useRef({ x: 0, y: 0 });
+    const currentPos = useRef({ x: 0, y: 0 });
+
+    // Load position on mount (only for floating mode)
+    useEffect(() => {
+        if (isFloating && containerRef.current) {
+            const saved = localStorage.getItem(POSITION_KEY);
+            if (saved) {
+                try {
+                    const pos = JSON.parse(saved);
+                    currentPos.current = pos;
+                    containerRef.current.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+                } catch {
+                    // Use default position
+                }
+            }
+        }
+    }, [isFloating]);
+
+    // Drag event handlers (only for floating mode)
+    useEffect(() => {
+        if (!isFloating) return;
+
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isDragging.current || !containerRef.current) return;
+
+            const deltaX = e.clientX - dragStart.current.x;
+            const deltaY = e.clientY - dragStart.current.y;
+
+            const newX = currentPos.current.x + deltaX;
+            const newY = currentPos.current.y + deltaY;
+
+            containerRef.current.style.transform = `translate(${newX}px, ${newY}px)`;
+        };
+
+        const handleMouseUp = () => {
+            if (!isDragging.current || !containerRef.current) return;
+
+            isDragging.current = false;
+            containerRef.current.style.cursor = '';
+
+            // Get final position from transform
+            const style = containerRef.current.style.transform;
+            const match = style.match(/translate\((-?\d+(?:\.\d+)?)px,\s*(-?\d+(?:\.\d+)?)px\)/);
+            if (match) {
+                currentPos.current = { x: parseFloat(match[1]), y: parseFloat(match[2]) };
+                localStorage.setItem(POSITION_KEY, JSON.stringify(currentPos.current));
+            }
+        };
+
+        const handleTouchMove = (e: TouchEvent) => {
+            if (!isDragging.current || !containerRef.current) return;
+
+            const touch = e.touches[0];
+            const deltaX = touch.clientX - dragStart.current.x;
+            const deltaY = touch.clientY - dragStart.current.y;
+
+            const newX = currentPos.current.x + deltaX;
+            const newY = currentPos.current.y + deltaY;
+
+            containerRef.current.style.transform = `translate(${newX}px, ${newY}px)`;
+        };
+
+        const handleTouchEnd = () => {
+            if (!isDragging.current || !containerRef.current) return;
+
+            isDragging.current = false;
+
+            // Get final position from transform
+            const style = containerRef.current.style.transform;
+            const match = style.match(/translate\((-?\d+(?:\.\d+)?)px,\s*(-?\d+(?:\.\d+)?)px\)/);
+            if (match) {
+                currentPos.current = { x: parseFloat(match[1]), y: parseFloat(match[2]) };
+                localStorage.setItem(POSITION_KEY, JSON.stringify(currentPos.current));
+            }
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+        window.addEventListener('touchmove', handleTouchMove, { passive: true });
+        window.addEventListener('touchend', handleTouchEnd);
+
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+            window.removeEventListener('touchmove', handleTouchMove);
+            window.removeEventListener('touchend', handleTouchEnd);
+        };
+    }, [isFloating]);
+
+    const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+        if (!isFloating) return;
+
+        e.preventDefault();
+        isDragging.current = true;
+
+        if (containerRef.current) {
+            containerRef.current.style.cursor = 'grabbing';
+        }
+
+        // Get current position from transform
+        if (containerRef.current) {
+            const style = containerRef.current.style.transform;
+            const match = style.match(/translate\((-?\d+(?:\.\d+)?)px,\s*(-?\d+(?:\.\d+)?)px\)/);
+            if (match) {
+                currentPos.current = { x: parseFloat(match[1]), y: parseFloat(match[2]) };
+            }
+        }
+
+        if ('touches' in e) {
+            dragStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        } else {
+            dragStart.current = { x: e.clientX, y: e.clientY };
+        }
+    };
+
+    const handleResetPosition = () => {
+        if (containerRef.current) {
+            containerRef.current.style.transform = 'translate(0px, 0px)';
+            currentPos.current = { x: 0, y: 0 };
+            localStorage.removeItem(POSITION_KEY);
+        }
+    };
 
     const fetchWeather = async () => {
         setLoading(true);
@@ -89,22 +224,33 @@ export const WeatherWidget: React.FC = () => {
         return () => clearInterval(interval);
     }, []);
 
+    const floatingClasses = isFloating
+        ? 'fixed z-[9997] w-72 shadow-2xl'
+        : '';
+
     return (
-        <div className="bg-gradient-to-br from-sky-500 to-indigo-600 rounded-2xl shadow-xl overflow-hidden mb-3">
+        <div
+            ref={containerRef}
+            className={`bg-gradient-to-br from-sky-500 to-indigo-600 rounded-2xl shadow-xl overflow-hidden ${floatingClasses}`}
+            style={isFloating ? { top: '100px', right: '330px' } : undefined}
+        >
             {/* Header */}
             <div className="px-3 py-2 flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-white">
+                {isFloating && (
+                    <div
+                        onMouseDown={handleDragStart}
+                        onTouchStart={handleDragStart}
+                        className="p-1 cursor-grab active:cursor-grabbing hover:bg-white/10 rounded transition-colors mr-2"
+                        title="Sürükle"
+                    >
+                        <GripHorizontal size={14} className="text-white/60" />
+                    </div>
+                )}
+                <div className="flex items-center gap-1.5 text-white flex-1">
                     <MapPin size={14} className="opacity-80" />
                     <span className="text-xs font-medium">İstanbul</span>
                 </div>
                 <div className="flex items-center gap-1">
-                    <button
-                        onClick={() => window.location.reload()}
-                        className="p-1 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                        title="Sayfayı Yenile"
-                    >
-                        <RefreshCw size={12} />
-                    </button>
                     <button
                         onClick={fetchWeather}
                         disabled={loading}
@@ -113,6 +259,26 @@ export const WeatherWidget: React.FC = () => {
                     >
                         <Cloud size={12} className={loading ? 'animate-pulse' : ''} />
                     </button>
+                    {isFloating && (
+                        <>
+                            <button
+                                onClick={handleResetPosition}
+                                className="p-1 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                                title="Konumu Sıfırla"
+                            >
+                                <RotateCcw size={12} />
+                            </button>
+                            {onClose && (
+                                <button
+                                    onClick={onClose}
+                                    className="p-1 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                                    title="Kapat"
+                                >
+                                    <X size={12} />
+                                </button>
+                            )}
+                        </>
+                    )}
                 </div>
             </div>
 
