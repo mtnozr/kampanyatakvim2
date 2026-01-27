@@ -10,12 +10,13 @@ import {
     isWeekend,
     startOfMonth,
     startOfWeek,
-    isBefore
+    isBefore,
+    differenceInDays
 } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { Report, User, Department } from '../types';
 import { DAYS_OF_WEEK } from '../constants';
-import { Clock, AlertTriangle, FileText, Plus, CheckCircle2 } from 'lucide-react';
+import { Clock, AlertTriangle, FileText, Plus, CheckCircle2, Mail } from 'lucide-react';
 
 interface ReportWithStatus extends Report {
     isOverdue: boolean;
@@ -135,6 +136,50 @@ export const ReportCalendarTab: React.FC<ReportCalendarTabProps> = ({
 
     const canAddReport = isDesigner;
 
+    const handleBulkOverdueEmail = () => {
+        if (overdueReports.length === 0) {
+            alert('Gecikmiş rapor bulunmamaktadır.');
+            return;
+        }
+
+        // Group overdue reports by assignee
+        const reportsByAssignee = new Map<string, ReportWithStatus[]>();
+        overdueReports.forEach(report => {
+            if (!report.assigneeId) return;
+            const existing = reportsByAssignee.get(report.assigneeId) || [];
+            reportsByAssignee.set(report.assigneeId, [...existing, report]);
+        });
+
+        // Collect all assignee emails
+        const emails: string[] = [];
+        let bodyText = 'Merhaba,\n\nAşağıdaki raporlar gecikmiştir. Lütfen en kısa sürede tamamlayalım.\n\n';
+
+        reportsByAssignee.forEach((reports, assigneeId) => {
+            const assignee = users.find(u => u.id === assigneeId);
+            if (!assignee?.email) return;
+
+            if (!emails.includes(assignee.email)) {
+                emails.push(assignee.email);
+            }
+
+            bodyText += `\n--- ${assignee.name} ---\n`;
+            reports.forEach(report => {
+                const delayDays = differenceInDays(now, report.dueDate);
+                bodyText += `• Kampanya: ${report.campaignTitle || report.title}\n`;
+                bodyText += `  Rapor Teslim Tarihi: ${format(report.dueDate, 'd MMMM yyyy', { locale: tr })}\n`;
+                bodyText += `  Gecikme: ${delayDays} gün\n\n`;
+            });
+        });
+
+        bodyText += '\n----------------\nKampanya Yönetimi';
+
+        const subject = encodeURIComponent(`⚠️ Gecikmiş Raporlar - ${overdueReports.length} Rapor Beklemede`);
+        const body = encodeURIComponent(bodyText);
+        const to = emails.join(',');
+
+        window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+    };
+
     // Get styling for report card
     const getReportCardStyle = (report: ReportWithStatus) => {
         if (report.status === 'done') {
@@ -200,6 +245,16 @@ export const ReportCalendarTab: React.FC<ReportCalendarTabProps> = ({
                         Toplam: <span className="font-bold">{myReports.length}</span>
                     </span>
                 </div>
+                {isDesigner && overdueReports.length > 0 && (
+                    <button
+                        onClick={handleBulkOverdueEmail}
+                        className="ml-auto px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-sm"
+                        title="Gecikmiş raporlar için toplu mail gönder"
+                    >
+                        <Mail size={16} />
+                        Gecikmiş Raporlar İçin Mail Gönder ({overdueReports.length})
+                    </button>
+                )}
             </div>
 
             {/* Calendar Grid Header */}
