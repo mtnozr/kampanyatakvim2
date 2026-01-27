@@ -1588,7 +1588,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         .map(user => {
                           const isOnline = user.lastSeen && new Date().getTime() - new Date(user.lastSeen).getTime() < 5 * 60 * 1000;
                           const lastSeenText = user.lastSeen
-                            ? format(new Date(user.lastSeen), 'HH:mm', { locale: tr })
+                            ? format(new Date(user.lastSeen), 'dd.MM.yyyy HH:mm', { locale: tr })
                             : 'Görülmedi';
                           const deptName = departments.find(d => d.id === user.departmentId)?.name || 'Bilinmiyor';
 
