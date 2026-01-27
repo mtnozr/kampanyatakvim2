@@ -14,6 +14,9 @@ interface WeatherWidgetProps {
 }
 
 const POSITION_KEY = 'weather_widget_position';
+const WIDTH_KEY = 'weather_widget_width';
+const MIN_WIDTH = 200;
+const MAX_WIDTH = 500;
 
 // Weather code to icon mapping (WMO Weather interpretation codes)
 // Using bright colors for visibility on gradient background
@@ -54,6 +57,10 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ isFloating = false
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+    const [width, setWidth] = useState<number>(() => {
+        const saved = localStorage.getItem(WIDTH_KEY);
+        return saved ? parseInt(saved) : 288; // 288px = w-72
+    });
 
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -61,6 +68,11 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ isFloating = false
     const isDragging = useRef(false);
     const dragStart = useRef({ x: 0, y: 0 });
     const currentPos = useRef({ x: 0, y: 0 });
+
+    // Resize state
+    const isResizing = useRef(false);
+    const resizeStart = useRef({ x: 0, width: 0 });
+    const resizeSide = useRef<'left' | 'right' | null>(null);
 
     // Load position on mount (only for floating mode)
     useEffect(() => {
@@ -78,11 +90,28 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ isFloating = false
         }
     }, [isFloating]);
 
-    // Drag event handlers (only for floating mode)
+    // Drag and Resize event handlers (only for floating mode)
     useEffect(() => {
         if (!isFloating) return;
 
         const handleMouseMove = (e: MouseEvent) => {
+            // Handle resize
+            if (isResizing.current && containerRef.current) {
+                const deltaX = e.clientX - resizeStart.current.x;
+                let newWidth = resizeStart.current.width;
+
+                if (resizeSide.current === 'right') {
+                    newWidth = resizeStart.current.width + deltaX;
+                } else if (resizeSide.current === 'left') {
+                    newWidth = resizeStart.current.width - deltaX;
+                }
+
+                newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, newWidth));
+                setWidth(newWidth);
+                return;
+            }
+
+            // Handle drag
             if (!isDragging.current || !containerRef.current) return;
 
             const deltaX = e.clientX - dragStart.current.x;
@@ -95,6 +124,16 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ isFloating = false
         };
 
         const handleMouseUp = () => {
+            // Handle resize end
+            if (isResizing.current) {
+                isResizing.current = false;
+                resizeSide.current = null;
+                document.body.style.cursor = '';
+                localStorage.setItem(WIDTH_KEY, width.toString());
+                return;
+            }
+
+            // Handle drag end
             if (!isDragging.current || !containerRef.current) return;
 
             isDragging.current = false;
@@ -110,9 +149,27 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ isFloating = false
         };
 
         const handleTouchMove = (e: TouchEvent) => {
+            const touch = e.touches[0];
+
+            // Handle resize
+            if (isResizing.current && containerRef.current) {
+                const deltaX = touch.clientX - resizeStart.current.x;
+                let newWidth = resizeStart.current.width;
+
+                if (resizeSide.current === 'right') {
+                    newWidth = resizeStart.current.width + deltaX;
+                } else if (resizeSide.current === 'left') {
+                    newWidth = resizeStart.current.width - deltaX;
+                }
+
+                newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, newWidth));
+                setWidth(newWidth);
+                return;
+            }
+
+            // Handle drag
             if (!isDragging.current || !containerRef.current) return;
 
-            const touch = e.touches[0];
             const deltaX = touch.clientX - dragStart.current.x;
             const deltaY = touch.clientY - dragStart.current.y;
 
@@ -123,6 +180,15 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ isFloating = false
         };
 
         const handleTouchEnd = () => {
+            // Handle resize end
+            if (isResizing.current) {
+                isResizing.current = false;
+                resizeSide.current = null;
+                localStorage.setItem(WIDTH_KEY, width.toString());
+                return;
+            }
+
+            // Handle drag end
             if (!isDragging.current || !containerRef.current) return;
 
             isDragging.current = false;
@@ -147,7 +213,7 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ isFloating = false
             window.removeEventListener('touchmove', handleTouchMove);
             window.removeEventListener('touchend', handleTouchEnd);
         };
-    }, [isFloating]);
+    }, [isFloating, width]);
 
     const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
         if (!isFloating) return;
@@ -181,6 +247,20 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ isFloating = false
             currentPos.current = { x: 0, y: 0 };
             localStorage.removeItem(POSITION_KEY);
         }
+    };
+
+    const handleResizeStart = (e: React.MouseEvent | React.TouchEvent, side: 'left' | 'right') => {
+        if (!isFloating) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        isResizing.current = true;
+        resizeSide.current = side;
+        resizeStart.current = {
+            x: 'touches' in e ? e.touches[0].clientX : e.clientX,
+            width: width
+        };
+        document.body.style.cursor = side === 'left' ? 'ew-resize' : 'ew-resize';
     };
 
     const fetchWeather = async () => {
@@ -225,15 +305,32 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ isFloating = false
     }, []);
 
     const floatingClasses = isFloating
-        ? 'fixed z-[9997] w-72 shadow-2xl'
+        ? 'fixed z-[9997] shadow-2xl'
         : '';
 
     return (
         <div
             ref={containerRef}
-            className={`bg-gradient-to-br from-sky-500 to-indigo-600 rounded-2xl shadow-xl overflow-hidden ${floatingClasses}`}
-            style={isFloating ? { top: '100px', right: '330px' } : undefined}
+            className={`bg-gradient-to-br from-sky-500 to-indigo-600 rounded-2xl shadow-xl overflow-hidden relative ${floatingClasses}`}
+            style={isFloating ? { top: '100px', right: '330px', width: `${width}px` } : undefined}
         >
+            {/* Resize handles */}
+            {isFloating && (
+                <>
+                    <div
+                        onMouseDown={(e) => handleResizeStart(e, 'left')}
+                        onTouchStart={(e) => handleResizeStart(e, 'left')}
+                        className="absolute left-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-white/20 transition-colors z-10"
+                        title="Genişliği ayarla"
+                    />
+                    <div
+                        onMouseDown={(e) => handleResizeStart(e, 'right')}
+                        onTouchStart={(e) => handleResizeStart(e, 'right')}
+                        className="absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-white/20 transition-colors z-10"
+                        title="Genişliği ayarla"
+                    />
+                </>
+            )}
             {/* Header */}
             <div className="px-3 py-2 flex items-center justify-between">
                 {isFloating && (
