@@ -1264,6 +1264,12 @@ function App() {
         'İptal Edildi': { bg: [254, 226, 226], text: [185, 28, 28] }    // red
       };
 
+      // Calculate statistics
+      const completedCount = events.filter(ev => ev.status === 'Tamamlandı').length;
+      const plannedCount = events.filter(ev => ev.status === 'Planlandı').length;
+      const waitingCount = events.filter(ev => ev.status === 'Bekleme').length;
+      const cancelledCount = events.filter(ev => ev.status === 'İptal Edildi').length;
+
       // Header - compact
       pdf.setFillColor(139, 92, 246); // violet-500
       pdf.rect(0, 0, pageWidth, 16, 'F');
@@ -1273,6 +1279,12 @@ function App() {
       pdf.setFont('helvetica', 'bold');
       const monthYearText = toAscii(format(currentDate, 'MMMM yyyy', { locale: tr }).toUpperCase());
       pdf.text(`KAMPANYA TAKVIMI - ${monthYearText}`, margin, 10);
+
+      // Statistics in header
+      pdf.setFontSize(7);
+      pdf.setFont('helvetica', 'normal');
+      const statsText = `Tamamlandi: ${completedCount} | Planlandi: ${plannedCount} | Bekleme: ${waitingCount} | Iptal: ${cancelledCount}`;
+      pdf.text(statsText, margin, 14);
 
       // Right side info
       pdf.setFontSize(7);

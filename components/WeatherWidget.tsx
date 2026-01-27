@@ -97,6 +97,7 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ isFloating = false
         const handleMouseMove = (e: MouseEvent) => {
             // Handle resize
             if (isResizing.current && containerRef.current) {
+                e.preventDefault();
                 const deltaX = e.clientX - resizeStart.current.x;
                 let newWidth = resizeStart.current.width;
 
@@ -104,6 +105,16 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ isFloating = false
                     newWidth = resizeStart.current.width + deltaX;
                 } else if (resizeSide.current === 'left') {
                     newWidth = resizeStart.current.width - deltaX;
+                    // When resizing from left, adjust position to keep right edge fixed
+                    const widthDiff = newWidth - width;
+                    const currentTransform = containerRef.current.style.transform;
+                    const match = currentTransform.match(/translate\((-?\d+(?:\.\d+)?)px,\s*(-?\d+(?:\.\d+)?)px\)/);
+                    if (match) {
+                        const currentX = parseFloat(match[1]);
+                        const currentY = parseFloat(match[2]);
+                        containerRef.current.style.transform = `translate(${currentX - widthDiff}px, ${currentY}px)`;
+                        currentPos.current.x = currentX - widthDiff;
+                    }
                 }
 
                 newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, newWidth));
@@ -160,6 +171,16 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ isFloating = false
                     newWidth = resizeStart.current.width + deltaX;
                 } else if (resizeSide.current === 'left') {
                     newWidth = resizeStart.current.width - deltaX;
+                    // When resizing from left, adjust position to keep right edge fixed
+                    const widthDiff = newWidth - width;
+                    const currentTransform = containerRef.current.style.transform;
+                    const match = currentTransform.match(/translate\((-?\d+(?:\.\d+)?)px,\s*(-?\d+(?:\.\d+)?)px\)/);
+                    if (match) {
+                        const currentX = parseFloat(match[1]);
+                        const currentY = parseFloat(match[2]);
+                        containerRef.current.style.transform = `translate(${currentX - widthDiff}px, ${currentY}px)`;
+                        currentPos.current.x = currentX - widthDiff;
+                    }
                 }
 
                 newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, newWidth));
