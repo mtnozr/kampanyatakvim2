@@ -1995,6 +1995,20 @@ function App() {
 
       await deleteDoc(doc(db, "events", id));
 
+      // Delete related reports
+      try {
+        const reportsQuery = query(collection(db, "reports"), where("campaignId", "==", id));
+        const reportsSnapshot = await getDocs(reportsQuery);
+        const deletePromises = reportsSnapshot.docs.map(reportDoc => deleteDoc(reportDoc.ref));
+        await Promise.all(deletePromises);
+
+        if (reportsSnapshot.docs.length > 0) {
+          console.log(`${reportsSnapshot.docs.length} ilişkili rapor silindi`);
+        }
+      } catch (reportError) {
+        console.error('İlişkili raporlar silinirken hata:', reportError);
+      }
+
       if (eventData) {
         // Find assignee name
         const assignee = users.find(u => u.id === eventData.assigneeId);
