@@ -99,6 +99,7 @@ export interface DepartmentUser {
   birthday?: string; // Format: MM-DD (e.g., "03-15" for March 15)
   createdAt: Date;
   lastSeen?: Date; // For tracking online status
+  ipAddress?: string; // Last known IP address
 }
 
 export interface WorkRequest {

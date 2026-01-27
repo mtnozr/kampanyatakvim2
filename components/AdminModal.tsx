@@ -1598,7 +1598,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                                 <div className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-gray-300 dark:bg-slate-600'}`} />
                                 <div>
                                   <h4 className="font-medium text-gray-900 dark:text-white text-sm">{user.username}</h4>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">{deptName}</p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    {deptName}
+                                    {user.ipAddress && <span className="ml-2 text-gray-400 dark:text-gray-500">• IP: {user.ipAddress}</span>}
+                                  </p>
                                 </div>
                               </div>
                               <div className="text-right">

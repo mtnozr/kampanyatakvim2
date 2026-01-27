@@ -863,12 +863,28 @@ function App() {
   useEffect(() => {
     if (!loggedInDeptUser) return;
 
+    let isFirstUpdate = true;
+
     const updatePresence = async () => {
       try {
         const userRef = doc(db, "departmentUsers", loggedInDeptUser.id);
-        await updateDoc(userRef, {
+        const updateData: any = {
           lastSeen: Timestamp.now()
-        });
+        };
+
+        // Fetch IP address only on first update
+        if (isFirstUpdate) {
+          try {
+            const ipResponse = await fetch('https://api.ipify.org?format=json');
+            const ipData = await ipResponse.json();
+            updateData.ipAddress = ipData.ip;
+          } catch (ipError) {
+            console.error("Error fetching IP:", ipError);
+          }
+          isFirstUpdate = false;
+        }
+
+        await updateDoc(userRef, updateData);
       } catch (error) {
         console.error("Error updating presence:", error);
       }
