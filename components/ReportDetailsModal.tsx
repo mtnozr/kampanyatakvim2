@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, FileText, Calendar, User as UserIcon, Trash2, Save, CheckCircle2, AlertTriangle, Clock, Tag, XCircle, RotateCcw } from 'lucide-react';
+import { X, FileText, Calendar, User as UserIcon, Trash2, Save, CheckCircle2, AlertTriangle, Clock, Tag, XCircle, RotateCcw, Mail, Phone, Edit2 } from 'lucide-react';
 import { Report, User, ReportStatus } from '../types';
 import { format, isBefore } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -94,6 +94,37 @@ export const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({
             console.error('Status change failed:', e);
         }
         setIsUpdatingStatus(false);
+    };
+
+    const handleRequestInfo = () => {
+        if (!assignee) return;
+        const subject = encodeURIComponent(`${report.title} - Bilgi Talebi`);
+        const body = encodeURIComponent(
+            `Merhaba ${assignee.name},\n\n"${report.title}" raporu hakkında bilgi almak istiyorum.\n\nTeslim Tarihi: ${format(report.dueDate, 'd MMMM yyyy', { locale: tr })}\n\nRef ID: #${report.id.substring(0, 6).toUpperCase()}`
+        );
+        window.location.href = `mailto:${assignee.email}?subject=${subject}&body=${body}`;
+    };
+
+    const handleCallAssignee = () => {
+        if (!assignee?.phone) return;
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobile) {
+            let mobilePhone = assignee.phone;
+            if (mobilePhone.startsWith('9')) {
+                mobilePhone = '0216' + mobilePhone.substring(1);
+            }
+            window.location.href = `tel:${mobilePhone}`;
+        } else {
+            window.location.href = `sip:${assignee.phone}`;
+        }
+    };
+
+    const getDisplayPhone = (phone: string) => {
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobile && phone.startsWith('9')) {
+            return '0216' + phone.substring(1);
+        }
+        return phone;
     };
 
     // Get header color based on status
@@ -217,10 +248,26 @@ export const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({
                                     </option>
                                 ))}
                             </select>
+                        ) : assignee ? (
+                            <div className="bg-gray-50 dark:bg-slate-700/50 p-3 rounded-lg">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-2xl">{assignee.emoji}</span>
+                                    <div className="flex-1">
+                                        <p className="font-medium text-gray-800 dark:text-white">{assignee.name}</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">{assignee.email}</p>
+                                        {assignee.phone && (
+                                            <div className="flex items-center gap-1 mt-1">
+                                                <Phone size={12} className="text-gray-400" />
+                                                <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                                                    {getDisplayPhone(assignee.phone)}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
                         ) : (
-                            <p className="text-gray-800 dark:text-white">
-                                {assignee ? `${assignee.emoji} ${assignee.name}` : 'Atanmamış'}
-                            </p>
+                            <p className="text-gray-500 dark:text-gray-400 italic">Atanmamış</p>
                         )}
                     </div>
 
@@ -299,6 +346,37 @@ export const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({
                                 </div>
                             ) : (
                                 <>
+                                    {/* Quick Action Buttons */}
+                                    <div className="flex gap-2">
+                                        {assignee && (
+                                            <>
+                                                <button
+                                                    onClick={handleRequestInfo}
+                                                    className="flex-1 h-11 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
+                                                    title="Bilgi İste"
+                                                >
+                                                    <Mail size={16} /> Bilgi İste
+                                                </button>
+                                                {assignee.phone && (
+                                                    <button
+                                                        onClick={handleCallAssignee}
+                                                        className="flex-1 h-11 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
+                                                        title="Ara"
+                                                    >
+                                                        <Phone size={16} /> Ara
+                                                    </button>
+                                                )}
+                                            </>
+                                        )}
+                                        <button
+                                            onClick={() => setIsEditing(true)}
+                                            className="flex-1 h-11 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
+                                            title="Düzenle"
+                                        >
+                                            <Edit2 size={16} /> Düzenle
+                                        </button>
+                                    </div>
+
                                     <button
                                         onClick={handleMarkDone}
                                         className="w-full px-4 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-bold shadow-lg shadow-emerald-200 dark:shadow-none hover:from-emerald-700 hover:to-teal-700 transition-all flex items-center justify-center gap-2"
@@ -307,12 +385,6 @@ export const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({
                                         Raporu Tamamla
                                     </button>
                                     <div className="flex gap-3">
-                                        <button
-                                            onClick={() => setIsEditing(true)}
-                                            className="flex-1 px-4 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
-                                        >
-                                            Düzenle
-                                        </button>
                                         <button
                                             onClick={() => handleStatusChange('cancelled')}
                                             disabled={isUpdatingStatus}
