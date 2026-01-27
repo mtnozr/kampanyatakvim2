@@ -96,7 +96,11 @@ function App() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'month' | 'week'>(() => {
     const saved = localStorage.getItem('calendarViewMode');
-    return saved === 'week' ? 'week' : 'month';
+    if (saved) return saved === 'week' ? 'week' : 'month';
+
+    // Mobile detection - default to week view for mobile
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    return isMobile ? 'week' : 'month';
   });
   const { theme, toggleTheme, setTheme } = useTheme();
   const {
