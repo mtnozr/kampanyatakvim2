@@ -1264,11 +1264,21 @@ function App() {
         'İptal Edildi': { bg: [254, 226, 226], text: [185, 28, 28] }    // red
       };
 
-      // Calculate statistics
-      const completedCount = events.filter(ev => ev.status === 'Tamamlandı').length;
-      const plannedCount = events.filter(ev => ev.status === 'Planlandı').length;
-      const waitingCount = events.filter(ev => ev.status === 'Bekleme').length;
-      const cancelledCount = events.filter(ev => ev.status === 'İptal Edildi').length;
+      // Calculate calendar days first
+      const monthStart = startOfMonth(currentDate);
+      const monthEnd = endOfMonth(currentDate);
+
+      // Filter events for current month only
+      const monthEvents = events.filter(ev => {
+        const evDate = ev.date instanceof Date ? ev.date : (ev.date as any).toDate();
+        return isSameMonth(evDate, currentDate);
+      });
+
+      // Calculate statistics for current month
+      const completedCount = monthEvents.filter(ev => ev.status === 'Tamamlandı').length;
+      const plannedCount = monthEvents.filter(ev => ev.status === 'Planlandı').length;
+      const waitingCount = monthEvents.filter(ev => ev.status === 'Bekleme').length;
+      const cancelledCount = monthEvents.filter(ev => ev.status === 'İptal Edildi').length;
 
       // Header - compact
       pdf.setFillColor(139, 92, 246); // violet-500
@@ -1290,10 +1300,6 @@ function App() {
       pdf.setFontSize(7);
       pdf.setFont('helvetica', 'normal');
       pdf.text(`${format(new Date(), 'dd.MM.yyyy HH:mm')}`, pageWidth - margin, 10, { align: 'right' });
-
-      // Calculate calendar days first
-      const monthStart = startOfMonth(currentDate);
-      const monthEnd = endOfMonth(currentDate);
       const calStart = startOfWeek(monthStart, { weekStartsOn: 1 });
       const calEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
       const allDays = eachDayOfInterval({ start: calStart, end: calEnd });
@@ -1449,9 +1455,9 @@ function App() {
         legendX += 22;
       });
 
-      // Total events count
+      // Total events count for current month
       pdf.setTextColor(100, 100, 100);
-      pdf.text(`${events.length} kampanya`, pageWidth - margin, legendY, { align: 'right' });
+      pdf.text(`${monthEvents.length} kampanya`, pageWidth - margin, legendY, { align: 'right' });
 
       // Save
       pdf.save(`kampanya-takvimi-${format(currentDate, 'yyyy-MM')}.pdf`);
