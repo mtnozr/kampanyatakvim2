@@ -175,7 +175,7 @@ export const ReportCalendarTab: React.FC<ReportCalendarTabProps> = ({
 
         const subject = encodeURIComponent(`⚠️ Gecikmiş Raporlar - ${overdueReports.length} Rapor Beklemede`);
         const body = encodeURIComponent(bodyText);
-        const to = emails.join(',');
+        const to = emails.join(';');
 
         window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
     };
