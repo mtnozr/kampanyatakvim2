@@ -3,11 +3,13 @@ import { X, UserPlus, AlertCircle, AlignLeft, AlertTriangle, Building, Gauge } f
 import { UrgencyLevel, User, Department, DifficultyLevel, CalendarEvent } from '../types';
 import { URGENCY_CONFIGS, TURKISH_HOLIDAYS, DIFFICULTY_CONFIGS } from '../constants';
 import { RichTextEditor } from './RichTextEditor';
+import { addDays, format } from 'date-fns';
+import { calculateReportDueDate } from '../utils/businessDays';
 
 interface AddEventModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (title: string, urgency: UrgencyLevel, date: Date, assigneeId?: string, description?: string, departmentId?: string, difficulty?: DifficultyLevel, requiresReport?: boolean) => void;
+  onAdd: (title: string, urgency: UrgencyLevel, date: Date, assigneeId?: string, description?: string, departmentId?: string, difficulty?: DifficultyLevel, requiresReport?: boolean, reportDueDate?: Date) => void;
   initialDate?: Date;
   initialData?: {
     title?: string;
@@ -43,6 +45,7 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
   const [description, setDescription] = useState('');
   const [holidayWarning, setHolidayWarning] = useState<string | null>(null);
   const [requiresReport, setRequiresReport] = useState(true);
+  const [reportDueDateStr, setReportDueDateStr] = useState('');
 
   // Helper function to convert text to Title Case with Turkish support
   const toTitleCase = (str: string) => {
@@ -61,6 +64,10 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
         const formattedDate = `${year}-${month}-${day}`;
         setDateStr(formattedDate);
         checkHoliday(formattedDate);
+
+        // Calculate default report due date (+30 business days)
+        const defaultReportDue = calculateReportDueDate(initialDate);
+        setReportDueDateStr(format(defaultReportDue, 'yyyy-MM-dd'));
       }
 
       if (initialData) {
@@ -85,6 +92,7 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
       setDescription('');
       setHolidayWarning(null);
       setRequiresReport(true);
+      setReportDueDateStr('');
     }
   }, [isOpen, initialDate, initialData]);
 
@@ -115,7 +123,8 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
     }
 
     const selectedDate = new Date(dateStr);
-    onAdd(title, urgency, selectedDate, assigneeId, description, departmentId, difficulty, requiresReport);
+    const reportDue = requiresReport && reportDueDateStr ? new Date(reportDueDateStr) : undefined;
+    onAdd(title, urgency, selectedDate, assigneeId, description, departmentId, difficulty, requiresReport, reportDue);
     onClose();
     setTitle('');
     setUrgency('Medium');
@@ -125,6 +134,7 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
     setDescription('');
     setHolidayWarning(null);
     setRequiresReport(true);
+    setReportDueDateStr('');
   };
 
   if (!isOpen) return null;
@@ -308,17 +318,35 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
           </div>
 
           {/* Rapor Yapılacak mı */}
-          <div className="flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
-            <input
-              type="checkbox"
-              id="requiresReport"
-              checked={requiresReport}
-              onChange={(e) => setRequiresReport(e.target.checked)}
-              className="w-5 h-5 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 dark:bg-slate-600 dark:border-slate-500"
-            />
-            <label htmlFor="requiresReport" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none">
-              📊 Tamamlandığında rapor oluşturulsun
-            </label>
+          <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800 space-y-3">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="requiresReport"
+                checked={requiresReport}
+                onChange={(e) => setRequiresReport(e.target.checked)}
+                className="w-5 h-5 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 dark:bg-slate-600 dark:border-slate-500"
+              />
+              <label htmlFor="requiresReport" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                📊 Tamamlandığında rapor oluşturulsun
+              </label>
+            </div>
+            {requiresReport && (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                  Rapor Teslim Tarihi
+                </label>
+                <input
+                  type="date"
+                  value={reportDueDateStr}
+                  onChange={(e) => setReportDueDateStr(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-emerald-300 dark:border-emerald-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-all bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Varsayılan: Kampanya tarihinden +30 gün sonraki ilk iş günü
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="pt-4 flex justify-end gap-3 shrink-0">
