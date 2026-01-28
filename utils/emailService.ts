@@ -23,22 +23,26 @@ interface EmailResponse {
 }
 
 /**
- * Resend API ile email gönderir
+ * Resend API ile email gönderir (Backend üzerinden)
  */
 export async function sendEmailWithResend(
   apiKey: string,
   params: SendEmailParams
 ): Promise<EmailResponse> {
   try {
-    const response = await fetch('https://api.resend.com/emails', {
+    // Backend API endpoint'imizi kullan (CORS sorununu çözer)
+    // Vercel dev sunucusu hem dev hem prod için aynı path'i kullanır
+    const apiUrl = '/api/send-reminder';
+
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Kampanya Takvimi <onboarding@resend.dev>', // Resend ücretsiz test email
+        apiKey: apiKey,
         to: params.to,
+        toName: params.toName,
         subject: params.subject,
         html: params.html,
       }),
@@ -46,17 +50,18 @@ export async function sendEmailWithResend(
 
     if (!response.ok) {
       const error = await response.json();
-      console.error('Resend API error:', error);
+      console.error('API error:', error);
       return {
         success: false,
-        error: error.message || 'Email gönderilemedi',
+        error: error.error || 'Email gönderilemedi',
       };
     }
 
     const data = await response.json();
     return {
-      success: true,
-      messageId: data.id,
+      success: data.success,
+      messageId: data.messageId,
+      error: data.error,
     };
   } catch (error) {
     console.error('Email send error:', error);
