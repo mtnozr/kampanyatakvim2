@@ -472,35 +472,83 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
 
       {/* Recent Logs */}
       <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-6">
-        <h3 className="text-lg font-semibold mb-4">Son Gönderilen Mailler</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Son Gönderilen Mailler</h3>
+          <button
+            onClick={loadRecentLogs}
+            className="text-sm text-primary-700 hover:text-primary-800 flex items-center gap-1"
+          >
+            🔄 Yenile
+          </button>
+        </div>
 
         {recentLogs.length === 0 ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Henüz mail gönderilmemiş
-          </p>
+          <div className="text-center py-8">
+            <Mail size={48} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Henüz mail gönderilmemiş
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              Test email gönderin veya manuel kontrol yapın
+            </p>
+          </div>
         ) : (
           <div className="space-y-3">
             {recentLogs.map((log) => (
               <div
                 key={log.id}
-                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700/50 rounded-md"
+                className={`flex items-center justify-between p-3 rounded-md border ${
+                  log.status === 'success'
+                    ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                    : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                }`}
               >
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {log.eventTitle}
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      {log.eventTitle}
+                    </p>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      log.eventType === 'campaign'
+                        ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300'
+                        : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                    }`}>
+                      {log.eventType === 'campaign' ? '📅 Kampanya' : '📈 Analitik'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    📧 {log.recipientName} ({log.recipientEmail})
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {log.recipientName} ({log.recipientEmail})
-                  </p>
+                  {log.errorMessage && (
+                    <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                      ❌ Hata: {log.errorMessage}
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs text-gray-500">
-                    {log.sentAt.toLocaleDateString('tr-TR')}
-                  </span>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {log.sentAt.toLocaleDateString('tr-TR', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric'
+                      })}
+                    </p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                      {log.sentAt.toLocaleTimeString('tr-TR', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
                   {log.status === 'success' ? (
-                    <Check size={18} className="text-green-500" />
+                    <div className="flex items-center justify-center w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full">
+                      <Check size={18} className="text-green-600 dark:text-green-400" />
+                    </div>
                   ) : (
-                    <X size={18} className="text-red-500" />
+                    <div className="flex items-center justify-center w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-full">
+                      <X size={18} className="text-red-600 dark:text-red-400" />
+                    </div>
                   )}
                 </div>
               </div>
