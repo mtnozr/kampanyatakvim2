@@ -2718,8 +2718,9 @@ function App() {
   // Check if user can see Kampanya tab (everyone except only-Analitik users)
   const canSeeKampanyaTab = !isOnlyAnalitik;
 
-  // Check if user can see Settings tab (only admins/designers/kampanyaYapan)
-  const canSeeSettingsTab = isDesigner || isKampanyaYapan;
+  // Check if user can see Settings tab (ONLY Super Admin)
+  // Super Admin = Firebase Auth admin kullanıcısı (departmentUser değil)
+  const canSeeSettingsTab = isSuperAdmin;
 
   // Auto-switch to analytics tab for Analitik-only users
   useEffect(() => {
