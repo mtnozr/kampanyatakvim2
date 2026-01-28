@@ -3026,14 +3026,14 @@ function App() {
               <button
                 onClick={() => setActiveTab('ayarlar')}
                 className={`
-                  p-1.5 transition-colors rounded-lg shadow-sm border
+                  p-1.5 transition-colors rounded-lg shadow-sm border text-lg
                   ${activeTab === 'ayarlar'
-                    ? 'text-gray-700 bg-gray-100 border-gray-200 dark:bg-gray-700/30 dark:text-gray-300 dark:border-gray-600'
-                    : 'bg-white border-gray-100 text-gray-400 hover:text-gray-700 dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-700/30'}
+                    ? 'text-blue-700 bg-blue-50 border-blue-200 dark:bg-blue-700/30 dark:text-blue-300 dark:border-blue-600'
+                    : 'bg-white border-gray-100 text-gray-400 hover:text-blue-700 hover:bg-blue-50 dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-blue-300 dark:hover:bg-blue-700/30'}
                 `}
-                title="Ayarlar"
+                title="Mail Gönderim Ayarları"
               >
-                ⚙️
+                @
               </button>
             )}
 
