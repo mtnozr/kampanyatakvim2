@@ -177,3 +177,66 @@ export interface AnalyticsTask {
   updatedAt?: Date;
   history?: EventHistoryItem[];
 }
+
+// ==================== EMAIL REMINDER SYSTEM ====================
+
+// Email Reminder Settings - stored in Firestore
+export interface ReminderSettings {
+  id: string;
+  emailProvider: 'resend';
+  resendApiKey?: string;
+  isEnabled: boolean;
+
+  // Urgency-based reminder rules
+  reminderRules: {
+    'Very High': number;  // Days after assignment (e.g., 1)
+    'High': number;       // Days after assignment (e.g., 2)
+    'Medium': number;     // Days after assignment (e.g., 2)
+    'Low': number;        // Days after assignment (e.g., 2)
+  };
+
+  // Email template settings
+  emailSubjectTemplate: string;  // e.g., "Hatırlatma: {title}"
+  emailBodyTemplate: string;     // e.g., "Merhaba {assignee}, {title} görevi..."
+
+  updatedAt: Date;
+  updatedBy?: string;
+}
+
+// Email Reminder Log - sent email history
+export interface ReminderLog {
+  id: string;
+  eventId: string;          // CalendarEvent.id or AnalyticsTask.id
+  eventType: 'campaign' | 'analytics';
+  eventTitle: string;
+  recipientEmail: string;
+  recipientName: string;
+  urgency: UrgencyLevel;
+  sentAt: Date;
+  status: 'success' | 'failed';
+  errorMessage?: string;
+  emailProvider: 'resend';
+  messageId?: string;       // Provider's message ID for tracking
+}
+
+// Email Template for customization
+export interface EmailTemplate {
+  id: string;
+  name: string;
+  subject: string;
+  body: string;
+  isDefault: boolean;
+  createdAt: Date;
+  updatedAt?: Date;
+}
+
+// Reminder Queue - events waiting to send reminders
+export interface ReminderQueue {
+  id: string;
+  eventId: string;
+  eventType: 'campaign' | 'analytics';
+  scheduledFor: Date;       // When to send the reminder
+  processed: boolean;
+  processedAt?: Date;
+  createdAt: Date;
+}

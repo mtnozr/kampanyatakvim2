@@ -49,6 +49,7 @@ import { ThemeToggle } from './components/ThemeToggle';
 import { BackgroundTheme, ThemeType } from './components/BackgroundTheme';
 import { BirthdayAnimation } from './components/BirthdayAnimation';
 import { BirthdayReminder } from './components/BirthdayReminder';
+import ReminderSettingsPanel from './components/ReminderSettingsPanel';
 import { useTheme } from './hooks/useTheme';
 import { useBrowserNotifications } from './hooks/useBrowserNotifications';
 import { setCookie, getCookie, deleteCookie } from './utils/cookies';
@@ -163,8 +164,8 @@ function App() {
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterDepartment, setFilterDepartment] = useState<string>('');
 
-  // Calendar Tab State (KAMPANYA, RAPOR, or ANALİTİK)
-  const [activeTab, setActiveTab] = useState<'kampanya' | 'rapor' | 'analitik'>('kampanya');
+  // Calendar Tab State (KAMPANYA, RAPOR, ANALİTİK, or AYARLAR)
+  const [activeTab, setActiveTab] = useState<'kampanya' | 'rapor' | 'analitik' | 'ayarlar'>('kampanya');
 
   // Analytics State
   const [analyticsUsers, setAnalyticsUsers] = useState<AnalyticsUser[]>([]);
@@ -2717,6 +2718,9 @@ function App() {
   // Check if user can see Kampanya tab (everyone except only-Analitik users)
   const canSeeKampanyaTab = !isOnlyAnalitik;
 
+  // Check if user can see Settings tab (only admins/designers/kampanyaYapan)
+  const canSeeSettingsTab = isDesigner || isKampanyaYapan;
+
   // Auto-switch to analytics tab for Analitik-only users
   useEffect(() => {
     if (isOnlyAnalitik && activeTab !== 'analitik') {
@@ -3222,6 +3226,19 @@ function App() {
                 )}
               </button>
             )}
+            {canSeeSettingsTab && (
+              <button
+                onClick={() => setActiveTab('ayarlar')}
+                className={`
+                  px-6 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200
+                  ${activeTab === 'ayarlar'
+                    ? 'bg-gray-700 text-white shadow-lg shadow-gray-200 dark:shadow-none'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:text-gray-700 hover:border-gray-300 dark:bg-slate-800 dark:text-gray-300 dark:border-slate-600 dark:hover:bg-slate-700'}
+                `}
+              >
+                ⚙️ AYARLAR
+              </button>
+            )}
           </div>
 
           {/* Conditional Content Based on Active Tab */}
@@ -3418,6 +3435,8 @@ function App() {
               isDesigner={isDesigner}
               isAnalitik={isAnalitik}
             />
+          ) : activeTab === 'ayarlar' ? (
+            <ReminderSettingsPanel />
           ) : null}
 
           {/* Minimal Footer */}
