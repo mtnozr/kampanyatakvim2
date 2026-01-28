@@ -37,11 +37,18 @@ export function isWeekend(): boolean {
  */
 export function shouldSendReminder(
   event: CalendarEvent | AnalyticsTask,
-  reminderSettings: ReminderSettings
+  reminderSettings: ReminderSettings,
+  testMode: boolean = false
 ): boolean {
   if (!reminderSettings.isEnabled) return false;
   if (!event.assigneeId) return false;
   if (event.status === 'Tamamlandı' || event.status === 'İptal Edildi') return false;
+
+  // TEST MODE: Tüm tarihleri bypass et, sadece aktif görevleri kontrol et
+  if (testMode) {
+    return true;
+  }
+
   if (!event.createdAt) return false;
 
   // Hafta sonu kontrolü - Cumartesi ve Pazar mail gönderme
@@ -184,7 +191,8 @@ export async function processReminders(
   events: (CalendarEvent | AnalyticsTask)[],
   eventType: 'campaign' | 'analytics',
   users: (User | AnalyticsUser)[],
-  reminderSettings: ReminderSettings
+  reminderSettings: ReminderSettings,
+  testMode: boolean = false
 ): Promise<{
   sent: number;
   failed: number;
@@ -197,16 +205,19 @@ export async function processReminders(
   for (const event of events) {
     try {
       // Hatırlatma gerekli mi?
-      if (!shouldSendReminder(event, reminderSettings)) {
+      if (!shouldSendReminder(event, reminderSettings, testMode)) {
         skipped++;
         continue;
       }
 
-      // Daha önce gönderilmiş mi?
-      const alreadySent = await hasReminderBeenSent(event.id, eventType);
-      if (alreadySent) {
-        skipped++;
-        continue;
+      // Test modunda daha önce gönderilmiş olsa bile gönder
+      if (!testMode) {
+        // Daha önce gönderilmiş mi?
+        const alreadySent = await hasReminderBeenSent(event.id, eventType);
+        if (alreadySent) {
+          skipped++;
+          continue;
+        }
       }
 
       // Atanan kişiyi bul

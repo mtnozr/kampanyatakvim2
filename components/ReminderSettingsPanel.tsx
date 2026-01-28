@@ -43,6 +43,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [testMode, setTestMode] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [testMessage, setTestMessage] = useState('');
   const [processMessage, setProcessMessage] = useState('');
@@ -189,7 +190,8 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
         campaigns,
         'campaign',
         users,
-        settings
+        settings,
+        testMode  // Test mode parametresi
       );
 
       // Process analytics reminders
@@ -197,7 +199,8 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
         analyticsTasks,
         'analytics',
         analyticsUsers,
-        settings
+        settings,
+        testMode  // Test mode parametresi
       );
 
       const totalSent = campaignResults.sent + analyticsResults.sent;
@@ -454,13 +457,47 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
           Tüm kampanya ve analitik görevleri kontrol eder ve gerekli hatırlatma maillerini gönderir.
         </p>
 
+        {/* Test Mode Toggle */}
+        <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={testMode}
+              onChange={(e) => setTestMode(e.target.checked)}
+              className="mt-1 w-4 h-4 text-amber-600 rounded focus:ring-2 focus:ring-amber-200"
+            />
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-amber-900 dark:text-amber-200">
+                  🧪 Test Modu
+                </span>
+                <span className="text-xs px-2 py-0.5 bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-200 rounded-full font-semibold">
+                  ÖNERİLEN
+                </span>
+              </div>
+              <p className="text-sm text-amber-800 dark:text-amber-300 mt-1">
+                Tüm tarih kontrollerini bypass eder. <strong>Atanmış tüm aktif görevler</strong> için hatırlatma gönderir.
+              </p>
+              <p className="text-xs text-amber-700 dark:text-amber-400 mt-2">
+                ✓ Geçmiş görevleri test edebilirsiniz<br />
+                ✓ Hafta sonu kontrolü devre dışı<br />
+                ✓ Gün kontrolü yok (hemen gönderir)
+              </p>
+            </div>
+          </label>
+        </div>
+
         <button
           onClick={handleProcessReminders}
           disabled={isProcessing || !settings.isEnabled || !settings.resendApiKey}
-          className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+          className={`w-full px-6 py-3 rounded-md font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 ${
+            testMode
+              ? 'bg-amber-600 hover:bg-amber-700 text-white'
+              : 'bg-green-600 hover:bg-green-700 text-white'
+          }`}
         >
           <Play size={18} />
-          {isProcessing ? 'İşleniyor...' : 'Şimdi Kontrol Et'}
+          {isProcessing ? 'İşleniyor...' : testMode ? '🧪 Test Modu ile Kontrol Et' : 'Şimdi Kontrol Et'}
         </button>
 
         {processMessage && (
