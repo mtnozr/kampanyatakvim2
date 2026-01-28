@@ -45,8 +45,9 @@ export interface CalendarEvent {
   channels?: {
     push?: boolean;
     sms?: boolean;
-    popupMimCCO?: boolean;
-    popupMimCCI?: boolean;
+    popup?: boolean;
+    mimCCO?: boolean;
+    mimCCI?: boolean;
     atm?: boolean;
   };
 

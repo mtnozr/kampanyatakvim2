@@ -9,7 +9,7 @@ import { calculateReportDueDate } from '../utils/businessDays';
 interface AddEventModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (title: string, urgency: UrgencyLevel, date: Date, assigneeId?: string, description?: string, departmentId?: string, difficulty?: DifficultyLevel, requiresReport?: boolean, reportDueDate?: Date, channels?: { push?: boolean; sms?: boolean; popupMimCCO?: boolean; popupMimCCI?: boolean; atm?: boolean; }) => void;
+  onAdd: (title: string, urgency: UrgencyLevel, date: Date, assigneeId?: string, description?: string, departmentId?: string, difficulty?: DifficultyLevel, requiresReport?: boolean, reportDueDate?: Date, channels?: { push?: boolean; sms?: boolean; popup?: boolean; mimCCO?: boolean; mimCCI?: boolean; atm?: boolean; }) => void;
   initialDate?: Date;
   initialData?: {
     title?: string;
@@ -50,8 +50,9 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
   // Channel selections
   const [channelPush, setChannelPush] = useState(false);
   const [channelSMS, setChannelSMS] = useState(false);
-  const [channelPopupMimCCO, setChannelPopupMimCCO] = useState(false);
-  const [channelPopupMimCCI, setChannelPopupMimCCI] = useState(false);
+  const [channelPopup, setChannelPopup] = useState(false);
+  const [channelMimCCO, setChannelMimCCO] = useState(false);
+  const [channelMimCCI, setChannelMimCCI] = useState(false);
   const [channelATM, setChannelATM] = useState(false);
 
   // Helper function to convert text to Title Case with Turkish support
@@ -102,8 +103,9 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
       setReportDueDateStr('');
       setChannelPush(false);
       setChannelSMS(false);
-      setChannelPopupMimCCO(false);
-      setChannelPopupMimCCI(false);
+      setChannelPopup(false);
+      setChannelMimCCO(false);
+      setChannelMimCCI(false);
       setChannelATM(false);
     }
   }, [isOpen, initialDate, initialData]);
@@ -139,8 +141,9 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
     const channels = {
       push: channelPush,
       sms: channelSMS,
-      popupMimCCO: channelPopupMimCCO,
-      popupMimCCI: channelPopupMimCCI,
+      popup: channelPopup,
+      mimCCO: channelMimCCO,
+      mimCCI: channelMimCCI,
       atm: channelATM
     };
     onAdd(title, urgency, selectedDate, assigneeId, description, departmentId, difficulty, requiresReport, reportDue, channels);
@@ -156,8 +159,9 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
     setReportDueDateStr('');
     setChannelPush(false);
     setChannelSMS(false);
-    setChannelPopupMimCCO(false);
-    setChannelPopupMimCCI(false);
+    setChannelPopup(false);
+    setChannelMimCCO(false);
+    setChannelMimCCI(false);
     setChannelATM(false);
   };
 
@@ -405,6 +409,19 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
                 </span>
               </label>
 
+              {/* Pop-Up */}
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={channelPopup}
+                  onChange={(e) => setChannelPopup(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  Pop-Up
+                </span>
+              </label>
+
               {/* ATM */}
               <label className="flex items-center gap-2 cursor-pointer group">
                 <input
@@ -419,17 +436,17 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
               </label>
             </div>
 
-            {/* Pop-Up-MİM (with nested checkboxes) */}
+            {/* MİM (with nested checkboxes) */}
             <div className="border-t border-blue-200 dark:border-blue-800 pt-3 mt-3">
               <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Pop-Up-MİM
+                MİM
               </div>
               <div className="pl-4 space-y-2">
                 <label className="flex items-center gap-2 cursor-pointer group">
                   <input
                     type="checkbox"
-                    checked={channelPopupMimCCO}
-                    onChange={(e) => setChannelPopupMimCCO(e.target.checked)}
+                    checked={channelMimCCO}
+                    onChange={(e) => setChannelMimCCO(e.target.checked)}
                     className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
                   />
                   <span className="text-sm text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
@@ -439,8 +456,8 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
                 <label className="flex items-center gap-2 cursor-pointer group">
                   <input
                     type="checkbox"
-                    checked={channelPopupMimCCI}
-                    onChange={(e) => setChannelPopupMimCCI(e.target.checked)}
+                    checked={channelMimCCI}
+                    onChange={(e) => setChannelMimCCI(e.target.checked)}
                     className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
                   />
                   <span className="text-sm text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">

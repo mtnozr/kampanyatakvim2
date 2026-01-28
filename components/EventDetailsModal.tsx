@@ -412,24 +412,29 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                       SMS
                     </span>
                   )}
+                  {event.channels.popup && (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800">
+                      Pop-Up
+                    </span>
+                  )}
                   {event.channels.atm && (
                     <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                       ATM
                     </span>
                   )}
-                  {(event.channels.popupMimCCO || event.channels.popupMimCCI) && (
+                  {(event.channels.mimCCO || event.channels.mimCCI) && (
                     <div className="inline-flex items-center gap-1.5">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800">
-                        Pop-Up-MİM
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 border border-pink-200 dark:border-pink-800">
+                        MİM
                       </span>
                       <div className="flex gap-1">
-                        {event.channels.popupMimCCO && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800">
+                        {event.channels.mimCCO && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 border border-pink-200 dark:border-pink-800">
                             CCO
                           </span>
                         )}
-                        {event.channels.popupMimCCI && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800">
+                        {event.channels.mimCCI && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 border border-pink-200 dark:border-pink-800">
                             CCI
                           </span>
                         )}
