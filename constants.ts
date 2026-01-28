@@ -1,5 +1,11 @@
 import { CalendarEvent, UrgencyConfig, User, UrgencyLevel, Department, DifficultyLevel, DifficultyConfig } from './types';
 
+/**
+ * DESIGN TOKENS KULLANIMI
+ * Artık renkler tokens.ts'den merkezi olarak yönetiliyor
+ * Tailwind class'ları tutarlı şekilde kullanılıyor
+ */
+
 export const DIFFICULTY_CONFIGS: Record<DifficultyLevel, DifficultyConfig> = {
   'BASİT': {
     label: 'Basit',
