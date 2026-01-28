@@ -47,7 +47,7 @@ export default async function handler(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Kampanya Takvimi <onboarding@resend.dev>',
+        from: 'Kampanya Takvimi <hatirlatma@kampanyatakvimi.net.tr>',
         to: to,
         subject: subject,
         html: html,
