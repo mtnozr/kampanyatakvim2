@@ -21,7 +21,16 @@ import {
   serverTimestamp,
   Timestamp
 } from 'firebase/firestore';
-import { sendEmailWithResend, getDefaultEmailHTML } from './emailService';
+import { sendEmailWithResend, buildCustomEmailHTML } from './emailService';
+
+/**
+ * Bugün hafta sonu mu kontrol eder (Cumartesi veya Pazar)
+ */
+export function isWeekend(): boolean {
+  const today = new Date();
+  const day = today.getDay();
+  return day === 0 || day === 6; // 0 = Pazar, 6 = Cumartesi
+}
 
 /**
  * Bir event'in hatırlatma göndermesi gerekip gerekmediğini kontrol eder
@@ -34,6 +43,11 @@ export function shouldSendReminder(
   if (!event.assigneeId) return false;
   if (event.status === 'Tamamlandı' || event.status === 'İptal Edildi') return false;
   if (!event.createdAt) return false;
+
+  // Hafta sonu kontrolü - Cumartesi ve Pazar mail gönderme
+  if (isWeekend()) {
+    return false;
+  }
 
   const daysElapsed = getDaysElapsed(event.createdAt);
   const reminderThreshold = reminderSettings.reminderRules[event.urgency];
@@ -91,14 +105,15 @@ export async function sendReminderEmail(
       return { success: false, error: 'Resend API key tanımlanmamış' };
     }
 
-    // Email HTML oluştur
+    // Email HTML oluştur (custom template kullan)
     const daysElapsed = getDaysElapsed(event.createdAt || new Date());
-    const emailHTML = getDefaultEmailHTML({
+    const emailHTML = buildCustomEmailHTML({
       assigneeName: assignee.name,
       eventTitle: event.title,
       eventType,
       urgency: event.urgency,
       daysElapsed,
+      customBodyTemplate: reminderSettings.emailBodyTemplate,
     });
 
     // Subject template'ini kullan

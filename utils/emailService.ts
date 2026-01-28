@@ -90,9 +90,169 @@ export function buildEmailFromTemplate(
 }
 
 /**
+ * Custom email body template'inden HTML oluşturur
+ */
+export function buildCustomEmailHTML(params: {
+  assigneeName: string;
+  eventTitle: string;
+  eventType: 'campaign' | 'analytics';
+  urgency: string;
+  daysElapsed: number;
+  customBodyTemplate?: string;
+}): string {
+  const { assigneeName, eventTitle, eventType, urgency, daysElapsed, customBodyTemplate } = params;
+
+  const urgencyColors: Record<string, string> = {
+    'Very High': '#EF4444',
+    'High': '#F97316',
+    'Medium': '#3B82F6',
+    'Low': '#6B7280',
+  };
+
+  const urgencyLabels: Record<string, string> = {
+    'Very High': 'Çok Yüksek',
+    'High': 'Yüksek',
+    'Medium': 'Orta',
+    'Low': 'Düşük',
+  };
+
+  const color = urgencyColors[urgency] || '#6B7280';
+  const urgencyLabel = urgencyLabels[urgency] || urgency;
+  const typeLabel = eventType === 'campaign' ? 'Kampanya' : 'Analitik Görev';
+
+  // Eğer custom template varsa, değişkenleri değiştir
+  let messageContent = customBodyTemplate ||
+    `Lütfen görevinizin durumunu kontrol edin ve gerekli aksiyonları alın.
+     Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`;
+
+  // Template değişkenlerini değiştir
+  messageContent = buildEmailFromTemplate(messageContent, {
+    assignee: assigneeName,
+    title: eventTitle,
+    urgency: urgencyLabel,
+    days: daysElapsed.toString(),
+    eventType: typeLabel,
+  });
+
+  return `
+    <!DOCTYPE html>
+    <html lang="tr">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Hatırlatma</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #F8F9FE;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F8F9FE; padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <!-- Email Container -->
+            <table width="600" cellpadding="0" cellspacing="0" style="background-color: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+
+              <!-- Header -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #7C3AED 0%, #4338CA 100%); padding: 32px; text-align: center;">
+                  <h1 style="margin: 0; color: #FFFFFF; font-size: 24px; font-weight: 700;">
+                    📅 Kampanya Takvimi
+                  </h1>
+                  <p style="margin: 8px 0 0 0; color: #E9D5FF; font-size: 14px;">
+                    Hatırlatma Bildirimi
+                  </p>
+                </td>
+              </tr>
+
+              <!-- Content -->
+              <tr>
+                <td style="padding: 32px;">
+
+                  <!-- Greeting -->
+                  <p style="margin: 0 0 24px 0; font-size: 16px; color: #1F2937;">
+                    Merhaba <strong>${assigneeName}</strong>,
+                  </p>
+
+                  <!-- Alert Box -->
+                  <div style="background-color: #FEF3C7; border-left: 4px solid ${color}; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
+                    <p style="margin: 0; font-size: 14px; color: #78350F;">
+                      ⏰ Atanan göreviniz üzerinden <strong>${daysElapsed} gün</strong> geçti.
+                    </p>
+                  </div>
+
+                  <!-- Event Info -->
+                  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F9FAFB; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+                    <tr>
+                      <td>
+                        <p style="margin: 0 0 8px 0; font-size: 12px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.5px;">
+                          ${typeLabel}
+                        </p>
+                        <h2 style="margin: 0 0 16px 0; font-size: 20px; color: #1F2937; font-weight: 600;">
+                          ${eventTitle}
+                        </h2>
+
+                        <!-- Urgency Badge -->
+                        <div style="display: inline-block; background-color: ${color}15; border: 1px solid ${color}; border-radius: 6px; padding: 6px 12px;">
+                          <span style="color: ${color}; font-size: 12px; font-weight: 600;">
+                            ${urgencyLabel} Öncelik
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Custom Message -->
+                  <div style="margin: 0 0 24px 0; font-size: 14px; color: #4B5563; line-height: 1.6;">
+                    ${messageContent.split('\n').map(line => `<p style="margin: 0 0 12px 0;">${line.trim()}</p>`).join('')}
+                  </div>
+
+                  <!-- CTA Button -->
+                  <div style="text-align: center; margin: 32px 0;">
+                    <a href="https://kampanya-takvimi.vercel.app"
+                       style="display: inline-block; background: linear-gradient(135deg, #7C3AED 0%, #4338CA 100%); color: #FFFFFF; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(124, 58, 237, 0.3);">
+                      Takvime Git →
+                    </a>
+                  </div>
+
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td style="background-color: #F9FAFB; padding: 24px; text-align: center; border-top: 1px solid #E5E7EB;">
+                  <p style="margin: 0 0 8px 0; font-size: 12px; color: #6B7280;">
+                    Bu otomatik bir hatırlatma mailidir.
+                  </p>
+                  <p style="margin: 0; font-size: 12px; color: #9CA3AF;">
+                    Kampanya Takvimi © ${new Date().getFullYear()}
+                  </p>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
+/**
  * Varsayılan email HTML template'i
+ * @deprecated Use buildCustomEmailHTML instead
  */
 export function getDefaultEmailHTML(params: {
+  assigneeName: string;
+  eventTitle: string;
+  eventType: 'campaign' | 'analytics';
+  urgency: string;
+  daysElapsed: number;
+}): string {
+  return buildCustomEmailHTML(params);
+}
+
+/**
+ * @deprecated - Eski versiyon, kaldırılacak
+ */
+function getDefaultEmailHTMLOld(params: {
   assigneeName: string;
   eventTitle: string;
   eventType: 'campaign' | 'analytics';

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Send, Check, X, AlertCircle, Mail, Settings, Play } from 'lucide-react';
+import { Save, Send, Check, X, AlertCircle, Mail, Settings, Play, FileText, Eye } from 'lucide-react';
 import { ReminderSettings, ReminderLog, CalendarEvent, AnalyticsTask, User, AnalyticsUser } from '../types';
 import { db } from '../firebase';
 import {
@@ -30,7 +30,11 @@ export default function ReminderSettingsPanel() {
       'Low': 2,
     },
     emailSubjectTemplate: '⏰ Hatırlatma: {title}',
-    emailBodyTemplate: 'Merhaba {assignee}, {title} görevi üzerinden {days} gün geçti.',
+    emailBodyTemplate: `Lütfen "{title}" görevinizin durumunu kontrol edin ve gerekli aksiyonları alın.
+
+Görev üzerinden {days} gün geçti ve aciliyet seviyesi {urgency} olarak işaretlendi.
+
+Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`,
     updatedAt: new Date(),
   });
 
@@ -251,6 +255,10 @@ export default function ReminderSettingsPanel() {
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Sistem otomatik olarak hatırlatma mailleri gönderecek
               </p>
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1">
+                <AlertCircle size={12} />
+                Hafta sonları (Cumartesi-Pazar) mail gönderilmez
+              </p>
             </div>
           </label>
         </div>
@@ -318,21 +326,71 @@ export default function ReminderSettingsPanel() {
           </p>
         </div>
 
-        {/* Email Templates */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Email Konu Şablonu
-          </label>
-          <input
-            type="text"
-            value={settings.emailSubjectTemplate}
-            onChange={(e) => setSettings({ ...settings, emailSubjectTemplate: e.target.value })}
-            placeholder="⏰ Hatırlatma: {title}"
-            className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm focus:ring-2 focus:ring-primary-200 dark:bg-slate-700 dark:text-white"
-          />
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Değişkenler: {'{title}'}, {'{urgency}'}, {'{days}'}
-          </p>
+        {/* Email Templates Section */}
+        <div className="mb-6 p-4 bg-gray-50 dark:bg-slate-700/30 rounded-lg border border-gray-200 dark:border-slate-600">
+          <h4 className="text-md font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
+            <FileText size={18} className="text-primary-700" />
+            Email Şablon Düzenleyici
+          </h4>
+
+          {/* Subject Template */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Email Konu Satırı
+            </label>
+            <input
+              type="text"
+              value={settings.emailSubjectTemplate}
+              onChange={(e) => setSettings({ ...settings, emailSubjectTemplate: e.target.value })}
+              placeholder="⏰ Hatırlatma: {title}"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm focus:ring-2 focus:ring-primary-200 dark:bg-slate-700 dark:text-white"
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Değişkenler: <code className="bg-gray-200 dark:bg-slate-600 px-1 rounded">{'{title}'}</code>, <code className="bg-gray-200 dark:bg-slate-600 px-1 rounded">{'{urgency}'}</code>, <code className="bg-gray-200 dark:bg-slate-600 px-1 rounded">{'{days}'}</code>
+            </p>
+          </div>
+
+          {/* Body Template */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Email İçeriği (Metin)
+            </label>
+            <textarea
+              value={settings.emailBodyTemplate}
+              onChange={(e) => setSettings({ ...settings, emailBodyTemplate: e.target.value })}
+              placeholder="Merhaba {assignee},&#10;&#10;{title} görevi üzerinden {days} gün geçti. Lütfen durumu kontrol edin."
+              rows={6}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm focus:ring-2 focus:ring-primary-200 dark:bg-slate-700 dark:text-white font-mono"
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Kullanılabilir değişkenler:
+              <code className="bg-gray-200 dark:bg-slate-600 px-1 rounded ml-1">{'{assignee}'}</code>
+              <code className="bg-gray-200 dark:bg-slate-600 px-1 rounded ml-1">{'{title}'}</code>
+              <code className="bg-gray-200 dark:bg-slate-600 px-1 rounded ml-1">{'{urgency}'}</code>
+              <code className="bg-gray-200 dark:bg-slate-600 px-1 rounded ml-1">{'{days}'}</code>
+              <code className="bg-gray-200 dark:bg-slate-600 px-1 rounded ml-1">{'{eventType}'}</code>
+            </p>
+          </div>
+
+          {/* Preview Example */}
+          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+            <p className="text-xs font-medium text-blue-900 dark:text-blue-200 mb-2 flex items-center gap-1">
+              <Eye size={14} />
+              Örnek Önizleme:
+            </p>
+            <div className="text-xs text-blue-800 dark:text-blue-300 space-y-1">
+              <p><strong>Konu:</strong> {settings.emailSubjectTemplate.replace('{title}', 'Yaz Kampanyası').replace('{urgency}', 'Yüksek').replace('{days}', '2')}</p>
+              <p className="mt-2"><strong>İçerik:</strong></p>
+              <p className="whitespace-pre-wrap bg-white dark:bg-slate-800 p-2 rounded border border-blue-200 dark:border-blue-700">
+                {settings.emailBodyTemplate
+                  .replace('{assignee}', 'Ahmet Yılmaz')
+                  .replace('{title}', 'Yaz Kampanyası')
+                  .replace('{urgency}', 'Yüksek')
+                  .replace('{days}', '2')
+                  .replace('{eventType}', 'Kampanya')}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Save Button */}
