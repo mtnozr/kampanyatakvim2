@@ -393,6 +393,54 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
             </div>
           </div>
 
+          {/* Channels Section */}
+          {event.channels && Object.values(event.channels).some(v => v) && (
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg shrink-0">
+                📡
+              </div>
+              <div className="flex-1">
+                <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Kanallar</p>
+                <div className="flex flex-wrap gap-2">
+                  {event.channels.push && (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                      Push
+                    </span>
+                  )}
+                  {event.channels.sms && (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800">
+                      SMS
+                    </span>
+                  )}
+                  {event.channels.atm && (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                      ATM
+                    </span>
+                  )}
+                  {(event.channels.popupMimCCO || event.channels.popupMimCCI) && (
+                    <div className="inline-flex items-center gap-1.5">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800">
+                        Pop-Up-MİM
+                      </span>
+                      <div className="flex gap-1">
+                        {event.channels.popupMimCCO && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800">
+                            CCO
+                          </span>
+                        )}
+                        {event.channels.popupMimCCI && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800">
+                            CCI
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Difficulty Section */}
           {!isKampanyaYapan && (
             <div className="flex items-start gap-3">

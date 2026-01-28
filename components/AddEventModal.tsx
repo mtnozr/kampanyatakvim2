@@ -9,7 +9,7 @@ import { calculateReportDueDate } from '../utils/businessDays';
 interface AddEventModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (title: string, urgency: UrgencyLevel, date: Date, assigneeId?: string, description?: string, departmentId?: string, difficulty?: DifficultyLevel, requiresReport?: boolean, reportDueDate?: Date) => void;
+  onAdd: (title: string, urgency: UrgencyLevel, date: Date, assigneeId?: string, description?: string, departmentId?: string, difficulty?: DifficultyLevel, requiresReport?: boolean, reportDueDate?: Date, channels?: { push?: boolean; sms?: boolean; popupMimCCO?: boolean; popupMimCCI?: boolean; atm?: boolean; }) => void;
   initialDate?: Date;
   initialData?: {
     title?: string;
@@ -46,6 +46,13 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
   const [holidayWarning, setHolidayWarning] = useState<string | null>(null);
   const [requiresReport, setRequiresReport] = useState(true);
   const [reportDueDateStr, setReportDueDateStr] = useState('');
+
+  // Channel selections
+  const [channelPush, setChannelPush] = useState(false);
+  const [channelSMS, setChannelSMS] = useState(false);
+  const [channelPopupMimCCO, setChannelPopupMimCCO] = useState(false);
+  const [channelPopupMimCCI, setChannelPopupMimCCI] = useState(false);
+  const [channelATM, setChannelATM] = useState(false);
 
   // Helper function to convert text to Title Case with Turkish support
   const toTitleCase = (str: string) => {
@@ -93,6 +100,11 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
       setHolidayWarning(null);
       setRequiresReport(true);
       setReportDueDateStr('');
+      setChannelPush(false);
+      setChannelSMS(false);
+      setChannelPopupMimCCO(false);
+      setChannelPopupMimCCI(false);
+      setChannelATM(false);
     }
   }, [isOpen, initialDate, initialData]);
 
@@ -124,7 +136,14 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
 
     const selectedDate = new Date(dateStr);
     const reportDue = requiresReport && reportDueDateStr ? new Date(reportDueDateStr) : undefined;
-    onAdd(title, urgency, selectedDate, assigneeId, description, departmentId, difficulty, requiresReport, reportDue);
+    const channels = {
+      push: channelPush,
+      sms: channelSMS,
+      popupMimCCO: channelPopupMimCCO,
+      popupMimCCI: channelPopupMimCCI,
+      atm: channelATM
+    };
+    onAdd(title, urgency, selectedDate, assigneeId, description, departmentId, difficulty, requiresReport, reportDue, channels);
     onClose();
     setTitle('');
     setUrgency('Medium');
@@ -135,6 +154,11 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
     setHolidayWarning(null);
     setRequiresReport(true);
     setReportDueDateStr('');
+    setChannelPush(false);
+    setChannelSMS(false);
+    setChannelPopupMimCCO(false);
+    setChannelPopupMimCCI(false);
+    setChannelATM(false);
   };
 
   if (!isOpen) return null;
@@ -347,6 +371,84 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
                 </p>
               </div>
             )}
+          </div>
+
+          {/* Kanallar */}
+          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 space-y-3">
+            <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+              📡 Kanallar
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {/* Push */}
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={channelPush}
+                  onChange={(e) => setChannelPush(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  Push
+                </span>
+              </label>
+
+              {/* SMS */}
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={channelSMS}
+                  onChange={(e) => setChannelSMS(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  SMS
+                </span>
+              </label>
+
+              {/* ATM */}
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={channelATM}
+                  onChange={(e) => setChannelATM(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  ATM
+                </span>
+              </label>
+            </div>
+
+            {/* Pop-Up-MİM (with nested checkboxes) */}
+            <div className="border-t border-blue-200 dark:border-blue-800 pt-3 mt-3">
+              <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Pop-Up-MİM
+              </div>
+              <div className="pl-4 space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={channelPopupMimCCO}
+                    onChange={(e) => setChannelPopupMimCCO(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
+                  />
+                  <span className="text-sm text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                    CCO
+                  </span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={channelPopupMimCCI}
+                    onChange={(e) => setChannelPopupMimCCI(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
+                  />
+                  <span className="text-sm text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                    CCI
+                  </span>
+                </label>
+              </div>
+            </div>
           </div>
 
           <div className="pt-4 flex justify-end gap-3 shrink-0">

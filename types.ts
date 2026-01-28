@@ -42,6 +42,13 @@ export interface CalendarEvent {
   history?: EventHistoryItem[];
   note?: string; // Campaign delay note or sticky note
   requiresReport?: boolean; // Whether this campaign needs a report when completed
+  channels?: {
+    push?: boolean;
+    sms?: boolean;
+    popupMimCCO?: boolean;
+    popupMimCCI?: boolean;
+    atm?: boolean;
+  };
 
   // Report Tracking Fields
   reportStatus?: 'pending' | 'done';      // Report status

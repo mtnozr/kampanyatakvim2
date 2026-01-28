@@ -1894,7 +1894,8 @@ function App() {
     departmentId?: string,
     difficulty?: DifficultyLevel,
     requiresReport?: boolean,
-    reportDueDate?: Date
+    reportDueDate?: Date,
+    channels?: { push?: boolean; sms?: boolean; popupMimCCO?: boolean; popupMimCCI?: boolean; atm?: boolean; }
   ) => {
 
     const eventData = {
@@ -1908,6 +1909,7 @@ function App() {
       departmentId,
       status: 'Planlandı',
       requiresReport: requiresReport !== false, // Default true if undefined
+      channels: channels || {},
       createdAt: Timestamp.now(),
       history: [{
         date: Timestamp.now(),
@@ -3019,6 +3021,22 @@ function App() {
               </button>
             )}
 
+            {/* Settings Button */}
+            {canSeeSettingsTab && (
+              <button
+                onClick={() => setActiveTab('ayarlar')}
+                className={`
+                  flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200
+                  ${activeTab === 'ayarlar'
+                    ? 'bg-gray-700 text-white shadow-lg shadow-gray-200 dark:shadow-none'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:text-gray-700 hover:border-gray-300 dark:bg-slate-800 dark:text-gray-300 dark:border-slate-600 dark:hover:bg-slate-700'}
+                `}
+                title="Ayarlar"
+              >
+                ⚙️ AYARLAR
+              </button>
+            )}
+
             {isDesigner && (
               <>
                 <div className="relative">
@@ -3225,19 +3243,6 @@ function App() {
                     {myPendingAnalyticsTasks.length}
                   </span>
                 )}
-              </button>
-            )}
-            {canSeeSettingsTab && (
-              <button
-                onClick={() => setActiveTab('ayarlar')}
-                className={`
-                  px-6 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200
-                  ${activeTab === 'ayarlar'
-                    ? 'bg-gray-700 text-white shadow-lg shadow-gray-200 dark:shadow-none'
-                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:text-gray-700 hover:border-gray-300 dark:bg-slate-800 dark:text-gray-300 dark:border-slate-600 dark:hover:bg-slate-700'}
-                `}
-              >
-                ⚙️ AYARLAR
               </button>
             )}
           </div>
