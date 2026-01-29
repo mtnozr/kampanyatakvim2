@@ -1896,7 +1896,7 @@ function App() {
     difficulty?: DifficultyLevel,
     requiresReport?: boolean,
     reportDueDate?: Date,
-    channels?: { push?: boolean; sms?: boolean; popup?: boolean; mimCCO?: boolean; mimCCI?: boolean; atm?: boolean; }
+    channels?: { push?: boolean; sms?: boolean; popup?: boolean; email?: boolean; mimCCO?: boolean; mimCCI?: boolean; atm?: boolean; sube?: boolean; }
   ) => {
 
     const eventData = {
