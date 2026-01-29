@@ -2003,13 +2003,15 @@ function App() {
           if (channels.push) selectedChannels.push('Push');
           if (channels.sms) selectedChannels.push('SMS');
           if (channels.popup) selectedChannels.push('Pop-Up');
-          if (channels.atm) selectedChannels.push('ATM');
+          if (channels.email) selectedChannels.push('E-mail');
           if (channels.mimCCO || channels.mimCCI) {
             const mimSubChannels: string[] = [];
             if (channels.mimCCO) mimSubChannels.push('CCO (Inbound)');
             if (channels.mimCCI) mimSubChannels.push('CCI (Outbound)');
             selectedChannels.push(`MİM (${mimSubChannels.join(', ')})`);
           }
+          if (channels.atm) selectedChannels.push('ATM');
+          if (channels.sube) selectedChannels.push('Şube');
 
           if (selectedChannels.length > 0) {
             emailMessage += `\n\nKanallar: ${selectedChannels.join(', ')}`;

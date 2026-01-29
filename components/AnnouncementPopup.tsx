@@ -129,7 +129,7 @@ export const AnnouncementPopup: React.FC<AnnouncementPopupProps> = ({
             onClick={handleClose}
             className="w-full py-3 px-4 bg-violet-600 hover:bg-violet-700 dark:bg-violet-700 dark:hover:bg-violet-600 text-white font-semibold rounded-lg transition-colors shadow-lg shadow-violet-200 dark:shadow-none"
           >
-            Anladım
+            Okudum
           </button>
         </div>
       </div>

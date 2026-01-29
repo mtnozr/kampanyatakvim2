@@ -417,9 +417,19 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                       Pop-Up
                     </span>
                   )}
+                  {event.channels.email && (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800">
+                      E-mail
+                    </span>
+                  )}
                   {event.channels.atm && (
                     <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                       ATM
+                    </span>
+                  )}
+                  {event.channels.sube && (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800">
+                      Şube
                     </span>
                   )}
                   {(event.channels.mimCCO || event.channels.mimCCI) && (

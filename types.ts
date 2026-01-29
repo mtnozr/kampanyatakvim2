@@ -46,9 +46,11 @@ export interface CalendarEvent {
     push?: boolean;
     sms?: boolean;
     popup?: boolean;
+    email?: boolean;
     mimCCO?: boolean;
     mimCCI?: boolean;
     atm?: boolean;
+    sube?: boolean;
   };
 
   // Report Tracking Fields

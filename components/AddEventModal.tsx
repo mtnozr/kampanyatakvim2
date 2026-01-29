@@ -9,7 +9,7 @@ import { calculateReportDueDate } from '../utils/businessDays';
 interface AddEventModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (title: string, urgency: UrgencyLevel, date: Date, assigneeId?: string, description?: string, departmentId?: string, difficulty?: DifficultyLevel, requiresReport?: boolean, reportDueDate?: Date, channels?: { push?: boolean; sms?: boolean; popup?: boolean; mimCCO?: boolean; mimCCI?: boolean; atm?: boolean; }) => void;
+  onAdd: (title: string, urgency: UrgencyLevel, date: Date, assigneeId?: string, description?: string, departmentId?: string, difficulty?: DifficultyLevel, requiresReport?: boolean, reportDueDate?: Date, channels?: { push?: boolean; sms?: boolean; popup?: boolean; email?: boolean; mimCCO?: boolean; mimCCI?: boolean; atm?: boolean; sube?: boolean; }) => void;
   initialDate?: Date;
   initialData?: {
     title?: string;
@@ -51,9 +51,11 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
   const [channelPush, setChannelPush] = useState(false);
   const [channelSMS, setChannelSMS] = useState(false);
   const [channelPopup, setChannelPopup] = useState(false);
+  const [channelEmail, setChannelEmail] = useState(false);
   const [channelMimCCO, setChannelMimCCO] = useState(false);
   const [channelMimCCI, setChannelMimCCI] = useState(false);
   const [channelATM, setChannelATM] = useState(false);
+  const [channelSube, setChannelSube] = useState(false);
 
   // Helper function to convert text to Title Case with Turkish support
   const toTitleCase = (str: string) => {
@@ -104,9 +106,11 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
       setChannelPush(false);
       setChannelSMS(false);
       setChannelPopup(false);
+      setChannelEmail(false);
       setChannelMimCCO(false);
       setChannelMimCCI(false);
       setChannelATM(false);
+      setChannelSube(false);
     }
   }, [isOpen, initialDate, initialData]);
 
@@ -142,9 +146,11 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
       push: channelPush,
       sms: channelSMS,
       popup: channelPopup,
+      email: channelEmail,
       mimCCO: channelMimCCO,
       mimCCI: channelMimCCI,
-      atm: channelATM
+      atm: channelATM,
+      sube: channelSube
     };
     onAdd(title, urgency, selectedDate, assigneeId, description, departmentId, difficulty, requiresReport, reportDue, channels);
     onClose();
@@ -160,9 +166,11 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
     setChannelPush(false);
     setChannelSMS(false);
     setChannelPopup(false);
+    setChannelEmail(false);
     setChannelMimCCO(false);
     setChannelMimCCI(false);
     setChannelATM(false);
+    setChannelSube(false);
   };
 
   if (!isOpen) return null;
@@ -422,6 +430,19 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
                 </span>
               </label>
 
+              {/* E-mail */}
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={channelEmail}
+                  onChange={(e) => setChannelEmail(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  E-mail
+                </span>
+              </label>
+
               {/* ATM */}
               <label className="flex items-center gap-2 cursor-pointer group">
                 <input
@@ -432,6 +453,19 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
                 />
                 <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                   ATM
+                </span>
+              </label>
+
+              {/* Şube */}
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={channelSube}
+                  onChange={(e) => setChannelSube(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  Şube
                 </span>
               </label>
             </div>
