@@ -430,12 +430,12 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                       <div className="flex gap-1">
                         {event.channels.mimCCO && (
                           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 border border-pink-200 dark:border-pink-800">
-                            CCO
+                            CCO (Inbound)
                           </span>
                         )}
                         {event.channels.mimCCI && (
                           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 border border-pink-200 dark:border-pink-800">
-                            CCI
+                            CCI (Outbound)
                           </span>
                         )}
                       </div>

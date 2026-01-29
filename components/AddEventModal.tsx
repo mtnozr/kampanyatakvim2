@@ -450,7 +450,7 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
                     className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
                   />
                   <span className="text-sm text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                    CCO
+                    CCO (Inbound)
                   </span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer group">
@@ -461,7 +461,7 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
                     className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
                   />
                   <span className="text-sm text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                    CCI
+                    CCI (Outbound)
                   </span>
                 </label>
               </div>
