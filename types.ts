@@ -207,6 +207,13 @@ export interface ReminderSettings {
   emailSubjectTemplate: string;  // e.g., "Hatırlatma: {title}"
   emailBodyTemplate: string;     // e.g., "Merhaba {assignee}, {title} görevi..."
 
+  // Twilio SMS settings
+  twilioEnabled?: boolean;
+  twilioAccountSid?: string;
+  twilioAuthToken?: string;
+  twilioPhoneNumber?: string;
+  smsTemplate?: string; // e.g., "{title} görevi size atandı. Detay: {url}"
+
   updatedAt: Date;
   updatedBy?: string;
 }

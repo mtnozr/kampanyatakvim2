@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Send, Check, X, AlertCircle, Mail, Settings, Play, FileText, Eye } from 'lucide-react';
+import { Save, Send, Check, X, AlertCircle, Mail, Settings, Play, FileText, Eye, Smartphone } from 'lucide-react';
 import { ReminderSettings, ReminderLog, CalendarEvent, AnalyticsTask, User, AnalyticsUser } from '../types';
 import { db } from '../firebase';
 import {
@@ -15,6 +15,7 @@ import {
   where
 } from 'firebase/firestore';
 import { sendTestEmail } from '../utils/emailService';
+import { sendTestSMS, formatPhoneNumber } from '../utils/smsService';
 import { processReminders } from '../utils/reminderHelper';
 
 export default function ReminderSettingsPanel() {
@@ -35,17 +36,25 @@ export default function ReminderSettingsPanel() {
 Görev üzerinden {days} gün geçti ve aciliyet seviyesi {urgency} olarak işaretlendi.
 
 Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`,
+    twilioEnabled: false,
+    twilioAccountSid: '',
+    twilioAuthToken: '',
+    twilioPhoneNumber: '',
+    smsTemplate: '{title} görevi size atandı. Kampanya Takvimi',
     updatedAt: new Date(),
   });
 
   const [recentLogs, setRecentLogs] = useState<ReminderLog[]>([]);
   const [testEmail, setTestEmail] = useState('');
+  const [testPhone, setTestPhone] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [isTestingSMS, setIsTestingSMS] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [testMode, setTestMode] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [testMessage, setTestMessage] = useState('');
+  const [testSMSMessage, setTestSMSMessage] = useState('');
   const [processMessage, setProcessMessage] = useState('');
 
   // Load settings from Firestore
@@ -135,6 +144,38 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
       setTestMessage('❌ Test email gönderilemedi');
     } finally {
       setIsTesting(false);
+    }
+  }
+
+  async function handleSendTestSMS() {
+    if (!testPhone || !settings.twilioAccountSid || !settings.twilioAuthToken || !settings.twilioPhoneNumber) {
+      setTestSMSMessage('❌ Telefon numarası ve Twilio credentials gerekli');
+      return;
+    }
+
+    setIsTestingSMS(true);
+    setTestSMSMessage('');
+
+    try {
+      const result = await sendTestSMS(
+        settings.twilioAccountSid,
+        settings.twilioAuthToken,
+        settings.twilioPhoneNumber,
+        testPhone
+      );
+
+      if (result.success) {
+        setTestSMSMessage('✅ Test SMS gönderildi!');
+      } else {
+        setTestSMSMessage(`❌ Hata: ${result.error}`);
+      }
+
+      setTimeout(() => setTestSMSMessage(''), 5000);
+    } catch (error) {
+      console.error('Error sending test SMS:', error);
+      setTestSMSMessage('❌ Test SMS gönderilemedi');
+    } finally {
+      setIsTestingSMS(false);
     }
   }
 
@@ -413,6 +454,130 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
           )}
         </div>
       </div>
+
+      {/* Twilio SMS Settings */}
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Smartphone size={20} className="text-green-700" />
+              SMS Bildirimleri (Twilio)
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Kampanya ataması yapıldığında SMS gönderimi
+            </p>
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={settings.twilioEnabled || false}
+              onChange={(e) => setSettings({ ...settings, twilioEnabled: e.target.checked })}
+              className="w-5 h-5 text-green-600 rounded focus:ring-2 focus:ring-green-200"
+            />
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              SMS Aktif
+            </span>
+          </label>
+        </div>
+
+        {settings.twilioEnabled && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Account SID
+              </label>
+              <input
+                type="text"
+                value={settings.twilioAccountSid || ''}
+                onChange={(e) => setSettings({ ...settings, twilioAccountSid: e.target.value })}
+                placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm focus:ring-2 focus:ring-green-200 dark:bg-slate-700 dark:text-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Auth Token
+              </label>
+              <input
+                type="password"
+                value={settings.twilioAuthToken || ''}
+                onChange={(e) => setSettings({ ...settings, twilioAuthToken: e.target.value })}
+                placeholder="••••••••••••••••••••••••••••••••"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm focus:ring-2 focus:ring-green-200 dark:bg-slate-700 dark:text-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Twilio Phone Number
+              </label>
+              <input
+                type="text"
+                value={settings.twilioPhoneNumber || ''}
+                onChange={(e) => setSettings({ ...settings, twilioPhoneNumber: e.target.value })}
+                placeholder="+90xxxxxxxxxx"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm focus:ring-2 focus:ring-green-200 dark:bg-slate-700 dark:text-white"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Twilio'dan aldığınız telefon numarası (+ ile başlamalı)
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                SMS Şablonu
+              </label>
+              <textarea
+                value={settings.smsTemplate || ''}
+                onChange={(e) => setSettings({ ...settings, smsTemplate: e.target.value })}
+                rows={3}
+                placeholder="{title} görevi size atandı. Kampanya Takvimi"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm focus:ring-2 focus:ring-green-200 dark:bg-slate-700 dark:text-white font-mono"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Değişkenler: <code className="bg-gray-100 dark:bg-slate-700 px-1 rounded">{'{title}'}</code>,{' '}
+                <code className="bg-gray-100 dark:bg-slate-700 px-1 rounded">{'{assignee}'}</code>,{' '}
+                <code className="bg-gray-100 dark:bg-slate-700 px-1 rounded">{'{urgency}'}</code>
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Test SMS Section */}
+      {settings.twilioEnabled && (
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Smartphone size={20} className="text-green-700" />
+            Test SMS Gönder
+          </h3>
+
+          <div className="flex gap-3">
+            <input
+              type="tel"
+              value={testPhone}
+              onChange={(e) => setTestPhone(e.target.value)}
+              placeholder="+905xxxxxxxxx"
+              className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm focus:ring-2 focus:ring-green-200 dark:bg-slate-700 dark:text-white"
+            />
+            <button
+              onClick={handleSendTestSMS}
+              disabled={isTestingSMS || !settings.twilioAccountSid || !settings.twilioAuthToken || !settings.twilioPhoneNumber}
+              className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
+              <Smartphone size={18} />
+              {isTestingSMS ? 'Gönderiliyor...' : 'Test Gönder'}
+            </button>
+          </div>
+
+          {testSMSMessage && (
+            <div className="mt-3 text-sm text-gray-600 dark:text-gray-400">
+              {testSMSMessage}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Test Email Section */}
       <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-6">

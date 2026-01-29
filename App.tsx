@@ -19,8 +19,9 @@ import {
 import { tr } from 'date-fns/locale';
 import { Bell, Smartphone, SmartphoneNfc, ChevronLeft, ChevronRight, Plus, Users, ClipboardList, Loader2, Search, Filter, X, LogIn, LogOut, Database, Download, Lock, Megaphone, PieChart, CheckSquare, StickyNote, Trash2, Flag } from 'lucide-react';
 import jsPDF from 'jspdf';
-import { CalendarEvent, UrgencyLevel, User, AppNotification, ToastMessage, ActivityLog, Department, DepartmentUser, Announcement, DifficultyLevel, WorkRequest, Report, AnalyticsUser, AnalyticsTask, CampaignStatus } from './types';
+import { CalendarEvent, UrgencyLevel, User, AppNotification, ToastMessage, ActivityLog, Department, DepartmentUser, Announcement, DifficultyLevel, WorkRequest, Report, AnalyticsUser, AnalyticsTask, CampaignStatus, ReminderSettings } from './types';
 import { INITIAL_EVENTS, DAYS_OF_WEEK, INITIAL_USERS, URGENCY_CONFIGS, TURKISH_HOLIDAYS, INITIAL_DEPARTMENTS, DIFFICULTY_CONFIGS } from './constants';
+import { sendSMSWithTwilio, buildSMSFromTemplate, formatPhoneNumber } from './utils/smsService';
 import { EventBadge } from './components/EventBadge';
 import { AddEventModal } from './components/AddEventModal';
 import { RequestWorkModal } from './components/RequestWorkModal';
@@ -2000,6 +2001,45 @@ function App() {
         const footerIdText = `Ref ID: #${newEventId.substring(0, 6).toUpperCase()}`;
         const isVeryHigh = urgency === 'Very High';
         const subjectPrefix = isVeryHigh ? 'ACİL: ' : '';
+
+        // Send SMS if Twilio is enabled and user has phone number
+        try {
+          const settingsDoc = await getDoc(doc(db, 'reminderSettings', 'default'));
+          if (settingsDoc.exists()) {
+            const smsSettings = settingsDoc.data() as ReminderSettings;
+
+            if (smsSettings.twilioEnabled &&
+                smsSettings.twilioAccountSid &&
+                smsSettings.twilioAuthToken &&
+                smsSettings.twilioPhoneNumber &&
+                assignedUser.phone) {
+
+              const smsMessage = buildSMSFromTemplate(
+                smsSettings.smsTemplate || '{title} görevi size atandı.',
+                {
+                  title,
+                  assignee: assignedUser.name,
+                  urgency: URGENCY_CONFIGS[urgency].label
+                }
+              );
+
+              await sendSMSWithTwilio(
+                smsSettings.twilioAccountSid,
+                smsSettings.twilioAuthToken,
+                smsSettings.twilioPhoneNumber,
+                {
+                  toNumber: formatPhoneNumber(assignedUser.phone),
+                  message: smsMessage
+                }
+              );
+
+              console.log('SMS sent successfully to:', assignedUser.phone);
+            }
+          }
+        } catch (smsError) {
+          console.error('SMS send error (non-blocking):', smsError);
+          // Don't block the flow if SMS fails
+        }
 
         // Open mailto directly for task assignment
         const subject = encodeURIComponent(`${subjectPrefix}${title} - Kampanya Görev Ataması`);
