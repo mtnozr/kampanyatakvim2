@@ -1482,9 +1482,6 @@ function App() {
         readBy: []
       });
 
-      // Prevent popup for the creator
-      localStorage.setItem('dismissed_announcement_id', docRef.id);
-
       // Log action
       await addDoc(collection(db, "logs"), {
         message: `${user} yeni bir duyuru yayınladı: "${title}"`,

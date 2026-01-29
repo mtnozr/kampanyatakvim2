@@ -21,24 +21,31 @@ export const AnnouncementPopup: React.FC<AnnouncementPopupProps> = ({
   const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
-    if (latestAnnouncement) {
-      // 1. Check if user is the creator
-      if (currentUsername && latestAnnouncement.createdBy === currentUsername) {
-        return;
-      }
-
-      // 2. Check if user already read this announcement (DB check)
-      if (currentUserId && latestAnnouncement.readBy && latestAnnouncement.readBy.includes(currentUserId)) {
-        return;
-      }
-
-      // Show popup after a small delay
-      const timer = setTimeout(() => {
-        setIsVisible(true);
-      }, 1000);
-      return () => clearTimeout(timer);
+    if (!latestAnnouncement) {
+      setIsVisible(false);
+      return;
     }
-  }, [latestAnnouncement, currentUsername, currentUserId]);
+
+    // Reset states for new announcement (ensures popup shows for each new announcement)
+    setIsClosing(false);
+    setIsVisible(false);
+
+    // 1. Check if user is the creator
+    if (currentUsername && latestAnnouncement.createdBy === currentUsername) {
+      return;
+    }
+
+    // 2. Check if user already read this announcement (DB check)
+    if (currentUserId && latestAnnouncement.readBy && latestAnnouncement.readBy.includes(currentUserId)) {
+      return;
+    }
+
+    // Show popup after a small delay
+    const timer = setTimeout(() => {
+      setIsVisible(true);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [latestAnnouncement?.id, currentUsername, currentUserId]);
 
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
