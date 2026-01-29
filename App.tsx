@@ -1998,6 +1998,25 @@ function App() {
           if (dept) emailMessage += `\n\nTalep Eden Birim: ${dept.name}`;
         }
 
+        // Add channels if any selected
+        if (channels && Object.values(channels).some(v => v)) {
+          const selectedChannels: string[] = [];
+          if (channels.push) selectedChannels.push('Push');
+          if (channels.sms) selectedChannels.push('SMS');
+          if (channels.popup) selectedChannels.push('Pop-Up');
+          if (channels.atm) selectedChannels.push('ATM');
+          if (channels.mimCCO || channels.mimCCI) {
+            const mimSubChannels: string[] = [];
+            if (channels.mimCCO) mimSubChannels.push('CCO (Inbound)');
+            if (channels.mimCCI) mimSubChannels.push('CCI (Outbound)');
+            selectedChannels.push(`MİM (${mimSubChannels.join(', ')})`);
+          }
+
+          if (selectedChannels.length > 0) {
+            emailMessage += `\n\nKanallar: ${selectedChannels.join(', ')}`;
+          }
+        }
+
         const footerIdText = `Ref ID: #${newEventId.substring(0, 6).toUpperCase()}`;
         const isVeryHigh = urgency === 'Very High';
         const subjectPrefix = isVeryHigh ? 'ACİL: ' : '';
