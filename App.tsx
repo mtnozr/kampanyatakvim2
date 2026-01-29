@@ -1990,7 +1990,6 @@ function App() {
         setIsSendingEmail(true);
 
         let emailMessage = `${format(date, 'd MMMM yyyy', { locale: tr })} tarihindeki "${title}" kampanyası için görevlendirildiniz.\nAciliyet: ${URGENCY_CONFIGS[urgency].label}`;
-        if (difficulty) emailMessage += `\nZorluk Seviyesi: ${DIFFICULTY_CONFIGS[difficulty].label}`;
         if (description) emailMessage += `\n\nAçıklama:\n${stripHtml(description)}`;
 
         if (departmentId) {
