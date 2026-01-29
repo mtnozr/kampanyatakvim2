@@ -3774,6 +3774,7 @@ function App() {
           latestAnnouncement={filteredAnnouncements[0]}
           currentUsername={currentUsername}
           currentUserId={loggedInDeptUser?.id || auth.currentUser?.uid || 'guest'}
+          onMarkAsRead={(id) => handleMarkAsRead([id])}
         />
 
         <MyTasksModal
