@@ -30,6 +30,11 @@ export const AnnouncementPopup: React.FC<AnnouncementPopupProps> = ({
     setIsClosing(false);
     setIsVisible(false);
 
+    // 0. Check if user is logged in (don't show to guests)
+    if (!currentUserId || currentUserId === 'guest') {
+      return;
+    }
+
     // 1. Check if user is the creator
     if (currentUsername && latestAnnouncement.createdBy === currentUsername) {
       return;
