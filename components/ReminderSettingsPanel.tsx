@@ -106,6 +106,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
 
         // This processDailyDigest function handles time checking internally
         // It checks if current time matches target time AND if not sent today
+        // We added a Firestore Transaction Lock inside it to prevent race conditions across tabs/users
         const result = await processDailyDigest(campaigns, users, deptUsers, settings);
 
         if (result.sent > 0 || result.failed > 0) {
@@ -113,6 +114,9 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
           setProcessMessage(`✅ Gün sonu bülteni otomatik gönderildi: ${result.sent} başarılı`);
           setTimeout(() => setProcessMessage(''), 5000);
           loadRecentLogs();
+        } else if (result.skipped > 0) {
+          // Optionally log skipped attempts due to lock
+          // console.log('Digest skipped (locked or already sent)');
         }
       } catch (error) {
         console.error('Auto digest error:', error);

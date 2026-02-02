@@ -6,7 +6,7 @@ import { CalendarEvent, User, ReminderSettings } from '../types';
 import { buildDailyDigest, DailyDigestContent } from './dailyDigestBuilder';
 import { sendDailyDigestEmail } from './emailService';
 import { db } from '../firebase';
-import { collection, addDoc, Timestamp, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, query, where, getDocs, limit, runTransaction, doc } from 'firebase/firestore';
 
 interface DepartmentUser {
     id: string;
@@ -38,6 +38,36 @@ async function checkDigestAlreadySent(dateStr: string): Promise<boolean> {
         return !snapshot.empty;
     } catch (error) {
         console.error('Error checking existing digest:', error);
+        return false;
+    }
+}
+
+/**
+ * Try to acquire a lock for today's digest
+ * Returns true if lock acquired, false if already locked/sent
+ */
+async function acquireDailyDigestLock(dateStr: string): Promise<boolean> {
+    const lockRef = doc(db, 'systemLocks', `daily-digest-${dateStr}`);
+
+    try {
+        return await runTransaction(db, async (transaction) => {
+            const lockDoc = await transaction.get(lockRef);
+
+            if (lockDoc.exists()) {
+                // Already locked/sent
+                return false;
+            }
+
+            // Create lock
+            transaction.set(lockRef, {
+                createdAt: Timestamp.now(),
+                status: 'processing'
+            });
+
+            return true;
+        });
+    } catch (error) {
+        console.error('Error acquiring lock:', error);
         return false;
     }
 }
@@ -121,14 +151,26 @@ export async function processDailyDigest(
         return result;
     }
 
-    // Check if duplicate for today
+    // Check if duplicate for today using Transaction Lock
     const todayStr = now.toISOString().split('T')[0];
-    const alreadySent = await checkDigestAlreadySent(todayStr);
 
+    // First fast check using logs (optimization)
+    const alreadySent = await checkDigestAlreadySent(todayStr);
     if (alreadySent) {
-        console.log('Daily digest already sent for today, skipping.');
+        console.log('Daily digest already sent for today (log check), skipping.');
         return result;
     }
+
+    // Try to acquire distributed lock
+    console.log(`Attempting to acquire lock for daily-digest-${todayStr}...`);
+    const lockAcquired = await acquireDailyDigestLock(todayStr);
+
+    if (!lockAcquired) {
+        console.log('Could not acquire lock for daily digest, another instance is likely processing it.');
+        return result;
+    }
+
+    console.log('Lock acquired! Processing daily digest...');
 
     // Check if we have API key
     if (!settings.resendApiKey) {
@@ -205,3 +247,4 @@ export async function processDailyDigest(
 
     return result;
 }
+
