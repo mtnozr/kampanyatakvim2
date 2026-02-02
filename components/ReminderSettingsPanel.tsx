@@ -865,6 +865,27 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
           </ul>
         </div>
 
+        {/* Manual Trigger Button */}
+        <div className="mb-6 flex justify-end">
+          <button
+            onClick={handleOpenDigestPreview}
+            disabled={isBuildingDigest || !settings.resendApiKey}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md font-medium transition-colors flex items-center gap-2 disabled:opacity-50 text-sm"
+          >
+            {isBuildingDigest ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Hazırlanıyor...
+              </>
+            ) : (
+              <>
+                <Send size={16} />
+                Manuel Bülten Gönder
+              </>
+            )}
+          </button>
+        </div>
+
         {/* Daily Digest Section */}
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 mt-8 pt-6 border-t border-gray-200 dark:border-slate-700">
           <Mail size={20} className="text-green-600" />
@@ -988,26 +1009,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
           )}
         </div>
 
-        {/* Manual Trigger Button */}
-        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-700 flex justify-end">
-          <button
-            onClick={handleOpenDigestPreview}
-            disabled={isBuildingDigest || !settings.resendApiKey}
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md font-medium transition-colors flex items-center gap-2 disabled:opacity-50 text-sm"
-          >
-            {isBuildingDigest ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Hazırlanıyor...
-              </>
-            ) : (
-              <>
-                <Send size={16} />
-                Manuel Bülten Gönder
-              </>
-            )}
-          </button>
-        </div>
+
 
       </div>
 
