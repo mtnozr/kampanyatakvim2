@@ -3,7 +3,6 @@ import { Save, Send, Check, X, AlertCircle, Mail, Settings, Play, FileText, Eye,
 import { ReminderSettings, ReminderLog, CalendarEvent, AnalyticsTask, User, AnalyticsUser, Report, DepartmentUser } from '../types';
 import { db } from '../firebase';
 import {
-  collection,
   doc,
   getDoc,
   setDoc,
@@ -12,16 +11,27 @@ import {
   orderBy,
   limit,
   Timestamp,
-  where
+  where,
+  addDoc,
+  collection
 } from 'firebase/firestore';
 import { sendTestEmail } from '../utils/emailService';
 import { sendTestSMS, formatPhoneNumber } from '../utils/smsService';
-import { processReminders } from '../utils/reminderHelper';
-import { processReportDelayNotifications } from '../utils/reportDelayMonitor';
+
 import { buildWeeklyDigest } from '../utils/weeklyDigestBuilder';
 import { buildWeeklyDigestHTML, sendWeeklyDigestEmail, buildDailyDigestHTML, sendDailyDigestEmail } from '../utils/emailService';
 import { buildDailyDigest } from '../utils/dailyDigestBuilder';
 import { processDailyDigest } from '../utils/dailyDigestProcessor';
+
+// Add logging helper
+async function logAutomatedCheck(message: string) {
+  try {
+    // Optional: log to a specific collection for debugging automation
+    console.log(`[Auto-Scheduler] ${message}`);
+  } catch (e) {
+    console.error(e);
+  }
+}
 
 export default function ReminderSettingsPanel() {
   const [settings, setSettings] = useState<ReminderSettings>({
@@ -58,7 +68,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [isTestingSMS, setIsTestingSMS] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+
   const [digestPreviewOpen, setDigestPreviewOpen] = useState(false);
   const [digestPreviewHTML, setDigestPreviewHTML] = useState('');
   const [digestRecipients, setDigestRecipients] = useState<DepartmentUser[]>([]);
@@ -70,7 +80,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
   const [isSendingDailyDigest, setIsSendingDailyDigest] = useState(false);
   const [dailyDigestRecipients, setDailyDigestRecipients] = useState<DepartmentUser[]>([]);
 
-  const [testMode, setTestMode] = useState(false);
+
 
   const [saveMessage, setSaveMessage] = useState('');
   const [testMessage, setTestMessage] = useState('');
@@ -83,6 +93,34 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
     loadRecentLogs();
     loadDepartmentUsers();
   }, []);
+
+  // Automatic Daily Digest Scheduler
+  useEffect(() => {
+    // Check every minute
+    const intervalId = setInterval(async () => {
+      if (!settings.dailyDigestEnabled || !settings.resendApiKey) return;
+
+      try {
+        const now = new Date();
+        const { campaigns, users, deptUsers } = await fetchPanelData();
+
+        // This processDailyDigest function handles time checking internally
+        // It checks if current time matches target time AND if not sent today
+        const result = await processDailyDigest(campaigns, users, deptUsers, settings);
+
+        if (result.sent > 0 || result.failed > 0) {
+          console.log('Automatic digest run:', result);
+          setProcessMessage(`✅ Gün sonu bülteni otomatik gönderildi: ${result.sent} başarılı`);
+          setTimeout(() => setProcessMessage(''), 5000);
+          loadRecentLogs();
+        }
+      } catch (error) {
+        console.error('Auto digest error:', error);
+      }
+    }, 60000); // Run every 60 seconds
+
+    return () => clearInterval(intervalId);
+  }, [settings.dailyDigestEnabled, settings.dailyDigestTime, settings.resendApiKey]);
 
   async function loadDepartmentUsers() {
     try {
@@ -274,84 +312,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
     return { campaigns, analyticsTasks, reports, users, analyticsUsers, deptUsers };
   }
 
-  async function handleProcessReminders() {
-    if (!settings.isEnabled || !settings.resendApiKey) {
-      setProcessMessage('❌ Hatırlatma sistemi aktif değil veya API key tanımlı değil');
-      setTimeout(() => setProcessMessage(''), 3000);
-      return;
-    }
 
-    setIsProcessing(true);
-    setProcessMessage('⏳ Hatırlatmalar kontrol ediliyor...');
-
-    try {
-      // Fetch data
-      const { campaigns, analyticsTasks, reports, users, analyticsUsers, deptUsers } = await fetchPanelData();
-
-      // Process campaign reminders
-      const campaignResults = await processReminders(
-        campaigns,
-        'campaign',
-        users,
-        settings,
-        testMode,  // Test mode parametresi
-        deptUsers  // For CC email resolution
-      );
-
-      // Process analytics reminders
-      const analyticsResults = await processReminders(
-        analyticsTasks,
-        'analytics',
-        analyticsUsers,
-        settings,
-        testMode,  // Test mode parametresi
-        deptUsers  // For CC email resolution
-      );
-
-      // Process report delay notifications
-      const reportResults = await processReportDelayNotifications(
-        reports,
-        users,
-        settings,
-        testMode  // Test mode parametresi
-      );
-
-      // Weekly digest manual processing removed
-      const digestResults = { sent: 0, failed: 0, skipped: 0 };
-
-      // Process Automatic Daily Digest
-      const dailyDigestResults = await processDailyDigest(
-        campaigns,
-        users,
-        deptUsers,
-        settings
-      );
-
-      const totalSent = campaignResults.sent + analyticsResults.sent + reportResults.sent + digestResults.sent + dailyDigestResults.sent;
-      const totalFailed = campaignResults.failed + analyticsResults.failed + reportResults.failed + digestResults.failed + dailyDigestResults.failed;
-      const totalSkipped = campaignResults.skipped + analyticsResults.skipped + reportResults.skipped + digestResults.skipped + dailyDigestResults.skipped;
-
-      const digestInfo = '';
-      const dailyDigestInfo = dailyDigestResults.sent > 0 ? ` / 🌅 Gün Sonu: ${dailyDigestResults.sent}` : '';
-
-      setProcessMessage(
-        `✅ İşlem tamamlandı!\n` +
-        `Gönderilen: ${totalSent}\n` +
-        `Başarısız: ${totalFailed}\n` +
-        `Atlanan: ${totalSkipped}\n\n` +
-        `📅 Kampanya: ${campaignResults.sent} / 📈 Analitik: ${analyticsResults.sent} / 📊 Rapor: ${reportResults.sent}${digestInfo}${dailyDigestInfo}`
-      );
-
-      loadRecentLogs(); // Refresh logs
-      setTimeout(() => setProcessMessage(''), 8000);
-    } catch (error) {
-      console.error('Error processing reminders:', error);
-      setProcessMessage('❌ Hatırlatmalar işlenirken hata oluştu');
-      setTimeout(() => setProcessMessage(''), 5000);
-    } finally {
-      setIsProcessing(false);
-    }
-  }
 
   async function handleOpenDigestPreview() {
     setIsBuildingDigest(true);
@@ -1206,67 +1167,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
         )}
       </div>
 
-      {/* Manual Process Reminders */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-6">
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <Play size={20} className="text-primary-700" />
-          Manuel Hatırlatma Kontrolü
-        </h3>
 
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Tüm kampanya ve analitik görevleri kontrol eder ve gerekli hatırlatma maillerini gönderir.
-        </p>
-
-        {/* Test Mode Toggle */}
-        <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={testMode}
-              onChange={(e) => setTestMode(e.target.checked)}
-              className="mt-1 w-4 h-4 text-amber-600 rounded focus:ring-2 focus:ring-amber-200"
-            />
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-amber-900 dark:text-amber-200">
-                  🧪 Test Modu
-                </span>
-                <span className="text-xs px-2 py-0.5 bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-200 rounded-full font-semibold">
-                  ÖNERİLEN
-                </span>
-              </div>
-              <p className="text-sm text-amber-800 dark:text-amber-300 mt-1">
-                Tüm tarih kontrollerini bypass eder. <strong>Atanmış tüm aktif görevler</strong> için hatırlatma gönderir.
-              </p>
-              <p className="text-xs text-amber-700 dark:text-amber-400 mt-2">
-                ✓ Geçmiş görevleri test edebilirsiniz<br />
-                ✓ Hafta sonu kontrolü devre dışı<br />
-                ✓ Gün kontrolü yok (hemen gönderir)
-              </p>
-            </div>
-          </label>
-        </div>
-
-
-
-        <button
-          onClick={handleProcessReminders}
-          disabled={isProcessing || !settings.isEnabled || !settings.resendApiKey}
-          className={`w-full px-6 py-3 rounded-md font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 ${testMode
-            ? 'bg-amber-600 hover:bg-amber-700 text-white'
-            : 'bg-green-600 hover:bg-green-700 text-white'
-            }`}
-        >
-          <Play size={18} />
-          {isProcessing ? 'İşleniyor...' : testMode ? '🧪 Test Modu ile Kontrol Et' : 'Şimdi Kontrol Et'}
-        </button>
-
-        {processMessage && (
-          <div className="mt-3 p-3 bg-gray-50 dark:bg-slate-700/50 rounded-md text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line">
-            {processMessage}
-          </div>
-        )}
-      </div>
 
       {/* Recent Logs */}
       <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-6">
