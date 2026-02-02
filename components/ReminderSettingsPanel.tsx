@@ -18,6 +18,7 @@ import { sendTestEmail } from '../utils/emailService';
 import { sendTestSMS, formatPhoneNumber } from '../utils/smsService';
 import { processReminders } from '../utils/reminderHelper';
 import { processReportDelayNotifications } from '../utils/reportDelayMonitor';
+import { processWeeklyDigest } from '../utils/weeklyDigestProcessor';
 
 export default function ReminderSettingsPanel() {
   const [settings, setSettings] = useState<ReminderSettings>({
@@ -55,6 +56,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
   const [isTestingSMS, setIsTestingSMS] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [testMode, setTestMode] = useState(false);
+  const [includeWeeklyDigest, setIncludeWeeklyDigest] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [testMessage, setTestMessage] = useState('');
   const [testSMSMessage, setTestSMSMessage] = useState('');
@@ -239,6 +241,14 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
         ...doc.data(),
       } as AnalyticsUser));
 
+      // Fetch department users (for weekly digest)
+      const deptUsersRef = collection(db, 'departmentUsers');
+      const deptUsersSnapshot = await getDocs(deptUsersRef);
+      const deptUsers = deptUsersSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      } as any));
+
       // Process campaign reminders
       const campaignResults = await processReminders(
         campaigns,
@@ -265,16 +275,33 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
         testMode  // Test mode parametresi
       );
 
-      const totalSent = campaignResults.sent + analyticsResults.sent + reportResults.sent;
-      const totalFailed = campaignResults.failed + analyticsResults.failed + reportResults.failed;
-      const totalSkipped = campaignResults.skipped + analyticsResults.skipped + reportResults.skipped;
+      // Process weekly digest (if enabled)
+      let digestResults = { sent: 0, failed: 0, skipped: 0 };
+      if (includeWeeklyDigest) {
+        digestResults = await processWeeklyDigest(
+          reports,
+          campaigns,
+          users,
+          deptUsers,
+          settings
+        );
+      }
+
+      const totalSent = campaignResults.sent + analyticsResults.sent + reportResults.sent + digestResults.sent;
+      const totalFailed = campaignResults.failed + analyticsResults.failed + reportResults.failed + digestResults.failed;
+      const totalSkipped = campaignResults.skipped + analyticsResults.skipped + reportResults.skipped + digestResults.skipped;
+
+      let digestInfo = '';
+      if (includeWeeklyDigest) {
+        digestInfo = ` / 📊 Bülten: ${digestResults.sent}`;
+      }
 
       setProcessMessage(
         `✅ İşlem tamamlandı!\n` +
         `Gönderilen: ${totalSent}\n` +
         `Başarısız: ${totalFailed}\n` +
         `Atlanan: ${totalSkipped}\n\n` +
-        `📅 Kampanya: ${campaignResults.sent} / 📈 Analitik: ${analyticsResults.sent} / 📊 Rapor: ${reportResults.sent}`
+        `📅 Kampanya: ${campaignResults.sent} / 📈 Analitik: ${analyticsResults.sent} / 📊 Rapor: ${reportResults.sent}${digestInfo}`
       );
 
       loadRecentLogs(); // Refresh logs
@@ -549,6 +576,127 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
         </div>
       </div>
 
+      {/* Weekly Digest Settings */}
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <Mail size={20} className="text-purple-600" />
+          Haftalık Bülten
+        </h3>
+
+        {/* Enable/Disable Toggle */}
+        <div className="mb-6 p-4 bg-gray-50 dark:bg-slate-700/50 rounded-md">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={settings.weeklyDigestEnabled || false}
+              onChange={(e) => setSettings({ ...settings, weeklyDigestEnabled: e.target.checked })}
+              className="w-5 h-5 text-purple-600 rounded focus:ring-2 focus:ring-purple-200"
+            />
+            <div>
+              <span className="font-medium text-gray-900 dark:text-white">
+                Haftalık Bülteni Aktifleştir
+              </span>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Designer kullanıcılarına haftalık özet maili gönder
+              </p>
+            </div>
+          </label>
+        </div>
+
+        {/* Schedule Configuration */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Gün
+            </label>
+            <select
+              value={settings.weeklyDigestDay || 1}
+              onChange={(e) => setSettings({ ...settings, weeklyDigestDay: parseInt(e.target.value) })}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm focus:ring-2 focus:ring-purple-200 dark:bg-slate-700 dark:text-white"
+              disabled={!settings.weeklyDigestEnabled}
+            >
+              <option value={1}>Pazartesi</option>
+              <option value={2}>Salı</option>
+              <option value={3}>Çarşamba</option>
+              <option value={4}>Perşembe</option>
+              <option value={5}>Cuma</option>
+              <option value={6}>Cumartesi</option>
+              <option value={7}>Pazar</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Saat (HH:mm)
+            </label>
+            <input
+              type="time"
+              value={settings.weeklyDigestTime || '09:00'}
+              onChange={(e) => setSettings({ ...settings, weeklyDigestTime: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm focus:ring-2 focus:ring-purple-200 dark:bg-slate-700 dark:text-white"
+              disabled={!settings.weeklyDigestEnabled}
+            />
+          </div>
+        </div>
+
+        {/* Content Options */}
+        <div className="mb-6 space-y-3">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={settings.weeklyDigestIncludeOverdueReports ?? true}
+              onChange={(e) => setSettings({ ...settings, weeklyDigestIncludeOverdueReports: e.target.checked })}
+              className="w-4 h-4 text-purple-600 rounded focus:ring-2 focus:ring-purple-200"
+              disabled={!settings.weeklyDigestEnabled}
+            />
+            <span className="text-sm text-gray-700 dark:text-gray-300">
+              Gecikmiş raporları dahil et
+            </span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={settings.weeklyDigestIncludeThisWeekCampaigns ?? true}
+              onChange={(e) => setSettings({ ...settings, weeklyDigestIncludeThisWeekCampaigns: e.target.checked })}
+              className="w-4 h-4 text-purple-600 rounded focus:ring-2 focus:ring-purple-200"
+              disabled={!settings.weeklyDigestEnabled}
+            />
+            <span className="text-sm text-gray-700 dark:text-gray-300">
+              Bu haftanın kampanyalarını dahil et
+            </span>
+          </label>
+        </div>
+
+        {/* Info Box */}
+        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md mb-6">
+          <p className="text-sm text-blue-900 dark:text-blue-200 mb-2 font-medium">
+            📧 Bilgilendirme
+          </p>
+          <ul className="text-xs text-blue-800 dark:text-blue-300 space-y-1 list-disc list-inside">
+            <li>Sadece isDesigner=true olan kullanıcılara gönderilir</li>
+            <li>Gecikmiş raporlar ve bu haftanın kampanyaları listelenir</li>
+            <li>Hafta aralığı: Pazartesi - Pazar</li>
+            <li>Manuel test butonu ile önizleyebilirsiniz</li>
+          </ul>
+        </div>
+
+        {/* Save Button */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleSaveSettings}
+            disabled={isSaving}
+            className="px-6 py-2 bg-primary-700 hover:bg-primary-800 text-white rounded-md font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+          >
+            <Save size={18} />
+            {isSaving ? 'Kaydediliyor...' : 'Ayarları Kaydet'}
+          </button>
+          {saveMessage && (
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              {saveMessage}
+            </span>
+          )}
+        </div>
+      </div>
+
       {/* Twilio SMS Settings */}
       <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-6">
         <div className="flex items-start justify-between mb-4">
@@ -741,6 +889,26 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
                 ✓ Geçmiş görevleri test edebilirsiniz<br />
                 ✓ Hafta sonu kontrolü devre dışı<br />
                 ✓ Gün kontrolü yok (hemen gönderir)
+              </p>
+            </div>
+          </label>
+        </div>
+
+        {/* Weekly Digest Option */}
+        <div className="mb-4 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-md">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={includeWeeklyDigest}
+              onChange={(e) => setIncludeWeeklyDigest(e.target.checked)}
+              className="mt-1 w-4 h-4 text-purple-600 rounded focus:ring-2 focus:ring-purple-200"
+            />
+            <div className="flex-1">
+              <span className="font-medium text-purple-900 dark:text-purple-200">
+                📊 Haftalık Bülten Gönder
+              </span>
+              <p className="text-sm text-purple-800 dark:text-purple-300 mt-1">
+                Designer kullanıcılarına haftalık özet maili gönderir
               </p>
             </div>
           </label>

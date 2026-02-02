@@ -220,6 +220,13 @@ export interface ReminderSettings {
   reportDelayNotificationsEnabled?: boolean;  // Enable/disable report delay emails
   reportDelayThresholdDays?: number;         // Days overdue before sending notification (default: 0 = immediate)
 
+  // Weekly Digest Settings
+  weeklyDigestEnabled?: boolean;           // Enable/disable weekly digest
+  weeklyDigestDay?: number;                // Day of week (1=Monday, 7=Sunday)
+  weeklyDigestTime?: string;               // Time in HH:mm format (e.g., "09:00")
+  weeklyDigestIncludeOverdueReports?: boolean;  // Include overdue reports section
+  weeklyDigestIncludeThisWeekCampaigns?: boolean; // Include this week's campaigns
+
   updatedAt: Date;
   updatedBy?: string;
 }

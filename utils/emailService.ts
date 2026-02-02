@@ -562,3 +562,199 @@ export async function sendReportDelayEmail(
   });
 }
 
+/**
+ * Build HTML for weekly digest emails
+ */
+export function buildWeeklyDigestHTML(params: {
+  recipientName: string;
+  digestContent: {
+    overdueReports: Array<{
+      title: string;
+      campaignTitle?: string;
+      daysOverdue: number;
+      assigneeName: string;
+    }>;
+    thisWeekCampaigns: Array<{
+      title: string;
+      date: Date;
+      urgencyLabel: string;
+      assigneeName: string;
+      status?: string;
+    }>;
+    totalOverdueReports: number;
+    totalThisWeekCampaigns: number;
+  };
+  weekStart: Date;
+  weekEnd: Date;
+}): string {
+  const { recipientName, digestContent, weekStart, weekEnd } = params;
+
+  // Format week range
+  const weekRangeStr = `${weekStart.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} - ${weekEnd.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+
+  // Build overdue reports table
+  let overdueReportsHTML = '';
+  if (digestContent.totalOverdueReports > 0) {
+    overdueReportsHTML = `
+      <h3 style="margin: 24px 0 16px 0; font-size: 18px; color: #DC2626; font-weight: 600;">
+        ⚠️ Gecikmiş Raporlar (${digestContent.totalOverdueReports})
+      </h3>
+      <table width="100%" cellpadding="8" cellspacing="0" style="background-color: #FEE2E2; border: 1px solid #DC2626; border-radius: 8px; margin-bottom: 24px;">
+        <thead>
+          <tr style="background-color: #FCA5A5;">
+            <th style="text-align: left; font-size: 12px; color: #7F1D1D; font-weight: 600; padding: 12px 8px;">Rapor Adı</th>
+            <th style="text-align: left; font-size: 12px; color: #7F1D1D; font-weight: 600; padding: 12px 8px;">Kampanya</th>
+            <th style="text-align: center; font-size: 12px; color: #7F1D1D; font-weight: 600; padding: 12px 8px;">Gecikme</th>
+            <th style="text-align: left; font-size: 12px; color: #7F1D1D; font-weight: 600; padding: 12px 8px;">Atanan</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${digestContent.overdueReports.map(report => `
+            <tr style="border-top: 1px solid #DC2626;">
+              <td style="font-size: 13px; color: #991B1B; padding: 8px;"><strong>${report.title}</strong></td>
+              <td style="font-size: 13px; color: #991B1B; padding: 8px;">${report.campaignTitle || '-'}</td>
+              <td style="font-size: 13px; color: #991B1B; padding: 8px; text-align: center;"><strong>${report.daysOverdue} gün</strong></td>
+              <td style="font-size: 13px; color: #991B1B; padding: 8px;">${report.assigneeName}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  } else {
+    overdueReportsHTML = `
+      <h3 style="margin: 24px 0 16px 0; font-size: 18px; color: #10B981; font-weight: 600;">
+        ✅ Gecikmiş Raporlar
+      </h3>
+      <div style="background-color: #D1FAE5; border: 1px solid #10B981; border-radius: 8px; padding: 16px; margin-bottom: 24px; text-align: center;">
+        <p style="margin: 0; font-size: 14px; color: #065F46;">
+          🎉 Harika! Gecikmiş rapor bulunmuyor.
+        </p>
+      </div>
+    `;
+  }
+
+  // Build this week's campaigns table
+  let thisWeekCampaignsHTML = '';
+  if (digestContent.totalThisWeekCampaigns > 0) {
+    thisWeekCampaignsHTML = `
+      <h3 style="margin: 24px 0 16px 0; font-size: 18px; color: #7C3AED; font-weight: 600;">
+        📅 Bu Hafta Yapılacak Kampanyalar (${digestContent.totalThisWeekCampaigns})
+      </h3>
+      <table width="100%" cellpadding="8" cellspacing="0" style="background-color: #F3E8FF; border: 1px solid #7C3AED; border-radius: 8px; margin-bottom: 24px;">
+        <thead>
+          <tr style="background-color: #DDD6FE;">
+            <th style="text-align: left; font-size: 12px; color: #4C1D95; font-weight: 600; padding: 12px 8px;">Tarih</th>
+            <th style="text-align: left; font-size: 12px; color: #4C1D95; font-weight: 600; padding: 12px 8px;">Kampanya Adı</th>
+            <th style="text-align: center; font-size: 12px; color: #4C1D95; font-weight: 600; padding: 12px 8px;">Aciliyet</th>
+            <th style="text-align: left; font-size: 12px; color: #4C1D95; font-weight: 600; padding: 12px 8px;">Atanan</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${digestContent.thisWeekCampaigns.map(campaign => {
+      const dateStr = campaign.date.toLocaleDateString('tr-TR', {
+        day: 'numeric',
+        month: 'short',
+        weekday: 'short'
+      });
+      return `
+              <tr style="border-top: 1px solid #A78BFA;">
+                <td style="font-size: 13px; color: #6B21A8; padding: 8px; white-space: nowrap;">${dateStr}</td>
+                <td style="font-size: 13px; color: #6B21A8; padding: 8px;"><strong>${campaign.title}</strong></td>
+                <td style="font-size: 13px; color: #6B21A8; padding: 8px; text-align: center;">${campaign.urgencyLabel}</td>
+                <td style="font-size: 13px; color: #6B21A8; padding: 8px;">${campaign.assigneeName}</td>
+              </tr>
+            `;
+    }).join('')}
+        </tbody>
+      </table>
+    `;
+  } else {
+    thisWeekCampaignsHTML = `
+      <h3 style="margin: 24px 0 16px 0; font-size: 18px; color: #6B7280; font-weight: 600;">
+        📅 Bu Hafta Yapılacak Kampanyalar
+      </h3>
+      <div style="background-color: #F3F4F6; border: 1px solid #D1D5DB; border-radius: 8px; padding: 16px; margin-bottom: 24px; text-align: center;">
+        <p style="margin: 0; font-size: 14px; color: #4B5563;">
+          Bu hafta planlanmış kampanya bulunmuyor.
+        </p>
+      </div>
+    `;
+  }
+
+  return `
+    <!DOCTYPE html>
+    <html lang="tr">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Haftalık Bülten</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #F8F9FE;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F8F9FE; padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <table width="650" cellpadding="0" cellspacing="0" style="background-color: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+              <tr>
+                <td style="background: linear-gradient(135deg, #7C3AED 0%, #4338CA 100%); padding: 32px; text-align: center;">
+                  <h1 style="margin: 0; color: #FFFFFF; font-size: 28px; font-weight: 700;">📊 Haftalık Bülten</h1>
+                  <p style="margin: 8px 0 0 0; color: #E9D5FF; font-size: 16px; font-weight: 500;">${weekRangeStr}</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 32px;">
+                  <p style="margin: 0 0 24px 0; font-size: 16px; color: #1F2937;">Merhaba <strong>${recipientName}</strong>,</p>
+                  <p style="margin: 0 0 24px 0; font-size: 14px; color: #4B5563; line-height: 1.6;">İşte bu haftanın özeti:</p>
+                  ${overdueReportsHTML}
+                  ${thisWeekCampaignsHTML}
+                  <div style="text-align: center; margin: 32px 0;">
+                    <a href="https://kampanya-takvimi.vercel.app" style="display: inline-block; background: linear-gradient(135deg, #7C3AED 0%, #4338CA 100%); color: #FFFFFF; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(124, 58, 237, 0.3);">Takvime Git →</a>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td style="background-color: #F9FAFB; padding: 24px; text-align: center; border-top: 1px solid #E5E7EB;">
+                  <p style="margin: 0 0 8px 0; font-size: 12px; color: #6B7280;">Bu otomatik bir haftalık bültendir.</p>
+                  <p style="margin: 0; font-size: 12px; color: #9CA3AF;">Kampanya Takvimi © ${new Date().getFullYear()}</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * Send weekly digest email
+ */
+export async function sendWeeklyDigestEmail(
+  apiKey: string,
+  recipientEmail: string,
+  recipientName: string,
+  digestContent: any,
+  weekStart: Date,
+  weekEnd: Date
+): Promise<EmailResponse> {
+  const html = buildWeeklyDigestHTML({
+    recipientName,
+    digestContent,
+    weekStart,
+    weekEnd,
+  });
+
+  const weekRangeStr = `${weekStart.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} - ${weekEnd.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+  const subject = `📊 Haftalık Bülten - ${weekRangeStr}`;
+
+  return sendEmailWithResend(apiKey, {
+    to: recipientEmail,
+    toName: recipientName,
+    subject,
+    html,
+    eventId: `weekly-digest-${weekStart.toISOString().split('T')[0]}`,
+    eventTitle: `Haftalık Bülten - ${weekRangeStr}`,
+    eventType: 'campaign',
+    urgency: 'Medium',
+  });
+}
