@@ -403,7 +403,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
           const result = await sendWeeklyDigestEmail(
             settings.resendApiKey,
             recipient.email!,
-            recipient.name || recipient.username,
+            recipient.username,
             digestContent,
             digestContent.weekStart,
             digestContent.weekEnd
