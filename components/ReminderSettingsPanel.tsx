@@ -916,9 +916,37 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
           </p>
           <ul className="text-xs text-green-800 dark:text-green-300 space-y-1 list-disc list-inside">
             <li>Bugünün tamamlanan ve bekleyen kampanyalarını içerir</li>
-            <li>Manuel tetikleme ile gönderilir</li>
             <li>Sadece seçilen Designer kullanıcılarına gönderilir</li>
+            <li>Otomatik ayarlanırsa her gün belirlenen saatte gönderilir</li>
           </ul>
+
+          {/* Automatic Scheduling Options */}
+          <div className="mt-4 pt-4 border-t border-green-200 dark:border-green-800 space-y-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.dailyDigestEnabled || false}
+                onChange={(e) => setSettings({ ...settings, dailyDigestEnabled: e.target.checked })}
+                className="w-4 h-4 text-green-600 rounded focus:ring-2 focus:ring-green-200"
+              />
+              <span className="text-sm font-medium text-green-900 dark:text-green-100">
+                Otomatik Gönderimi Aktifleştir
+              </span>
+            </label>
+
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-green-800 dark:text-green-200">
+                Gönderim Saati:
+              </label>
+              <input
+                type="time"
+                value={settings.dailyDigestTime || '17:00'}
+                onChange={(e) => setSettings({ ...settings, dailyDigestTime: e.target.value })}
+                className="px-2 py-1 border border-green-300 dark:border-green-700 rounded text-sm focus:ring-2 focus:ring-green-200 dark:bg-slate-700 dark:text-white"
+                disabled={!settings.dailyDigestEnabled}
+              />
+            </div>
+          </div>
           <div className="mt-4 flex gap-3">
             <button
               onClick={handleOpenDailyDigestPreview}
