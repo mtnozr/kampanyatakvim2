@@ -19,6 +19,8 @@ import { sendTestSMS, formatPhoneNumber } from '../utils/smsService';
 import { processReminders } from '../utils/reminderHelper';
 import { processReportDelayNotifications } from '../utils/reportDelayMonitor';
 import { processWeeklyDigest } from '../utils/weeklyDigestProcessor';
+import { buildWeeklyDigest } from '../utils/weeklyDigestBuilder';
+import { buildWeeklyDigestHTML, sendWeeklyDigestEmail } from '../utils/emailService';
 
 export default function ReminderSettingsPanel() {
   const [settings, setSettings] = useState<ReminderSettings>({
@@ -56,6 +58,11 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
   const [isTesting, setIsTesting] = useState(false);
   const [isTestingSMS, setIsTestingSMS] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [digestPreviewOpen, setDigestPreviewOpen] = useState(false);
+  const [digestPreviewHTML, setDigestPreviewHTML] = useState('');
+  const [digestRecipients, setDigestRecipients] = useState<DepartmentUser[]>([]);
+  const [isBuildingDigest, setIsBuildingDigest] = useState(false);
+  const [isSendingDigest, setIsSendingDigest] = useState(false);
   const [testMode, setTestMode] = useState(false);
 
   const [saveMessage, setSaveMessage] = useState('');
@@ -202,6 +209,64 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
     }
   }
 
+  async function fetchPanelData() {
+    // Fetch campaigns
+    const campaignsRef = collection(db, 'events');
+    const campaignsSnapshot = await getDocs(campaignsRef);
+    const campaigns: CalendarEvent[] = campaignsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      date: doc.data().date?.toDate() || new Date(),
+      createdAt: doc.data().createdAt?.toDate() || new Date(),
+    } as CalendarEvent));
+
+    // Fetch analytics tasks
+    const analyticsRef = collection(db, 'analyticsTasks');
+    const analyticsSnapshot = await getDocs(analyticsRef);
+    const analyticsTasks: AnalyticsTask[] = analyticsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      date: doc.data().date?.toDate() || new Date(),
+      createdAt: doc.data().createdAt?.toDate() || new Date(),
+    } as AnalyticsTask));
+
+    // Fetch reports
+    const reportsRef = collection(db, 'reports');
+    const reportsSnapshot = await getDocs(reportsRef);
+    const reports: Report[] = reportsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      dueDate: doc.data().dueDate?.toDate() || new Date(),
+      createdAt: doc.data().createdAt?.toDate() || new Date(),
+    } as Report));
+
+    // Fetch users
+    const usersRef = collection(db, 'users');
+    const usersSnapshot = await getDocs(usersRef);
+    const users: User[] = usersSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    } as User));
+
+    // Fetch analytics users
+    const analyticsUsersRef = collection(db, 'analyticsUsers');
+    const analyticsUsersSnapshot = await getDocs(analyticsUsersRef);
+    const analyticsUsers: AnalyticsUser[] = analyticsUsersSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    } as AnalyticsUser));
+
+    // Fetch department users (for weekly digest)
+    const deptUsersRef = collection(db, 'departmentUsers');
+    const deptUsersSnapshot = await getDocs(deptUsersRef);
+    const deptUsers = deptUsersSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    } as DepartmentUser));
+
+    return { campaigns, analyticsTasks, reports, users, analyticsUsers, deptUsers };
+  }
+
   async function handleProcessReminders() {
     if (!settings.isEnabled || !settings.resendApiKey) {
       setProcessMessage('❌ Hatırlatma sistemi aktif değil veya API key tanımlı değil');
@@ -213,59 +278,8 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
     setProcessMessage('⏳ Hatırlatmalar kontrol ediliyor...');
 
     try {
-      // Fetch campaigns
-      const campaignsRef = collection(db, 'events');
-      const campaignsSnapshot = await getDocs(campaignsRef);
-      const campaigns: CalendarEvent[] = campaignsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        date: doc.data().date?.toDate() || new Date(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-      } as CalendarEvent));
-
-      // Fetch analytics tasks
-      const analyticsRef = collection(db, 'analyticsTasks');
-      const analyticsSnapshot = await getDocs(analyticsRef);
-      const analyticsTasks: AnalyticsTask[] = analyticsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        date: doc.data().date?.toDate() || new Date(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-      } as AnalyticsTask));
-
-      // Fetch reports
-      const reportsRef = collection(db, 'reports');
-      const reportsSnapshot = await getDocs(reportsRef);
-      const reports: Report[] = reportsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        dueDate: doc.data().dueDate?.toDate() || new Date(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-      } as Report));
-
-      // Fetch users
-      const usersRef = collection(db, 'users');
-      const usersSnapshot = await getDocs(usersRef);
-      const users: User[] = usersSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      } as User));
-
-      // Fetch analytics users
-      const analyticsUsersRef = collection(db, 'analyticsUsers');
-      const analyticsUsersSnapshot = await getDocs(analyticsUsersRef);
-      const analyticsUsers: AnalyticsUser[] = analyticsUsersSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      } as AnalyticsUser));
-
-      // Fetch department users (for weekly digest)
-      const deptUsersRef = collection(db, 'departmentUsers');
-      const deptUsersSnapshot = await getDocs(deptUsersRef);
-      const deptUsers = deptUsersSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      } as any));
+      // Fetch data
+      const { campaigns, analyticsTasks, reports, users, analyticsUsers, deptUsers } = await fetchPanelData();
 
       // Process campaign reminders
       const campaignResults = await processReminders(
@@ -320,6 +334,103 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
       setTimeout(() => setProcessMessage(''), 5000);
     } finally {
       setIsProcessing(false);
+    }
+  }
+
+  async function handleOpenDigestPreview() {
+    setIsBuildingDigest(true);
+    try {
+      // 1. Fetch data
+      const { campaigns, reports, users, deptUsers } = await fetchPanelData();
+
+      // 2. Filter recipients (Selected designers)
+      const selectedRecipients = deptUsers.filter(user => {
+        const isSelected = (settings.emailCcRecipients || []).includes(user.id);
+        return user.isDesigner && user.email && isSelected;
+      });
+
+      if (selectedRecipients.length === 0) {
+        setProcessMessage('⚠️ Lütfen önce yukarıdan en az bir Designer seçin.');
+        setTimeout(() => setProcessMessage(''), 4000);
+        setIsBuildingDigest(false);
+        return;
+      }
+
+      setDigestRecipients(selectedRecipients);
+
+      // 3. Build digest content
+      const digestContent = buildWeeklyDigest(reports, campaigns, users);
+
+      // 4. Generate preview HTML (Generic preview)
+      const previewHTML = buildWeeklyDigestHTML({
+        recipientName: 'Sayın Tasarımcı',
+        digestContent,
+        weekStart: digestContent.weekStart,
+        weekEnd: digestContent.weekEnd,
+      });
+
+      setDigestPreviewHTML(previewHTML);
+      setDigestPreviewOpen(true);
+
+    } catch (error) {
+      console.error('Error building digest preview:', error);
+      setProcessMessage('❌ Önizleme hazırlanırken bir hata oluştu.');
+      setTimeout(() => setProcessMessage(''), 4000);
+    } finally {
+      setIsBuildingDigest(false);
+    }
+  }
+
+  async function handleSendDigestManually() {
+    if (!settings.resendApiKey) {
+      alert('API Key eksik!');
+      return;
+    }
+
+    setIsSendingDigest(true);
+    let sentCount = 0;
+    let failedCount = 0;
+
+    try {
+      // Re-fetch data to be sure (or reuse digest content if we stored it? Re-fetching is safer for real-time consistency but reusing content ensures what they saw is what they send.)
+      // Actually, since we already built the content for preview, we could assume it's valid. 
+      // But sendWeeklyDigestEmail builds HTML internally if we pass data. 
+      // Let's re-fetch to be safe and consistent with processWeeklyDigest logic.
+      const { campaigns, reports, users } = await fetchPanelData();
+      const digestContent = buildWeeklyDigest(reports, campaigns, users);
+
+      for (const recipient of digestRecipients) {
+        try {
+          const result = await sendWeeklyDigestEmail(
+            settings.resendApiKey,
+            recipient.email!,
+            recipient.name || recipient.username,
+            digestContent,
+            digestContent.weekStart,
+            digestContent.weekEnd
+          );
+
+          if (result.success) {
+            sentCount++;
+          } else {
+            console.error(`Failed to send to ${recipient.username}:`, result.error);
+            failedCount++;
+          }
+        } catch (error) {
+          console.error(`Error sending to ${recipient.username}:`, error);
+          failedCount++;
+        }
+      }
+
+      setDigestPreviewOpen(false);
+      setProcessMessage(`✅ Bülten gönderimi tamamlandı!\nGönderilen: ${sentCount}, Başarısız: ${failedCount}`);
+      setTimeout(() => setProcessMessage(''), 8000);
+
+    } catch (error) {
+      console.error('Error sending digests:', error);
+      alert('Gönderim sırasında hata oluştu.');
+    } finally {
+      setIsSendingDigest(false);
     }
   }
 
@@ -746,6 +857,26 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
           )}
         </div>
 
+        {/* Manual Trigger Button */}
+        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-700 flex justify-end">
+          <button
+            onClick={handleOpenDigestPreview}
+            disabled={isBuildingDigest || !settings.resendApiKey || !settings.weeklyDigestEnabled}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md font-medium transition-colors flex items-center gap-2 disabled:opacity-50 text-sm"
+          >
+            {isBuildingDigest ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Hazırlanıyor...
+              </>
+            ) : (
+              <>
+                <Send size={16} />
+                Manuel Bülten Gönder
+              </>
+            )}
+          </button>
+        </div>
 
       </div>
 
@@ -1051,6 +1182,89 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
           </div>
         )}
       </div>
+
+      {/* Digest Preview Modal */}
+      {digestPreviewOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <FileText className="text-purple-600" size={20} />
+                Haftalık Bülten Önizleme ve Gönderim
+              </h3>
+              <button
+                onClick={() => setDigestPreviewOpen(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+              {/* Recipients List */}
+              <div className="w-full md:w-1/3 border-b md:border-b-0 md:border-r border-gray-200 dark:border-slate-700 p-4 overflow-y-auto bg-gray-50 dark:bg-slate-900/50">
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                  <Users size={16} />
+                  Alıcılar ({digestRecipients.length})
+                </h4>
+                <div className="space-y-2">
+                  {digestRecipients.map(user => (
+                    <div key={user.id} className="text-xs p-2 bg-white dark:bg-slate-800 rounded border border-gray-200 dark:border-slate-700">
+                      <div className="font-medium text-gray-900 dark:text-white">{user.username}</div>
+                      <div className="text-gray-500 dark:text-gray-400">{user.email}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Email Preview */}
+              <div className="w-full md:w-2/3 p-4 overflow-y-auto bg-white dark:bg-slate-800">
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                  <Eye size={16} />
+                  Email İçeriği (Önizleme)
+                </h4>
+                <div className="border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden h-[400px]">
+                  <iframe
+                    srcDoc={digestPreviewHTML}
+                    title="Digest Preview"
+                    className="w-full h-full bg-white"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-3 bg-gray-50 dark:bg-slate-800">
+              <button
+                onClick={() => setDigestPreviewOpen(false)}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md font-medium transition-colors"
+                disabled={isSendingDigest}
+              >
+                İptal
+              </button>
+              <button
+                onClick={handleSendDigestManually}
+                disabled={isSendingDigest}
+                className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                {isSendingDigest ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Gönderiliyor...
+                  </>
+                ) : (
+                  <>
+                    <Send size={16} />
+                    Onayla ve Gönder
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
