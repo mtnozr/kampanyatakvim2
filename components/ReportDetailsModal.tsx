@@ -445,6 +445,13 @@ export const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({
                                 </button>
                             </div>
                             <button
+                                onClick={() => setShowDeleteConfirm(true)}
+                                className="w-full px-4 py-3 bg-red-100 text-red-600 rounded-xl font-medium hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 transition-colors flex items-center justify-center gap-2"
+                            >
+                                <Trash2 size={18} />
+                                Sil
+                            </button>
+                            <button
                                 onClick={onClose}
                                 className="w-full px-4 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
                             >
