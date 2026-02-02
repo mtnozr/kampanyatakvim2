@@ -617,7 +617,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
                 Haftalık Bülteni Aktifleştir
               </span>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Designer kullanıcılarına haftalık özet maili gönder
+                Seçilen Designer kullanıcılarına haftalık özet maili gönder
               </p>
             </div>
           </label>
@@ -692,7 +692,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
             📧 Bilgilendirme
           </p>
           <ul className="text-xs text-blue-800 dark:text-blue-300 space-y-1 list-disc list-inside">
-            <li>Sadece isDesigner=true olan kullanıcılara gönderilir</li>
+            <li>Sadece aşağıda seçilen Designer kullanıcılarına gönderilir</li>
             <li>Gecikmiş raporlar ve bu haftanın kampanyaları listelenir</li>
             <li>Hafta aralığı: Pazartesi - Pazar</li>
             <li>Manuel test butonu ile önizleyebilirsiniz</li>
@@ -758,22 +758,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
           )}
         </div>
 
-        {/* Save Button */}
-        <div className="flex items-center gap-3 mt-4">
-          <button
-            onClick={handleSaveSettings}
-            disabled={isSaving}
-            className="px-6 py-2 bg-primary-700 hover:bg-primary-800 text-white rounded-md font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
-          >
-            <Save size={18} />
-            {isSaving ? 'Kaydediliyor...' : 'Ayarları Kaydet'}
-          </button>
-          {saveMessage && (
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              {saveMessage}
-            </span>
-          )}
-        </div>
+
       </div>
 
       {/* Twilio SMS Settings */}

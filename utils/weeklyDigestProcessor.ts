@@ -93,9 +93,10 @@ export async function processWeeklyDigest(
 
     console.log(`Digest content: ${digestContent.totalOverdueReports} overdue reports, ${digestContent.totalThisWeekCampaigns} campaigns this week`);
 
-    // Filter designer users who have email
+    // Filter designer users who have email and are in the selected CC list
     const designerUsers = departmentUsers.filter(user => {
-        return user.isDesigner && user.email;
+        const isSelected = (settings.emailCcRecipients || []).includes(user.id);
+        return user.isDesigner && user.email && isSelected;
     });
 
     if (designerUsers.length === 0) {
