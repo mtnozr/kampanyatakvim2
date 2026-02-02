@@ -227,6 +227,9 @@ export interface ReminderSettings {
   weeklyDigestIncludeOverdueReports?: boolean;  // Include overdue reports section
   weeklyDigestIncludeThisWeekCampaigns?: boolean; // Include this week's campaigns
 
+  // CC Recipients for all emails
+  emailCcRecipients?: string[];  // Array of department user IDs to CC on all emails
+
   updatedAt: Date;
   updatedBy?: string;
 }

@@ -30,13 +30,29 @@ export default async function handler(
   }
 
   try {
-    const { apiKey, to, toName, subject, html } = req.body;
+    const { apiKey, to, toName, subject, html, cc } = req.body;
 
     // Validate inputs
     if (!apiKey || !to || !subject || !html) {
       return res.status(400).json({
         error: 'Missing required fields: apiKey, to, subject, html'
       });
+    }
+
+    // Build email payload
+    const emailPayload: any = {
+      from: 'Kampanya Takvimi <hatirlatma@kampanyatakvimi.net.tr>',
+      to: to,
+      subject: subject,
+      html: html,
+    };
+
+    // Add CC if provided (filter out empty strings)
+    if (cc && Array.isArray(cc) && cc.length > 0) {
+      const validCc = cc.filter((email: string) => email && email.trim());
+      if (validCc.length > 0) {
+        emailPayload.cc = validCc;
+      }
     }
 
     // Call Resend API
@@ -46,12 +62,7 @@ export default async function handler(
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        from: 'Kampanya Takvimi <hatirlatma@kampanyatakvimi.net.tr>',
-        to: to,
-        subject: subject,
-        html: html,
-      }),
+      body: JSON.stringify(emailPayload),
     });
 
     if (!response.ok) {

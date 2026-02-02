@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Send, Check, X, AlertCircle, Mail, Settings, Play, FileText, Eye, Smartphone } from 'lucide-react';
-import { ReminderSettings, ReminderLog, CalendarEvent, AnalyticsTask, User, AnalyticsUser, Report } from '../types';
+import { Save, Send, Check, X, AlertCircle, Mail, Settings, Play, FileText, Eye, Smartphone, Users } from 'lucide-react';
+import { ReminderSettings, ReminderLog, CalendarEvent, AnalyticsTask, User, AnalyticsUser, Report, DepartmentUser } from '../types';
 import { db } from '../firebase';
 import {
   collection,
@@ -49,6 +49,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
   });
 
   const [recentLogs, setRecentLogs] = useState<ReminderLog[]>([]);
+  const [departmentUsers, setDepartmentUsers] = useState<DepartmentUser[]>([]);
   const [testEmail, setTestEmail] = useState('');
   const [testPhone, setTestPhone] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -66,7 +67,24 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
   useEffect(() => {
     loadSettings();
     loadRecentLogs();
+    loadDepartmentUsers();
   }, []);
+
+  async function loadDepartmentUsers() {
+    try {
+      const deptUsersRef = collection(db, 'departmentUsers');
+      const snapshot = await getDocs(deptUsersRef);
+      const users = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as DepartmentUser));
+      // Sort alphabetically
+      users.sort((a, b) => a.username.localeCompare(b.username, 'tr'));
+      setDepartmentUsers(users);
+    } catch (error) {
+      console.error('Error loading department users:', error);
+    }
+  }
 
   async function loadSettings() {
     try {
@@ -255,7 +273,8 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
         'campaign',
         users,
         settings,
-        testMode  // Test mode parametresi
+        testMode,  // Test mode parametresi
+        deptUsers  // For CC email resolution
       );
 
       // Process analytics reminders
@@ -264,7 +283,8 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
         'analytics',
         analyticsUsers,
         settings,
-        testMode  // Test mode parametresi
+        testMode,  // Test mode parametresi
+        deptUsers  // For CC email resolution
       );
 
       // Process report delay notifications
@@ -679,8 +699,67 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
           </ul>
         </div>
 
+        {/* CC Recipients Section */}
+        <div className="mt-6 pt-4 border-t border-gray-200 dark:border-slate-700">
+          <div className="flex items-center gap-2 mb-3">
+            <Users size={18} className="text-purple-600" />
+            <h4 className="font-medium text-gray-800 dark:text-gray-200">
+              Email CC Alıcıları
+            </h4>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            Seçilen kullanıcılar tüm email bildirimlerinde CC olarak eklenecektir.
+          </p>
+
+          {departmentUsers.length === 0 ? (
+            <p className="text-sm text-gray-400 italic">Yükleniyor...</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 bg-gray-50 dark:bg-slate-700/50 rounded-md">
+              {departmentUsers
+                .filter(user => user.isDesigner || user.email)
+                .map(user => (
+                  <label
+                    key={user.id}
+                    className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-slate-600 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={(settings.emailCcRecipients || []).includes(user.id)}
+                      onChange={(e) => {
+                        const currentCc = settings.emailCcRecipients || [];
+                        if (e.target.checked) {
+                          setSettings({ ...settings, emailCcRecipients: [...currentCc, user.id] });
+                        } else {
+                          setSettings({ ...settings, emailCcRecipients: currentCc.filter(id => id !== user.id) });
+                        }
+                      }}
+                      className="w-4 h-4 text-purple-600 rounded focus:ring-2 focus:ring-purple-200"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm text-gray-800 dark:text-gray-200 block truncate">
+                        {user.username}
+                        {user.isDesigner && (
+                          <span className="ml-1 text-xs text-purple-600 dark:text-purple-400">(Designer)</span>
+                        )}
+                      </span>
+                      {user.email && (
+                        <span className="text-xs text-gray-500 dark:text-gray-400 block truncate">{user.email}</span>
+                      )}
+                    </div>
+                  </label>
+                ))}
+            </div>
+          )}
+
+          {(settings.emailCcRecipients?.length || 0) > 0 && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              {settings.emailCcRecipients?.length} kullanıcı seçildi
+            </p>
+          )}
+        </div>
+
         {/* Save Button */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 mt-4">
           <button
             onClick={handleSaveSettings}
             disabled={isSaving}

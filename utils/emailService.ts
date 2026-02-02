@@ -14,6 +14,7 @@ interface SendEmailParams {
   eventTitle: string;
   eventType: 'campaign' | 'analytics';
   urgency: string;
+  cc?: string[];  // Array of email addresses to CC
 }
 
 interface EmailResponse {
@@ -45,6 +46,7 @@ export async function sendEmailWithResend(
         toName: params.toName,
         subject: params.subject,
         html: params.html,
+        cc: params.cc || [],
       }),
     });
 

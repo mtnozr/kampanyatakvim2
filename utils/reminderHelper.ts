@@ -104,7 +104,8 @@ export async function sendReminderEmail(
   event: CalendarEvent | AnalyticsTask,
   eventType: 'campaign' | 'analytics',
   assignee: User | AnalyticsUser,
-  reminderSettings: ReminderSettings
+  reminderSettings: ReminderSettings,
+  departmentUsers?: { id: string; email?: string }[]
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // API key kontrolü
@@ -129,6 +130,17 @@ export async function sendReminderEmail(
       .replace('{urgency}', event.urgency)
       .replace('{days}', daysElapsed.toString());
 
+    // Resolve CC recipients from user IDs to email addresses
+    let ccEmails: string[] = [];
+    if (reminderSettings.emailCcRecipients && departmentUsers) {
+      ccEmails = reminderSettings.emailCcRecipients
+        .map(userId => {
+          const user = departmentUsers.find(u => u.id === userId);
+          return user?.email || '';
+        })
+        .filter(email => email && email.length > 0);
+    }
+
     // Email gönder
     const result = await sendEmailWithResend(reminderSettings.resendApiKey, {
       to: assignee.email,
@@ -139,6 +151,7 @@ export async function sendReminderEmail(
       eventTitle: event.title,
       eventType,
       urgency: event.urgency,
+      cc: ccEmails,
     });
 
     // Log kaydet
@@ -192,7 +205,8 @@ export async function processReminders(
   eventType: 'campaign' | 'analytics',
   users: (User | AnalyticsUser)[],
   reminderSettings: ReminderSettings,
-  testMode: boolean = false
+  testMode: boolean = false,
+  departmentUsers?: { id: string; email?: string }[]
 ): Promise<{
   sent: number;
   failed: number;
@@ -227,8 +241,8 @@ export async function processReminders(
         continue;
       }
 
-      // Email gönder
-      const result = await sendReminderEmail(event, eventType, assignee, reminderSettings);
+      // Email gönder (with CC if departmentUsers provided)
+      const result = await sendReminderEmail(event, eventType, assignee, reminderSettings, departmentUsers);
 
       if (result.success) {
         sent++;
