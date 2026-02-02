@@ -2561,6 +2561,22 @@ function App() {
       await deleteDoc(doc(db, "reports", reportId));
       console.log('[DELETE REPORT] Successfully deleted from Firestore');
 
+      // IMPORTANT: If this report was linked to a campaign, mark that campaign
+      // as "no longer needs report" to prevent auto-recreation on page refresh
+      if (reportToDelete?.campaignId) {
+        try {
+          const campaignRef = doc(db, "events", reportToDelete.campaignId);
+          await updateDoc(campaignRef, {
+            requiresReport: false,
+            reportDeletedAt: Timestamp.now(),
+            reportDeletedBy: auth.currentUser?.uid || loggedInDeptUser?.id || 'unknown'
+          });
+          console.log('[DELETE REPORT] Marked campaign as not requiring report:', reportToDelete.campaignId);
+        } catch (campaignError) {
+          console.warn('[DELETE REPORT] Could not update campaign (may not exist):', campaignError);
+        }
+      }
+
       // Clear the selected report to close the modal
       setSelectedReport(null);
 
@@ -2572,7 +2588,8 @@ function App() {
         timestamp: Timestamp.now(),
         type: 'report_delete',
         userId: auth.currentUser?.uid || loggedInDeptUser?.id,
-        reportId: reportId
+        reportId: reportId,
+        campaignId: reportToDelete?.campaignId
       });
 
       console.log('[DELETE REPORT] Deletion complete');
