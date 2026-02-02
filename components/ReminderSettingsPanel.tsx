@@ -708,7 +708,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
             </h4>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            Seçilen kullanıcılar tüm email bildirimlerinde CC olarak eklenecektir.
+            Listelenen Designer kullanıcılarını seçerek tüm email bildirimlerine CC olarak ekleyebilirsiniz.
           </p>
 
           {departmentUsers.length === 0 ? (
@@ -716,7 +716,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 bg-gray-50 dark:bg-slate-700/50 rounded-md">
               {departmentUsers
-                .filter(user => user.isDesigner || user.email)
+                .filter(user => user.isDesigner)
                 .map(user => (
                   <label
                     key={user.id}
