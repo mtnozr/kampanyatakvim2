@@ -216,6 +216,10 @@ export interface ReminderSettings {
   twilioPhoneNumber?: string;
   smsTemplate?: string; // e.g., "{title} görevi size atandı. Detay: {url}"
 
+  // Report Delay Notifications
+  reportDelayNotificationsEnabled?: boolean;  // Enable/disable report delay emails
+  reportDelayThresholdDays?: number;         // Days overdue before sending notification (default: 0 = immediate)
+
   updatedAt: Date;
   updatedBy?: string;
 }

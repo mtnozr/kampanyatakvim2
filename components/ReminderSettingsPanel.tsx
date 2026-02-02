@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Send, Check, X, AlertCircle, Mail, Settings, Play, FileText, Eye, Smartphone } from 'lucide-react';
-import { ReminderSettings, ReminderLog, CalendarEvent, AnalyticsTask, User, AnalyticsUser } from '../types';
+import { ReminderSettings, ReminderLog, CalendarEvent, AnalyticsTask, User, AnalyticsUser, Report } from '../types';
 import { db } from '../firebase';
 import {
   collection,
@@ -17,6 +17,7 @@ import {
 import { sendTestEmail } from '../utils/emailService';
 import { sendTestSMS, formatPhoneNumber } from '../utils/smsService';
 import { processReminders } from '../utils/reminderHelper';
+import { processReportDelayNotifications } from '../utils/reportDelayMonitor';
 
 export default function ReminderSettingsPanel() {
   const [settings, setSettings] = useState<ReminderSettings>({
@@ -41,6 +42,8 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
     twilioAuthToken: '',
     twilioPhoneNumber: '',
     smsTemplate: '{title} görevi size atandı. Kampanya Takvimi',
+    reportDelayNotificationsEnabled: false,
+    reportDelayThresholdDays: 0,
     updatedAt: new Date(),
   });
 
@@ -210,6 +213,16 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
         createdAt: doc.data().createdAt?.toDate() || new Date(),
       } as AnalyticsTask));
 
+      // Fetch reports
+      const reportsRef = collection(db, 'reports');
+      const reportsSnapshot = await getDocs(reportsRef);
+      const reports: Report[] = reportsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        dueDate: doc.data().dueDate?.toDate() || new Date(),
+        createdAt: doc.data().createdAt?.toDate() || new Date(),
+      } as Report));
+
       // Fetch users
       const usersRef = collection(db, 'users');
       const usersSnapshot = await getDocs(usersRef);
@@ -244,15 +257,24 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
         testMode  // Test mode parametresi
       );
 
-      const totalSent = campaignResults.sent + analyticsResults.sent;
-      const totalFailed = campaignResults.failed + analyticsResults.failed;
-      const totalSkipped = campaignResults.skipped + analyticsResults.skipped;
+      // Process report delay notifications
+      const reportResults = await processReportDelayNotifications(
+        reports,
+        users,
+        settings,
+        testMode  // Test mode parametresi
+      );
+
+      const totalSent = campaignResults.sent + analyticsResults.sent + reportResults.sent;
+      const totalFailed = campaignResults.failed + analyticsResults.failed + reportResults.failed;
+      const totalSkipped = campaignResults.skipped + analyticsResults.skipped + reportResults.skipped;
 
       setProcessMessage(
         `✅ İşlem tamamlandı!\n` +
         `Gönderilen: ${totalSent}\n` +
         `Başarısız: ${totalFailed}\n` +
-        `Atlanan: ${totalSkipped}`
+        `Atlanan: ${totalSkipped}\n\n` +
+        `📅 Kampanya: ${campaignResults.sent} / 📈 Analitik: ${analyticsResults.sent} / 📊 Rapor: ${reportResults.sent}`
       );
 
       loadRecentLogs(); // Refresh logs
@@ -342,8 +364,8 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
               <div key={urgency} className="flex items-center gap-3">
                 <span className="text-sm text-gray-600 dark:text-gray-400 w-24">
                   {urgency === 'Very High' ? 'Çok Yüksek' :
-                   urgency === 'High' ? 'Yüksek' :
-                   urgency === 'Medium' ? 'Orta' : 'Düşük'}:
+                    urgency === 'High' ? 'Yüksek' :
+                      urgency === 'Medium' ? 'Orta' : 'Düşük'}:
                 </span>
                 <input
                   type="number"
@@ -452,6 +474,78 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
               {saveMessage}
             </span>
           )}
+        </div>
+      </div>
+
+      {/* Report Delay Notifications Settings */}
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <FileText size={20} className="text-red-600" />
+          Rapor Gecikme Bildirimleri
+        </h3>
+
+        {/* Enable/Disable Toggle */}
+        <div className="mb-6 p-4 bg-gray-50 dark:bg-slate-700/50 rounded-md">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={settings.reportDelayNotificationsEnabled || false}
+              onChange={(e) => setSettings({ ...settings, reportDelayNotificationsEnabled: e.target.checked })}
+              className="w-5 h-5 text-red-600 rounded focus:ring-2 focus:ring-red-200"
+            />
+            <div>
+              <span className="font-medium text-gray-900 dark:text-white">
+                Rapor Gecikme Bildirimlerini Aktifleştir
+              </span>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Teslim tarihi geçmiş raporlar için otomatik e-mail gönder
+              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1">
+                <AlertCircle size={12} />
+                Hafta sonları (Cumartesi-Pazar) mail gönderilmez
+              </p>
+            </div>
+          </label>
+        </div>
+
+        {/* Threshold Setting */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Gecikme Eşiği (Gün)
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              min="0"
+              max="30"
+              value={settings.reportDelayThresholdDays || 0}
+              onChange={(e) => setSettings({ ...settings, reportDelayThresholdDays: parseInt(e.target.value) || 0 })}
+              className="w-24 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm focus:ring-2 focus:ring-red-200 dark:bg-slate-700 dark:text-white"
+              disabled={!settings.reportDelayNotificationsEnabled}
+            />
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              gün gecikmeden sonra bildirim gönder
+            </span>
+          </div>
+          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+            {settings.reportDelayThresholdDays === 0
+              ? '⚡ Anında gönder: Rapor teslim tarihi geçer geçmez bildirim gönderilir'
+              : `⏱️ Rapor teslim tarihinden ${settings.reportDelayThresholdDays} gün sonra bildirim gönderilir`}
+          </p>
+        </div>
+
+        {/* Info Box */}
+        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+          <p className="text-sm text-blue-900 dark:text-blue-200 mb-2 font-medium">
+            📧 Nasıl Çalışır?
+          </p>
+          <ul className="text-xs text-blue-800 dark:text-blue-300 space-y-1 list-disc list-inside">
+            <li>Sadece "pending" (bekleyen) durumdaki raporlar kontrol edilir</li>
+            <li>Teslim tarihi geçmiş raporlar tespit edilir</li>
+            <li>Atanan kişiye otomatik e-mail gönderilir</li>
+            <li>Her rapor için 24 saatte bir kez bildirim gönderilir (spam önleme)</li>
+            <li>Manuel kontrol butonuyla test edebilirsiniz</li>
+          </ul>
         </div>
       </div>
 
@@ -655,11 +749,10 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
         <button
           onClick={handleProcessReminders}
           disabled={isProcessing || !settings.isEnabled || !settings.resendApiKey}
-          className={`w-full px-6 py-3 rounded-md font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 ${
-            testMode
-              ? 'bg-amber-600 hover:bg-amber-700 text-white'
-              : 'bg-green-600 hover:bg-green-700 text-white'
-          }`}
+          className={`w-full px-6 py-3 rounded-md font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 ${testMode
+            ? 'bg-amber-600 hover:bg-amber-700 text-white'
+            : 'bg-green-600 hover:bg-green-700 text-white'
+            }`}
         >
           <Play size={18} />
           {isProcessing ? 'İşleniyor...' : testMode ? '🧪 Test Modu ile Kontrol Et' : 'Şimdi Kontrol Et'}
@@ -699,22 +792,20 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
             {recentLogs.map((log) => (
               <div
                 key={log.id}
-                className={`flex items-center justify-between p-3 rounded-md border ${
-                  log.status === 'success'
-                    ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                    : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-                }`}
+                className={`flex items-center justify-between p-3 rounded-md border ${log.status === 'success'
+                  ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                  : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                  }`}
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
                       {log.eventTitle}
                     </p>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      log.eventType === 'campaign'
-                        ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300'
-                        : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                    }`}>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${log.eventType === 'campaign'
+                      ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300'
+                      : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                      }`}>
                       {log.eventType === 'campaign' ? '📅 Kampanya' : '📈 Analitik'}
                     </span>
                   </div>

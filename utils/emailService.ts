@@ -407,3 +407,158 @@ export async function sendTestEmail(
     urgency: 'High',
   });
 }
+
+
+/**
+ * Build HTML for report delay emails
+ */
+export function buildReportDelayEmailHTML(params: {
+  assigneeName: string;
+  reportTitle: string;
+  campaignTitle?: string;
+  daysOverdue: number;
+}): string {
+  const { assigneeName, reportTitle, campaignTitle, daysOverdue } = params;
+
+  return `
+    <!DOCTYPE html>
+    <html lang="tr">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Rapor Gecikme Bildirimi</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #F8F9FE;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F8F9FE; padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <!-- Email Container -->
+            <table width="600" cellpadding="0" cellspacing="0" style="background-color: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+
+              <!-- Header -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #DC2626 0%, #991B1B 100%); padding: 32px; text-align: center;">
+                  <h1 style="margin: 0; color: #FFFFFF; font-size: 24px; font-weight: 700;">
+                    ⚠️ Rapor Gecikme Bildirimi
+                  </h1>
+                  <p style="margin: 8px 0 0 0; color: #FEE2E2; font-size: 14px;">
+                    Kampanya Takvimi
+                  </p>
+                </td>
+              </tr>
+
+              <!-- Content -->
+              <tr>
+                <td style="padding: 32px;">
+
+                  <!-- Greeting -->
+                  <p style="margin: 0 0 24px 0; font-size: 16px; color: #1F2937;">
+                    Merhaba <strong>${assigneeName}</strong>,
+                  </p>
+
+                  <!-- Alert Box -->
+                  <div style="background-color: #FEE2E2; border-left: 4px solid #DC2626; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
+                    <p style="margin: 0; font-size: 14px; color: #991B1B;">
+                      ⏰ Rapor teslim tarihinden <strong>${daysOverdue} gün</strong> geçti.
+                    </p>
+                  </div>
+
+                  <!-- Report Info -->
+                  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F9FAFB; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+                    <tr>
+                      <td>
+                        <p style="margin: 0 0 8px 0; font-size: 12px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.5px;">
+                          📊 RAPOR
+                        </p>
+                        <h2 style="margin: 0 0 16px 0; font-size: 20px; color: #1F2937; font-weight: 600;">
+                          ${reportTitle}
+                        </h2>
+                        ${campaignTitle ? `
+                        <p style="margin: 0; font-size: 14px; color: #6B7280;">
+                          🎯 Kampanya: <strong>${campaignTitle}</strong>
+                        </p>
+                        ` : ''}
+
+                        <!-- Status Badge -->
+                        <div style="display: inline-block; background-color: #FEE2E2; border: 1px solid #DC2626; border-radius: 6px; padding: 6px 12px; margin-top: 12px;">
+                          <span style="color: #DC2626; font-size: 12px; font-weight: 600;">
+                            ⚠️ GECİKMİŞ
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Message -->
+                  <div style="margin: 0 0 24px 0; font-size: 14px; color: #4B5563; line-height: 1.6;">
+                    <p style="margin: 0 0 12px 0;">
+                      Lütfen bu raporu en kısa sürede tamamlayın.
+                    </p>
+                    <p style="margin: 0 0 12px 0;">
+                      Herhangi bir sorun veya ek süreye ihtiyacınız varsa lütfen yöneticinizle iletişime geçin.
+                    </p>
+                  </div>
+
+                  <!-- CTA Button -->
+                  <div style="text-align: center; margin: 32px 0;">
+                    <a href="https://kampanya-takvimi.vercel.app"
+                       style="display: inline-block; background: linear-gradient(135deg, #DC2626 0%, #991B1B 100%); color: #FFFFFF; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(220, 38, 38, 0.3);">
+                      Takvime Git →
+                    </a>
+                  </div>
+
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td style="background-color: #F9FAFB; padding: 24px; text-align: center; border-top: 1px solid #E5E7EB;">
+                  <p style="margin: 0 0 8px 0; font-size: 12px; color: #6B7280;">
+                    Bu otomatik bir hatırlatma mailidir.
+                  </p>
+                  <p style="margin: 0; font-size: 12px; color: #9CA3AF;">
+                    Kampanya Takvimi © ${new Date().getFullYear()}
+                  </p>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * Send report delay notification email
+ */
+export async function sendReportDelayEmail(
+  apiKey: string,
+  recipientEmail: string,
+  recipientName: string,
+  report: { id: string; title: string; campaignTitle?: string },
+  daysOverdue: number
+): Promise<EmailResponse> {
+  const html = buildReportDelayEmailHTML({
+    assigneeName: recipientName,
+    reportTitle: report.title,
+    campaignTitle: report.campaignTitle,
+    daysOverdue,
+  });
+
+  const subject = `⚠️ Rapor Gecikme Bildirimi: ${report.title}`;
+
+  return sendEmailWithResend(apiKey, {
+    to: recipientEmail,
+    toName: recipientName,
+    subject,
+    html,
+    eventId: report.id,
+    eventTitle: report.title,
+    eventType: 'campaign', // Reports are related to campaigns
+    urgency: 'High', // Overdue reports are high urgency
+  });
+}
+
