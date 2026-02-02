@@ -697,9 +697,9 @@ export function buildWeeklyDigestHTML(params: {
           <td align="center">
             <table width="650" cellpadding="0" cellspacing="0" style="background-color: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
               <tr>
-                <td style="background: linear-gradient(135deg, #7C3AED 0%, #4338CA 100%); padding: 32px; text-align: center;">
-                  <h1 style="margin: 0; color: #FFFFFF; font-size: 28px; font-weight: 700;">📊 Haftalık Bülten</h1>
-                  <p style="margin: 8px 0 0 0; color: #E9D5FF; font-size: 16px; font-weight: 500;">${weekRangeStr}</p>
+                <td style="background-color: #F9FAFB; padding: 32px; text-align: center; border-bottom: 1px solid #E5E7EB;">
+                  <h1 style="margin: 0; color: #1F2937; font-size: 28px; font-weight: 700;">📊 Haftalık Bülten</h1>
+                  <p style="margin: 8px 0 0 0; color: #6B7280; font-size: 16px; font-weight: 500;">${weekRangeStr}</p>
                 </td>
               </tr>
               <tr>
