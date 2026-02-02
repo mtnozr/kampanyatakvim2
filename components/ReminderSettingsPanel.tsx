@@ -57,7 +57,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
   const [isTestingSMS, setIsTestingSMS] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [testMode, setTestMode] = useState(false);
-  const [includeWeeklyDigest, setIncludeWeeklyDigest] = useState(false);
+
   const [saveMessage, setSaveMessage] = useState('');
   const [testMessage, setTestMessage] = useState('');
   const [testSMSMessage, setTestSMSMessage] = useState('');
@@ -295,26 +295,14 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
         testMode  // Test mode parametresi
       );
 
-      // Process weekly digest (if enabled)
-      let digestResults = { sent: 0, failed: 0, skipped: 0 };
-      if (includeWeeklyDigest) {
-        digestResults = await processWeeklyDigest(
-          reports,
-          campaigns,
-          users,
-          deptUsers,
-          settings
-        );
-      }
+      // Weekly digest manual processing removed
+      const digestResults = { sent: 0, failed: 0, skipped: 0 };
 
       const totalSent = campaignResults.sent + analyticsResults.sent + reportResults.sent + digestResults.sent;
       const totalFailed = campaignResults.failed + analyticsResults.failed + reportResults.failed + digestResults.failed;
       const totalSkipped = campaignResults.skipped + analyticsResults.skipped + reportResults.skipped + digestResults.skipped;
 
-      let digestInfo = '';
-      if (includeWeeklyDigest) {
-        digestInfo = ` / 📊 Bülten: ${digestResults.sent}`;
-      }
+      const digestInfo = '';
 
       setProcessMessage(
         `✅ İşlem tamamlandı!\n` +
@@ -958,25 +946,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
           </label>
         </div>
 
-        {/* Weekly Digest Option */}
-        <div className="mb-4 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-md">
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={includeWeeklyDigest}
-              onChange={(e) => setIncludeWeeklyDigest(e.target.checked)}
-              className="mt-1 w-4 h-4 text-purple-600 rounded focus:ring-2 focus:ring-purple-200"
-            />
-            <div className="flex-1">
-              <span className="font-medium text-purple-900 dark:text-purple-200">
-                📊 Haftalık Bülten Gönder
-              </span>
-              <p className="text-sm text-purple-800 dark:text-purple-300 mt-1">
-                Designer kullanıcılarına haftalık özet maili gönderir
-              </p>
-            </div>
-          </label>
-        </div>
+
 
         <button
           onClick={handleProcessReminders}
