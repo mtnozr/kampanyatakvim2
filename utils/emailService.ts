@@ -704,7 +704,7 @@ export function buildWeeklyDigestHTML(params: {
               </tr>
               <tr>
                 <td style="padding: 32px;">
-                  <p style="margin: 0 0 24px 0; font-size: 16px; color: #1F2937;">Merhaba <strong>${recipientName}</strong>,</p>
+                  <p style="margin: 0 0 24px 0; font-size: 16px; color: #1F2937;">İyi Günler,</p>
                   <p style="margin: 0 0 24px 0; font-size: 14px; color: #4B5563; line-height: 1.6;">İşte bu haftanın özeti:</p>
                   ${overdueReportsHTML}
                   ${thisWeekCampaignsHTML}
