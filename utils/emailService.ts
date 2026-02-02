@@ -760,3 +760,183 @@ export async function sendWeeklyDigestEmail(
     urgency: 'Medium',
   });
 }
+
+/**
+ * Build HTML for daily digest emails
+ */
+export function buildDailyDigestHTML(params: {
+  recipientName: string;
+  digestContent: {
+    completedCampaigns: Array<{
+      title: string;
+      assigneeName: string;
+      status: string;
+      urgencyLabel: string;
+    }>;
+    incompleteCampaigns: Array<{
+      title: string;
+      assigneeName: string;
+      status: string;
+      urgencyLabel: string;
+    }>;
+    date: Date;
+    totalCompleted: number;
+    totalIncomplete: number;
+  };
+}): string {
+  const { recipientName, digestContent } = params;
+  const date = digestContent.date;
+
+  const dateStr = date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'long' });
+
+  // Build completed campaigns table
+  let completedHTML = '';
+  if (digestContent.totalCompleted > 0) {
+    completedHTML = `
+      <h3 style="margin: 24px 0 16px 0; font-size: 18px; color: #059669; font-weight: 600;">
+        ✅ Tamamlananlar (${digestContent.totalCompleted})
+      </h3>
+      <table width="100%" cellpadding="8" cellspacing="0" style="background-color: #ECFDF5; border: 1px solid #059669; border-radius: 8px; margin-bottom: 24px;">
+        <thead>
+          <tr style="background-color: #D1FAE5;">
+            <th style="text-align: left; font-size: 12px; color: #064E3B; font-weight: 600; padding: 12px 8px;">Kampanya</th>
+            <th style="text-align: center; font-size: 12px; color: #064E3B; font-weight: 600; padding: 12px 8px;">Aciliyet</th>
+            <th style="text-align: left; font-size: 12px; color: #064E3B; font-weight: 600; padding: 12px 8px;">Atanan</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${digestContent.completedCampaigns.map(campaign => `
+            <tr style="border-top: 1px solid #34D399;">
+              <td style="font-size: 13px; color: #065F46; padding: 8px;"><strong>${campaign.title}</strong></td>
+              <td style="font-size: 13px; color: #065F46; padding: 8px; text-align: center;">${campaign.urgencyLabel}</td>
+              <td style="font-size: 13px; color: #065F46; padding: 8px;">${campaign.assigneeName}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  } else {
+    completedHTML = `
+      <h3 style="margin: 24px 0 16px 0; font-size: 18px; color: #6B7280; font-weight: 600;">
+        ✅ Tamamlananlar
+      </h3>
+      <div style="background-color: #F3F4F6; border: 1px solid #D1D5DB; border-radius: 8px; padding: 16px; margin-bottom: 24px; text-align: center;">
+        <p style="margin: 0; font-size: 14px; color: #4B5563;">
+          Bugün tamamlanan kampanya bulunmuyor.
+        </p>
+      </div>
+    `;
+  }
+
+  // Build incomplete campaigns table
+  let incompleteHTML = '';
+  if (digestContent.totalIncomplete > 0) {
+    incompleteHTML = `
+      <h3 style="margin: 24px 0 16px 0; font-size: 18px; color: #BE123C; font-weight: 600;">
+        ⏳ Tamamlanmayanlar / Bekleyenler (${digestContent.totalIncomplete})
+      </h3>
+      <table width="100%" cellpadding="8" cellspacing="0" style="background-color: #FFF1F2; border: 1px solid #BE123C; border-radius: 8px; margin-bottom: 24px;">
+        <thead>
+          <tr style="background-color: #FFE4E6;">
+            <th style="text-align: left; font-size: 12px; color: #881337; font-weight: 600; padding: 12px 8px;">Kampanya</th>
+            <th style="text-align: center; font-size: 12px; color: #881337; font-weight: 600; padding: 12px 8px;">Durum</th>
+            <th style="text-align: left; font-size: 12px; color: #881337; font-weight: 600; padding: 12px 8px;">Atanan</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${digestContent.incompleteCampaigns.map(campaign => `
+            <tr style="border-top: 1px solid #FDA4AF;">
+              <td style="font-size: 13px; color: #9F1239; padding: 8px;"><strong>${campaign.title}</strong></td>
+              <td style="font-size: 13px; color: #9F1239; padding: 8px; text-align: center;">${campaign.status}</td>
+              <td style="font-size: 13px; color: #9F1239; padding: 8px;">${campaign.assigneeName}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  } else {
+    incompleteHTML = `
+      <h3 style="margin: 24px 0 16px 0; font-size: 18px; color: #6B7280; font-weight: 600;">
+        ⏳ Tamamlanmayanlar
+      </h3>
+      <div style="background-color: #F3F4F6; border: 1px solid #D1D5DB; border-radius: 8px; padding: 16px; margin-bottom: 24px; text-align: center;">
+        <p style="margin: 0; font-size: 14px; color: #4B5563;">
+          Bugün için bekleyen kampanya bulunmuyor.
+        </p>
+      </div>
+    `;
+  }
+
+  return `
+    <!DOCTYPE html>
+    <html lang="tr">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Gün Sonu Bülteni</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #F8F9FE;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F8F9FE; padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <table width="650" cellpadding="0" cellspacing="0" style="background-color: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+              <tr>
+                <td style="background-color: #F9FAFB; padding: 32px; text-align: center; border-bottom: 1px solid #E5E7EB;">
+                  <h1 style="margin: 0; color: #1F2937; font-size: 28px; font-weight: 700;">🌅 Gün Sonu Bülteni</h1>
+                  <p style="margin: 8px 0 0 0; color: #6B7280; font-size: 16px; font-weight: 500;">${dateStr}</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 32px;">
+                  <p style="margin: 0 0 24px 0; font-size: 16px; color: #1F2937;">İyi Akşamlar,</p>
+                  <p style="margin: 0 0 24px 0; font-size: 14px; color: #4B5563; line-height: 1.6;">Bugünün kampanya özeti aşağıdadır:</p>
+                  ${completedHTML}
+                  ${incompleteHTML}
+                  <div style="text-align: center; margin: 32px 0;">
+                    <a href="https://kampanya-takvimi.vercel.app" style="display: inline-block; background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #FFFFFF; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(5, 150, 105, 0.3);">Takvime Git →</a>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td style="background-color: #F9FAFB; padding: 24px; text-align: center; border-top: 1px solid #E5E7EB;">
+                  <p style="margin: 0 0 8px 0; font-size: 12px; color: #6B7280;">Bu manuel tetiklenen gün sonu özetidir.</p>
+                  <p style="margin: 0; font-size: 12px; color: #9CA3AF;">Kampanya Takvimi © ${new Date().getFullYear()}</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * Send daily digest email
+ */
+export async function sendDailyDigestEmail(
+  apiKey: string,
+  recipientEmail: string,
+  recipientName: string,
+  digestContent: any
+): Promise<EmailResponse> {
+  const html = buildDailyDigestHTML({
+    recipientName,
+    digestContent: digestContent
+  });
+
+  const dateStr = digestContent.date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
+  const subject = `🌅 Gün Sonu Bülteni - ${dateStr}`;
+
+  return sendEmailWithResend(apiKey, {
+    to: recipientEmail,
+    toName: recipientName,
+    subject,
+    html,
+    eventId: `daily-digest-${digestContent.date.toISOString().split('T')[0]}`,
+    eventTitle: `Gün Sonu Bülteni - ${dateStr}`,
+    eventType: 'campaign',
+    urgency: 'Medium',
+  });
+}
