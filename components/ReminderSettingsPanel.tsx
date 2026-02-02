@@ -861,7 +861,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
         <div className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-700 flex justify-end">
           <button
             onClick={handleOpenDigestPreview}
-            disabled={isBuildingDigest || !settings.resendApiKey || !settings.weeklyDigestEnabled}
+            disabled={isBuildingDigest || !settings.resendApiKey}
             className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md font-medium transition-colors flex items-center gap-2 disabled:opacity-50 text-sm"
           >
             {isBuildingDigest ? (
