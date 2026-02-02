@@ -18,7 +18,6 @@ import { sendTestEmail } from '../utils/emailService';
 import { sendTestSMS, formatPhoneNumber } from '../utils/smsService';
 import { processReminders } from '../utils/reminderHelper';
 import { processReportDelayNotifications } from '../utils/reportDelayMonitor';
-import { processWeeklyDigest } from '../utils/weeklyDigestProcessor';
 import { buildWeeklyDigest } from '../utils/weeklyDigestBuilder';
 import { buildWeeklyDigestHTML, sendWeeklyDigestEmail } from '../utils/emailService';
 
