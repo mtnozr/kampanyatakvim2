@@ -2,6 +2,7 @@
  * Vercel Cron Job for Daily Digest
  * Runs periodically to check and send daily digest emails
  * Server-Side Implementation using Admin SDK
+ * Triggering Vercel Deploy
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
