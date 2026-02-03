@@ -120,15 +120,27 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
       const q = query(logsRef, orderBy('sentAt', 'desc'), limit(10));
       const snapshot = await getDocs(q);
 
-      const logs: ReminderLog[] = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        sentAt: doc.data().sentAt?.toDate() || new Date(),
-      } as ReminderLog));
+      console.log('Loading recent logs, found:', snapshot.docs.length);
+
+      const logs: ReminderLog[] = snapshot.docs.map(doc => {
+        const data = doc.data();
+        console.log('Log entry:', {
+          id: doc.id,
+          eventTitle: data.eventTitle,
+          sentAt: data.sentAt,
+        });
+        return {
+          id: doc.id,
+          ...data,
+          sentAt: data.sentAt?.toDate() || new Date(),
+        } as ReminderLog;
+      });
 
       setRecentLogs(logs);
+      console.log('Recent logs loaded successfully:', logs.length);
     } catch (error) {
       console.error('Error loading reminder logs:', error);
+      setProcessMessage('❌ Log yükleme hatası: ' + (error instanceof Error ? error.message : 'Bilinmeyen hata'));
     }
   }
 
@@ -166,23 +178,30 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
       const result = await sendTestEmail(settings.resendApiKey, testEmail);
 
       // Log to Firestore
-      await saveReminderLog({
-        eventId: 'test-email',
-        eventType: 'campaign',
-        eventTitle: '🧪 Test Email',
-        recipientEmail: testEmail,
-        recipientName: 'Test Kullanıcı',
-        urgency: 'High',
-        sentAt: new Date(),
-        status: result.success ? 'success' : 'failed',
-        errorMessage: result.error,
-        emailProvider: 'resend',
-        messageId: result.messageId,
-      });
+      try {
+        console.log('Saving test email log to Firestore...');
+        await saveReminderLog({
+          eventId: 'test-email-' + Date.now(),
+          eventType: 'campaign',
+          eventTitle: '🧪 Test Email',
+          recipientEmail: testEmail,
+          recipientName: 'Test Kullanıcı',
+          urgency: 'High',
+          sentAt: new Date(),
+          status: result.success ? 'success' : 'failed',
+          errorMessage: result.error,
+          emailProvider: 'resend',
+          messageId: result.messageId,
+        });
+        console.log('Test email log saved successfully');
+      } catch (logError) {
+        console.error('Error saving test email log:', logError);
+      }
 
       if (result.success) {
         setTestMessage('✅ Test email gönderildi!');
-        loadRecentLogs();
+        // Reload logs after a short delay to ensure Firestore has processed
+        setTimeout(() => loadRecentLogs(), 1000);
       } else {
         setTestMessage(`❌ Hata: ${result.error}`);
       }
@@ -382,19 +401,24 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
           );
 
           // Log to Firestore
-          await saveReminderLog({
-            eventId: `daily-digest-${new Date().toISOString().split('T')[0]}`,
-            eventType: 'campaign',
-            eventTitle: '📅 Gün Sonu Bülteni',
-            recipientEmail: recipient.email!,
-            recipientName: recipient.username,
-            urgency: 'Medium',
-            sentAt: new Date(),
-            status: result.success ? 'success' : 'failed',
-            errorMessage: result.error,
-            emailProvider: 'resend',
-            messageId: result.messageId,
-          });
+          try {
+            await saveReminderLog({
+              eventId: `daily-digest-${new Date().toISOString().split('T')[0]}-${recipient.id}`,
+              eventType: 'campaign',
+              eventTitle: '📅 Gün Sonu Bülteni',
+              recipientEmail: recipient.email!,
+              recipientName: recipient.username,
+              urgency: 'Medium',
+              sentAt: new Date(),
+              status: result.success ? 'success' : 'failed',
+              errorMessage: result.error,
+              emailProvider: 'resend',
+              messageId: result.messageId,
+            });
+            console.log('Daily digest log saved for:', recipient.username);
+          } catch (logError) {
+            console.error('Error saving daily digest log:', logError);
+          }
 
           if (result.success) {
             sentCount++;
@@ -410,7 +434,12 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
 
       setDailyDigestPreviewOpen(false);
       setProcessMessage(`✅ Bülten gönderimi tamamlandı!\nGönderilen: ${sentCount}, Başarısız: ${failedCount}`);
-      setTimeout(() => setProcessMessage(''), 8000);
+
+      // Reload logs after a short delay
+      setTimeout(() => {
+        loadRecentLogs();
+        setProcessMessage('');
+      }, 2000);
 
     } catch (error) {
       console.error('Error sending digests:', error);
@@ -446,19 +475,24 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
           );
 
           // Log to Firestore
-          await saveReminderLog({
-            eventId: `weekly-digest-${digestContent.weekStart.toISOString().split('T')[0]}`,
-            eventType: 'campaign',
-            eventTitle: '📊 Haftalık Bülten',
-            recipientEmail: recipient.email!,
-            recipientName: recipient.username,
-            urgency: 'Medium',
-            sentAt: new Date(),
-            status: result.success ? 'success' : 'failed',
-            errorMessage: result.error,
-            emailProvider: 'resend',
-            messageId: result.messageId,
-          });
+          try {
+            await saveReminderLog({
+              eventId: `weekly-digest-${digestContent.weekStart.toISOString().split('T')[0]}-${recipient.id}`,
+              eventType: 'campaign',
+              eventTitle: '📊 Haftalık Bülten',
+              recipientEmail: recipient.email!,
+              recipientName: recipient.username,
+              urgency: 'Medium',
+              sentAt: new Date(),
+              status: result.success ? 'success' : 'failed',
+              errorMessage: result.error,
+              emailProvider: 'resend',
+              messageId: result.messageId,
+            });
+            console.log('Weekly digest log saved for:', recipient.username);
+          } catch (logError) {
+            console.error('Error saving weekly digest log:', logError);
+          }
 
           if (result.success) {
             sentCount++;
@@ -474,7 +508,12 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
 
       setDigestPreviewOpen(false);
       setProcessMessage(`✅ Bülten gönderimi tamamlandı!\nGönderilen: ${sentCount}, Başarısız: ${failedCount}`);
-      setTimeout(() => setProcessMessage(''), 8000);
+
+      // Reload logs after a short delay
+      setTimeout(() => {
+        loadRecentLogs();
+        setProcessMessage('');
+      }, 2000);
 
     } catch (error) {
       console.error('Error sending digests:', error);
