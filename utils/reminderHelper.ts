@@ -191,12 +191,23 @@ export async function sendReminderEmail(
 export async function saveReminderLog(log: Omit<ReminderLog, 'id'>): Promise<void> {
   try {
     const logsRef = collection(db, 'reminderLogs');
-    await addDoc(logsRef, {
-      ...log,
+
+    // Remove undefined fields to avoid Firestore errors
+    const cleanLog: any = {
       sentAt: Timestamp.fromDate(log.sentAt),
+    };
+
+    // Only add fields that have defined values
+    Object.keys(log).forEach(key => {
+      if (key !== 'sentAt' && log[key as keyof typeof log] !== undefined) {
+        cleanLog[key] = log[key as keyof typeof log];
+      }
     });
+
+    await addDoc(logsRef, cleanLog);
   } catch (error) {
     console.error('Error saving reminder log:', error);
+    throw error; // Re-throw to see the error in calling code
   }
 }
 
