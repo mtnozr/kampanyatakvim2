@@ -1,5 +1,5 @@
 /**
- * Vercel Cron Job for Daily Digest
+ * Vercel Cron Job for Weekly Digest
  * Full implementation with all dependencies inline
  */
 
@@ -12,8 +12,9 @@ import { Timestamp } from 'firebase-admin/firestore';
 
 interface ReminderSettings {
     resendApiKey?: string;
-    dailyDigestEnabled?: boolean;
-    dailyDigestTime?: string;
+    weeklyDigestEnabled?: boolean;
+    weeklyDigestDay?: number; // 0=Sunday, 1=Monday, etc.
+    weeklyDigestTime?: string;
     emailCcRecipients?: string[];
 }
 
@@ -40,20 +41,43 @@ interface DepartmentUser {
     isDesigner?: boolean;
 }
 
-interface DailyCampaignDetails {
+interface Report {
     id: string;
     title: string;
-    assigneeName: string;
+    campaignTitle?: string;
+    dueDate: Date;
     status: string;
-    urgencyLabel: string;
+    assigneeId?: string;
 }
 
-interface DailyDigestContent {
-    completedCampaigns: DailyCampaignDetails[];
-    incompleteCampaigns: DailyCampaignDetails[];
+interface ReportWithDetails {
+    id: string;
+    title: string;
+    campaignTitle?: string;
+    dueDate: Date;
+    daysOverdue: number;
+    assigneeId?: string;
+    assigneeName: string;
+}
+
+interface CampaignWithDetails {
+    id: string;
+    title: string;
     date: Date;
-    totalCompleted: number;
-    totalIncomplete: number;
+    urgency: string;
+    urgencyLabel: string;
+    assigneeId?: string;
+    assigneeName: string;
+    status?: string;
+}
+
+interface DigestContent {
+    overdueReports: ReportWithDetails[];
+    thisWeekCampaigns: CampaignWithDetails[];
+    weekStart: Date;
+    weekEnd: Date;
+    totalOverdueReports: number;
+    totalThisWeekCampaigns: number;
 }
 
 interface ProcessResult {
@@ -80,7 +104,6 @@ function initFirebaseAdmin() {
                 throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON.');
             }
 
-            // Fix private_key newlines
             if (serviceAccount.private_key) {
                 const rawKey = serviceAccount.private_key;
                 let key = rawKey.replace(/\\n/g, '\n');
@@ -108,10 +131,30 @@ function initFirebaseAdmin() {
 
 // ===== UTILITY FUNCTIONS =====
 
-function isSameDay(date1: Date, date2: Date): boolean {
-    return date1.getFullYear() === date2.getFullYear() &&
-           date1.getMonth() === date2.getMonth() &&
-           date1.getDate() === date2.getDate();
+function startOfWeek(date: Date): Date {
+    const day = date.getDay();
+    const diff = (day === 0 ? -6 : 1) - day; // Monday = 1
+    const result = new Date(date);
+    result.setDate(date.getDate() + diff);
+    result.setHours(0, 0, 0, 0);
+    return result;
+}
+
+function endOfWeek(date: Date): Date {
+    const start = startOfWeek(date);
+    const result = new Date(start);
+    result.setDate(start.getDate() + 6); // Sunday
+    result.setHours(23, 59, 59, 999);
+    return result;
+}
+
+function isBefore(date1: Date, date2: Date): boolean {
+    return date1.getTime() < date2.getTime();
+}
+
+function isWithinInterval(date: Date, interval: { start: Date; end: Date }): boolean {
+    return date.getTime() >= interval.start.getTime() &&
+           date.getTime() <= interval.end.getTime();
 }
 
 function getUserName(userId: string | undefined, users: User[]): string {
@@ -130,135 +173,175 @@ function getUrgencyLabel(urgency: string): string {
     return labels[urgency] || urgency;
 }
 
-// ===== DAILY DIGEST BUILDER =====
+// ===== WEEKLY DIGEST BUILDER =====
 
-function buildDailyDigest(
+function buildWeeklyDigest(
+    reports: Report[],
     campaigns: CalendarEvent[],
     users: User[],
-    targetDate: Date = new Date()
-): DailyDigestContent {
-    // Filter campaigns for the target date
-    const todaysCampaigns = campaigns.filter(campaign =>
-        isSameDay(campaign.date, targetDate) && campaign.status !== 'İptal Edildi'
-    );
+    referenceDate: Date = new Date()
+): DigestContent {
+    const now = referenceDate;
 
-    const completedCampaigns: DailyCampaignDetails[] = [];
-    const incompleteCampaigns: DailyCampaignDetails[] = [];
+    // Calculate week range (Monday-Sunday)
+    const weekStart = startOfWeek(now);
+    const weekEnd = endOfWeek(now);
 
-    todaysCampaigns.forEach(campaign => {
-        const details: DailyCampaignDetails = {
+    // Find overdue reports
+    const overdueReports: ReportWithDetails[] = reports
+        .filter(report => {
+            return report.status === 'pending' && isBefore(report.dueDate, now);
+        })
+        .map(report => {
+            const daysOverdue = Math.floor(
+                (now.getTime() - report.dueDate.getTime()) / (1000 * 60 * 60 * 24)
+            );
+
+            return {
+                id: report.id,
+                title: report.title,
+                campaignTitle: report.campaignTitle,
+                dueDate: report.dueDate,
+                daysOverdue,
+                assigneeId: report.assigneeId,
+                assigneeName: getUserName(report.assigneeId, users),
+            };
+        })
+        .sort((a, b) => b.daysOverdue - a.daysOverdue);
+
+    // Find this week's campaigns
+    const thisWeekCampaigns: CampaignWithDetails[] = campaigns
+        .filter(campaign => {
+            if (campaign.status === 'İptal Edildi') return false;
+            return isWithinInterval(campaign.date, {
+                start: weekStart,
+                end: weekEnd,
+            });
+        })
+        .map(campaign => ({
             id: campaign.id,
             title: campaign.title,
+            date: campaign.date,
+            urgency: campaign.urgency,
+            urgencyLabel: getUrgencyLabel(campaign.urgency),
+            assigneeId: campaign.assigneeId,
             assigneeName: getUserName(campaign.assigneeId, users),
-            status: campaign.status || 'Planlandı',
-            urgencyLabel: getUrgencyLabel(campaign.urgency)
-        };
-
-        if (campaign.status === 'Tamamlandı') {
-            completedCampaigns.push(details);
-        } else {
-            incompleteCampaigns.push(details);
-        }
-    });
+            status: campaign.status,
+        }))
+        .sort((a, b) => {
+            if (a.date.getTime() !== b.date.getTime()) {
+                return a.date.getTime() - b.date.getTime();
+            }
+            const urgencyOrder = { 'Very High': 0, 'High': 1, 'Medium': 2, 'Low': 3 };
+            return (urgencyOrder[a.urgency as keyof typeof urgencyOrder] || 99) -
+                (urgencyOrder[b.urgency as keyof typeof urgencyOrder] || 99);
+        });
 
     return {
-        completedCampaigns,
-        incompleteCampaigns,
-        date: targetDate,
-        totalCompleted: completedCampaigns.length,
-        totalIncomplete: incompleteCampaigns.length
+        overdueReports,
+        thisWeekCampaigns,
+        weekStart,
+        weekEnd,
+        totalOverdueReports: overdueReports.length,
+        totalThisWeekCampaigns: thisWeekCampaigns.length,
     };
 }
 
 // ===== EMAIL HTML BUILDER =====
 
-function buildDailyDigestHTML(params: {
+function buildWeeklyDigestHTML(params: {
     recipientName: string;
-    digestContent: DailyDigestContent;
+    digestContent: DigestContent;
 }): string {
     const { recipientName, digestContent } = params;
-    const date = digestContent.date;
+    const { weekStart, weekEnd } = digestContent;
 
-    const dateStr = date.toLocaleDateString('tr-TR', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-        weekday: 'long'
-    });
+    const weekRangeStr = `${weekStart.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} - ${weekEnd.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}`;
 
-    // Build completed campaigns table
-    let completedHTML = '';
-    if (digestContent.totalCompleted > 0) {
-        completedHTML = `
-            <h3 style="margin: 24px 0 16px 0; font-size: 18px; color: #059669; font-weight: 600;">
-                ✅ Tamamlananlar (${digestContent.totalCompleted})
+    // Build overdue reports table
+    let overdueReportsHTML = '';
+    if (digestContent.totalOverdueReports > 0) {
+        overdueReportsHTML = `
+            <h3 style="margin: 24px 0 16px 0; font-size: 18px; color: #DC2626; font-weight: 600;">
+                ⚠️ Gecikmiş Raporlar (${digestContent.totalOverdueReports})
             </h3>
-            <table width="100%" cellpadding="8" cellspacing="0" style="background-color: #ECFDF5; border: 1px solid #059669; border-radius: 8px; margin-bottom: 24px;">
+            <table width="100%" cellpadding="8" cellspacing="0" style="background-color: #FEE2E2; border: 1px solid #DC2626; border-radius: 8px; margin-bottom: 24px;">
                 <thead>
-                    <tr style="background-color: #D1FAE5;">
-                        <th style="text-align: left; font-size: 12px; color: #064E3B; font-weight: 600; padding: 12px 8px;">Kampanya</th>
-                        <th style="text-align: center; font-size: 12px; color: #064E3B; font-weight: 600; padding: 12px 8px;">Aciliyet</th>
-                        <th style="text-align: left; font-size: 12px; color: #064E3B; font-weight: 600; padding: 12px 8px;">Atanan</th>
+                    <tr style="background-color: #FCA5A5;">
+                        <th style="text-align: left; font-size: 12px; color: #7F1D1D; font-weight: 600; padding: 12px 8px;">Rapor Adı</th>
+                        <th style="text-align: left; font-size: 12px; color: #7F1D1D; font-weight: 600; padding: 12px 8px;">Kampanya</th>
+                        <th style="text-align: center; font-size: 12px; color: #7F1D1D; font-weight: 600; padding: 12px 8px;">Gecikme</th>
+                        <th style="text-align: left; font-size: 12px; color: #7F1D1D; font-weight: 600; padding: 12px 8px;">Atanan</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${digestContent.completedCampaigns.map(campaign => `
-                        <tr style="border-top: 1px solid #34D399;">
-                            <td style="font-size: 13px; color: #065F46; padding: 8px;"><strong>${campaign.title}</strong></td>
-                            <td style="font-size: 13px; color: #065F46; padding: 8px; text-align: center;">${campaign.urgencyLabel}</td>
-                            <td style="font-size: 13px; color: #065F46; padding: 8px;">${campaign.assigneeName}</td>
+                    ${digestContent.overdueReports.map(report => `
+                        <tr style="border-top: 1px solid #DC2626;">
+                            <td style="font-size: 13px; color: #991B1B; padding: 8px;"><strong>${report.title}</strong></td>
+                            <td style="font-size: 13px; color: #991B1B; padding: 8px;">${report.campaignTitle || '-'}</td>
+                            <td style="font-size: 13px; color: #991B1B; padding: 8px; text-align: center;"><strong>${report.daysOverdue} gün</strong></td>
+                            <td style="font-size: 13px; color: #991B1B; padding: 8px;">${report.assigneeName}</td>
                         </tr>
                     `).join('')}
                 </tbody>
             </table>
         `;
     } else {
-        completedHTML = `
-            <h3 style="margin: 24px 0 16px 0; font-size: 18px; color: #6B7280; font-weight: 600;">
-                ✅ Tamamlananlar
+        overdueReportsHTML = `
+            <h3 style="margin: 24px 0 16px 0; font-size: 18px; color: #10B981; font-weight: 600;">
+                ✅ Gecikmiş Raporlar
             </h3>
-            <div style="background-color: #F3F4F6; border: 1px solid #D1D5DB; border-radius: 8px; padding: 16px; margin-bottom: 24px; text-align: center;">
-                <p style="margin: 0; font-size: 14px; color: #4B5563;">
-                    Bugün tamamlanan kampanya bulunmuyor.
+            <div style="background-color: #D1FAE5; border: 1px solid #10B981; border-radius: 8px; padding: 16px; margin-bottom: 24px; text-align: center;">
+                <p style="margin: 0; font-size: 14px; color: #065F46;">
+                    🎉 Harika! Gecikmiş rapor bulunmuyor.
                 </p>
             </div>
         `;
     }
 
-    // Build incomplete campaigns table
-    let incompleteHTML = '';
-    if (digestContent.totalIncomplete > 0) {
-        incompleteHTML = `
-            <h3 style="margin: 24px 0 16px 0; font-size: 18px; color: #BE123C; font-weight: 600;">
-                ⏳ Tamamlanmayanlar / Bekleyenler (${digestContent.totalIncomplete})
+    // Build this week's campaigns table
+    let thisWeekCampaignsHTML = '';
+    if (digestContent.totalThisWeekCampaigns > 0) {
+        thisWeekCampaignsHTML = `
+            <h3 style="margin: 24px 0 16px 0; font-size: 18px; color: #7C3AED; font-weight: 600;">
+                📅 Bu Hafta Yapılacak Kampanyalar (${digestContent.totalThisWeekCampaigns})
             </h3>
-            <table width="100%" cellpadding="8" cellspacing="0" style="background-color: #FFF1F2; border: 1px solid #BE123C; border-radius: 8px; margin-bottom: 24px;">
+            <table width="100%" cellpadding="8" cellspacing="0" style="background-color: #F3E8FF; border: 1px solid #7C3AED; border-radius: 8px; margin-bottom: 24px;">
                 <thead>
-                    <tr style="background-color: #FFE4E6;">
-                        <th style="text-align: left; font-size: 12px; color: #881337; font-weight: 600; padding: 12px 8px;">Kampanya</th>
-                        <th style="text-align: center; font-size: 12px; color: #881337; font-weight: 600; padding: 12px 8px;">Durum</th>
-                        <th style="text-align: left; font-size: 12px; color: #881337; font-weight: 600; padding: 12px 8px;">Atanan</th>
+                    <tr style="background-color: #DDD6FE;">
+                        <th style="text-align: left; font-size: 12px; color: #4C1D95; font-weight: 600; padding: 12px 8px;">Tarih</th>
+                        <th style="text-align: left; font-size: 12px; color: #4C1D95; font-weight: 600; padding: 12px 8px;">Kampanya Adı</th>
+                        <th style="text-align: center; font-size: 12px; color: #4C1D95; font-weight: 600; padding: 12px 8px;">Aciliyet</th>
+                        <th style="text-align: left; font-size: 12px; color: #4C1D95; font-weight: 600; padding: 12px 8px;">Atanan</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${digestContent.incompleteCampaigns.map(campaign => `
-                        <tr style="border-top: 1px solid #FDA4AF;">
-                            <td style="font-size: 13px; color: #9F1239; padding: 8px;"><strong>${campaign.title}</strong></td>
-                            <td style="font-size: 13px; color: #9F1239; padding: 8px; text-align: center;">${campaign.status}</td>
-                            <td style="font-size: 13px; color: #9F1239; padding: 8px;">${campaign.assigneeName}</td>
-                        </tr>
-                    `).join('')}
+                    ${digestContent.thisWeekCampaigns.map(campaign => {
+                        const dateStr = campaign.date.toLocaleDateString('tr-TR', {
+                            day: 'numeric',
+                            month: 'short',
+                            weekday: 'short'
+                        });
+                        return `
+                            <tr style="border-top: 1px solid #A78BFA;">
+                                <td style="font-size: 13px; color: #6B21A8; padding: 8px; white-space: nowrap;">${dateStr}</td>
+                                <td style="font-size: 13px; color: #6B21A8; padding: 8px;"><strong>${campaign.title}</strong></td>
+                                <td style="font-size: 13px; color: #6B21A8; padding: 8px; text-align: center;">${campaign.urgencyLabel}</td>
+                                <td style="font-size: 13px; color: #6B21A8; padding: 8px;">${campaign.assigneeName}</td>
+                            </tr>
+                        `;
+                    }).join('')}
                 </tbody>
             </table>
         `;
     } else {
-        incompleteHTML = `
+        thisWeekCampaignsHTML = `
             <h3 style="margin: 24px 0 16px 0; font-size: 18px; color: #6B7280; font-weight: 600;">
-                ⏳ Tamamlanmayanlar
+                📅 Bu Hafta Yapılacak Kampanyalar
             </h3>
             <div style="background-color: #F3F4F6; border: 1px solid #D1D5DB; border-radius: 8px; padding: 16px; margin-bottom: 24px; text-align: center;">
                 <p style="margin: 0; font-size: 14px; color: #4B5563;">
-                    Bugün için bekleyen kampanya bulunmuyor.
+                    Bu hafta planlanmış kampanya bulunmuyor.
                 </p>
             </div>
         `;
@@ -270,7 +353,7 @@ function buildDailyDigestHTML(params: {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Gün Sonu Bülteni</title>
+            <title>Haftalık Bülten</title>
         </head>
         <body style="margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #F8F9FE;">
             <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F8F9FE; padding: 40px 20px;">
@@ -279,24 +362,24 @@ function buildDailyDigestHTML(params: {
                         <table width="650" cellpadding="0" cellspacing="0" style="background-color: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                             <tr>
                                 <td style="background-color: #F9FAFB; padding: 32px; text-align: center; border-bottom: 1px solid #E5E7EB;">
-                                    <h1 style="margin: 0; color: #1F2937; font-size: 28px; font-weight: 700;">🌅 Gün Sonu Bülteni</h1>
-                                    <p style="margin: 8px 0 0 0; color: #6B7280; font-size: 16px; font-weight: 500;">${dateStr}</p>
+                                    <h1 style="margin: 0; color: #1F2937; font-size: 28px; font-weight: 700;">📊 Haftalık Bülten</h1>
+                                    <p style="margin: 8px 0 0 0; color: #6B7280; font-size: 16px; font-weight: 500;">${weekRangeStr}</p>
                                 </td>
                             </tr>
                             <tr>
                                 <td style="padding: 32px;">
-                                    <p style="margin: 0 0 24px 0; font-size: 16px; color: #1F2937;">İyi Akşamlar <strong>${recipientName}</strong>,</p>
-                                    <p style="margin: 0 0 24px 0; font-size: 14px; color: #4B5563; line-height: 1.6;">Bugünün kampanya özeti aşağıdadır:</p>
-                                    ${completedHTML}
-                                    ${incompleteHTML}
+                                    <p style="margin: 0 0 24px 0; font-size: 16px; color: #1F2937;">İyi Günler <strong>${recipientName}</strong>,</p>
+                                    <p style="margin: 0 0 24px 0; font-size: 14px; color: #4B5563; line-height: 1.6;">İşte bu haftanın özeti:</p>
+                                    ${overdueReportsHTML}
+                                    ${thisWeekCampaignsHTML}
                                     <div style="text-align: center; margin: 32px 0;">
-                                        <a href="https://www.kampanyatakvimi.net.tr" style="display: inline-block; background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #FFFFFF; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(5, 150, 105, 0.3);">Takvime Git →</a>
+                                        <a href="https://www.kampanyatakvimi.net.tr" style="display: inline-block; background: linear-gradient(135deg, #7C3AED 0%, #4338CA 100%); color: #FFFFFF; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(124, 58, 237, 0.3);">Takvime Git →</a>
                                     </div>
                                 </td>
                             </tr>
                             <tr>
                                 <td style="background-color: #F9FAFB; padding: 24px; text-align: center; border-top: 1px solid #E5E7EB;">
-                                    <p style="margin: 0 0 8px 0; font-size: 12px; color: #6B7280;">Bu otomatik bir gün sonu özetidir.</p>
+                                    <p style="margin: 0 0 8px 0; font-size: 12px; color: #6B7280;">Bu otomatik bir haftalık bültendir.</p>
                                     <p style="margin: 0; font-size: 12px; color: #9CA3AF;">Kampanya Takvimi © ${new Date().getFullYear()}</p>
                                 </td>
                             </tr>
@@ -345,65 +428,37 @@ async function sendEmailInternal(apiKey: string, params: {
 
 // ===== DIGEST LOCK & LOGGING =====
 
-async function checkDigestAlreadySent(db: Firestore, dateStr: string): Promise<boolean> {
+async function checkWeeklyDigestAlreadySent(db: Firestore, weekStr: string): Promise<boolean> {
     try {
         const logsRef = db.collection('reminderLogs');
         const snapshot = await logsRef
-            .where('eventId', '==', `daily-digest-${dateStr}`)
+            .where('eventId', '==', `weekly-digest-${weekStr}`)
             .where('status', '==', 'success')
             .limit(1)
             .get();
 
         return !snapshot.empty;
     } catch (error) {
-        console.error('Error checking existing digest:', error);
+        console.error('Error checking existing weekly digest:', error);
         return false;
     }
 }
 
-async function acquireDailyDigestLock(db: Firestore, dateStr: string): Promise<boolean> {
-    const lockRef = db.collection('systemLocks').doc(`daily-digest-${dateStr}`);
-
-    try {
-        return await db.runTransaction(async (transaction) => {
-            const lockDoc = await transaction.get(lockRef);
-
-            if (lockDoc.exists) {
-                return false;
-            }
-
-            transaction.set(lockRef, {
-                createdAt: Timestamp.now(),
-                status: 'processing'
-            });
-
-            return true;
-        });
-    } catch (error) {
-        console.error('Error acquiring lock:', error);
-        return false;
-    }
-}
-
-async function logDailyDigest(db: Firestore, params: {
+async function logWeeklyDigest(db: Firestore, params: {
     recipientEmail: string;
     recipientName: string;
     status: 'success' | 'failed';
-    digestContent: DailyDigestContent;
+    digestContent: DigestContent;
     errorMessage?: string;
     messageId?: string;
 }): Promise<void> {
     try {
-        const dateStr = params.digestContent.date.toLocaleDateString('tr-TR', {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric'
-        });
+        const weekRangeStr = `${params.digestContent.weekStart.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} - ${params.digestContent.weekEnd.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}`;
 
         await db.collection('reminderLogs').add({
-            eventId: `daily-digest-${params.digestContent.date.toISOString().split('T')[0]}`,
-            eventType: 'daily-digest',
-            eventTitle: `Gün Sonu Bülteni - ${dateStr}`,
+            eventId: `weekly-digest-${params.digestContent.weekStart.toISOString().split('T')[0]}`,
+            eventType: 'weekly-digest',
+            eventTitle: `Haftalık Bülten - ${weekRangeStr}`,
             recipientEmail: params.recipientEmail,
             recipientName: params.recipientName,
             urgency: 'Medium',
@@ -413,66 +468,31 @@ async function logDailyDigest(db: Firestore, params: {
             emailProvider: 'resend',
             messageId: params.messageId,
             digestStats: {
-                completedCount: params.digestContent.totalCompleted,
-                incompleteCount: params.digestContent.totalIncomplete,
+                overdueReportsCount: params.digestContent.totalOverdueReports,
+                thisWeekCampaignsCount: params.digestContent.totalThisWeekCampaigns,
             },
         });
     } catch (error) {
-        console.error('Error logging daily digest:', error);
+        console.error('Error logging weekly digest:', error);
     }
 }
 
 // ===== MAIN PROCESSOR =====
 
-async function processDailyDigest(
+async function processWeeklyDigest(
     db: Firestore,
+    reports: Report[],
     campaigns: CalendarEvent[],
     users: User[],
     departmentUsers: DepartmentUser[],
     settings: ReminderSettings
 ): Promise<ProcessResult> {
     const result: ProcessResult = { sent: 0, failed: 0, skipped: 0 };
-    const now = new Date();
 
-    if (!settings.dailyDigestEnabled) {
+    if (!settings.weeklyDigestEnabled) {
+        console.log('Weekly digest is disabled');
         return result;
     }
-
-    if (!settings.dailyDigestTime) {
-        return result;
-    }
-
-    // Parse configured time (assumed to be in Turkey time - UTC+3)
-    const [targetHour, targetMinute] = settings.dailyDigestTime.split(':').map(Number);
-
-    // Convert server time (UTC) to Turkey time (UTC+3)
-    const turkeyTime = new Date(now.getTime() + (3 * 60 * 60 * 1000));
-    const currentHour = turkeyTime.getHours();
-    const currentMinute = turkeyTime.getMinutes();
-
-    // Only process if it's time
-    const isTime = currentHour > targetHour || (currentHour === targetHour && currentMinute >= targetMinute);
-
-    if (!isTime) {
-        return result;
-    }
-
-    // Check if already sent today
-    const todayStr = now.toISOString().split('T')[0];
-    const alreadySent = await checkDigestAlreadySent(db, todayStr);
-    if (alreadySent) {
-        console.log('Daily digest already sent for today');
-        return result;
-    }
-
-    // Acquire lock
-    const lockAcquired = await acquireDailyDigestLock(db, todayStr);
-    if (!lockAcquired) {
-        console.log('Could not acquire lock for daily digest');
-        return result;
-    }
-
-    console.log('Lock acquired. Processing daily digest...');
 
     if (!settings.resendApiKey) {
         console.error('Resend API key is not configured');
@@ -480,7 +500,16 @@ async function processDailyDigest(
     }
 
     // Build digest content
-    const digestContent = buildDailyDigest(campaigns, users, now);
+    console.log('Building weekly digest content...');
+    const digestContent = buildWeeklyDigest(reports, campaigns, users);
+
+    // Check if already sent this week
+    const weekStr = digestContent.weekStart.toISOString().split('T')[0];
+    const alreadySent = await checkWeeklyDigestAlreadySent(db, weekStr);
+    if (alreadySent) {
+        console.log('Weekly digest already sent for this week');
+        return result;
+    }
 
     // Filter designer users
     const designerUsers = departmentUsers.filter(user => {
@@ -498,16 +527,18 @@ async function processDailyDigest(
     // Send email to each designer
     for (const designer of designerUsers) {
         try {
-            const html = buildDailyDigestHTML({
+            const html = buildWeeklyDigestHTML({
                 recipientName: designer.name || designer.username,
                 digestContent
             });
+
+            const weekRangeStr = `${digestContent.weekStart.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} - ${digestContent.weekEnd.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}`;
 
             const emailResult = await sendEmailInternal(
                 settings.resendApiKey,
                 {
                     to: designer.email!,
-                    subject: `Gün Sonu Bülteni - ${now.toLocaleDateString('tr-TR')}`,
+                    subject: `📊 Haftalık Bülten - ${weekRangeStr}`,
                     html
                 }
             );
@@ -516,7 +547,7 @@ async function processDailyDigest(
                 console.log(`✅ Sent to ${designer.name || designer.username}`);
                 result.sent++;
 
-                await logDailyDigest(db, {
+                await logWeeklyDigest(db, {
                     recipientEmail: designer.email!,
                     recipientName: designer.name || designer.username,
                     status: 'success',
@@ -527,7 +558,7 @@ async function processDailyDigest(
                 console.error(`❌ Failed to send to ${designer.name}: ${emailResult.error}`);
                 result.failed++;
 
-                await logDailyDigest(db, {
+                await logWeeklyDigest(db, {
                     recipientEmail: designer.email!,
                     recipientName: designer.name || designer.username,
                     status: 'failed',
@@ -539,7 +570,7 @@ async function processDailyDigest(
             console.error(`Error sending to ${designer.name}:`, error);
             result.failed++;
 
-            await logDailyDigest(db, {
+            await logWeeklyDigest(db, {
                 recipientEmail: designer.email!,
                 recipientName: designer.name || designer.username,
                 status: 'failed',
@@ -569,7 +600,7 @@ export default async function handler(
     }
 
     try {
-        console.log('Starting Daily Digest Cron Job...');
+        console.log('Starting Weekly Digest Cron Job...');
 
         // Initialize Firebase Admin
         const adminSDK = initFirebaseAdmin();
@@ -585,18 +616,23 @@ export default async function handler(
 
         const settings = settingsDoc.data() as ReminderSettings;
 
-        if (!settings.dailyDigestEnabled) {
-            console.log('Daily digest is disabled');
+        if (!settings.weeklyDigestEnabled) {
+            console.log('Weekly digest is disabled');
             return res.status(200).json({ status: 'skipped', reason: 'disabled' });
-        }
-
-        if (!settings.dailyDigestTime) {
-            console.log('No daily digest time configured');
-            return res.status(200).json({ status: 'skipped', reason: 'no_time_set' });
         }
 
         // Fetch Data
         console.log('Fetching data...');
+
+        const reportsSnapshot = await db.collection('reports').get();
+        const reports = reportsSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                dueDate: data.dueDate?.toDate() || new Date(),
+            };
+        }) as Report[];
 
         const campaignsSnapshot = await db.collection('events').get();
         const campaigns = campaignsSnapshot.docs.map(doc => {
@@ -622,8 +658,8 @@ export default async function handler(
         })) as DepartmentUser[];
 
         // Process
-        console.log('Processing digest...');
-        const result = await processDailyDigest(db, campaigns, users, deptUsers, settings);
+        console.log('Processing weekly digest...');
+        const result = await processWeeklyDigest(db, reports, campaigns, users, deptUsers, settings);
 
         return res.status(200).json({
             success: true,
