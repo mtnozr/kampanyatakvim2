@@ -1,12 +1,13 @@
 /**
  * Daily Digest Processor - Process and send daily digest emails automatically
+ * Server-Side Version (Uses Firebase Admin SDK)
  */
 
 import { CalendarEvent, User, ReminderSettings } from '../types';
 import { buildDailyDigest, DailyDigestContent } from './dailyDigestBuilder';
-import { sendDailyDigestEmail } from './emailService';
-import { db } from '../firebase';
-import { collection, addDoc, Timestamp, query, where, getDocs, limit, runTransaction, doc } from 'firebase/firestore';
+import { buildDailyDigestHTML } from './emailService';
+import type { Firestore } from 'firebase-admin/firestore';
+import { Timestamp } from 'firebase-admin/firestore';
 
 interface DepartmentUser {
     id: string;
@@ -23,18 +24,52 @@ interface ProcessResult {
 }
 
 /**
+ * Send email directly using Resend API (Server-Side compatible)
+ */
+async function sendEmailInternal(apiKey: string, params: {
+    to: string;
+    subject: string;
+    html: string;
+}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    try {
+        const response = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                from: 'Kampanya Takvimi <hatirlatma@kampanyatakvimi.net.tr>',
+                to: params.to,
+                subject: params.subject,
+                html: params.html,
+            }),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            return { success: false, error: error.message || 'Email sending failed' };
+        }
+
+        const data = await response.json();
+        return { success: true, messageId: data.id };
+    } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+}
+
+/**
  * Check if digest was already sent today
  */
-async function checkDigestAlreadySent(dateStr: string): Promise<boolean> {
+async function checkDigestAlreadySent(db: Firestore, dateStr: string): Promise<boolean> {
     try {
-        const logsRef = collection(db, 'reminderLogs');
-        const q = query(
-            logsRef,
-            where('eventId', '==', `daily-digest-${dateStr}`),
-            where('status', '==', 'success'),
-            limit(1)
-        );
-        const snapshot = await getDocs(q);
+        const logsRef = db.collection('reminderLogs');
+        const snapshot = await logsRef
+            .where('eventId', '==', `daily-digest-${dateStr}`)
+            .where('status', '==', 'success')
+            .limit(1)
+            .get();
+
         return !snapshot.empty;
     } catch (error) {
         console.error('Error checking existing digest:', error);
@@ -46,14 +81,14 @@ async function checkDigestAlreadySent(dateStr: string): Promise<boolean> {
  * Try to acquire a lock for today's digest
  * Returns true if lock acquired, false if already locked/sent
  */
-async function acquireDailyDigestLock(dateStr: string): Promise<boolean> {
-    const lockRef = doc(db, 'systemLocks', `daily-digest-${dateStr}`);
+async function acquireDailyDigestLock(db: Firestore, dateStr: string): Promise<boolean> {
+    const lockRef = db.collection('systemLocks').doc(`daily-digest-${dateStr}`);
 
     try {
-        return await runTransaction(db, async (transaction) => {
+        return await db.runTransaction(async (transaction) => {
             const lockDoc = await transaction.get(lockRef);
 
-            if (lockDoc.exists()) {
+            if (lockDoc.exists) {
                 // Already locked/sent
                 return false;
             }
@@ -75,7 +110,7 @@ async function acquireDailyDigestLock(dateStr: string): Promise<boolean> {
 /**
  * Log daily digest send to Firestore
  */
-async function logDailyDigest(params: {
+async function logDailyDigest(db: Firestore, params: {
     recipientEmail: string;
     recipientName: string;
     status: 'success' | 'failed';
@@ -86,7 +121,7 @@ async function logDailyDigest(params: {
     try {
         const dateStr = params.digestContent.date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
 
-        await addDoc(collection(db, 'reminderLogs'), {
+        await db.collection('reminderLogs').add({
             eventId: `daily-digest-${params.digestContent.date.toISOString().split('T')[0]}`,
             eventType: 'daily-digest',
             eventTitle: `Gün Sonu Bülteni - ${dateStr}`,
@@ -110,12 +145,14 @@ async function logDailyDigest(params: {
 
 /**
  * Process and send daily digest emails to all designer users
+ * @param db - Admin Firestore instance
  * @param campaigns - All campaigns
  * @param users - All users for name lookup
  * @param departmentUsers - Department users to filter designers
  * @param settings - Reminder settings including API key and digest config
  */
 export async function processDailyDigest(
+    db: Firestore,
     campaigns: CalendarEvent[],
     users: User[],
     departmentUsers: DepartmentUser[],
@@ -155,7 +192,7 @@ export async function processDailyDigest(
     const todayStr = now.toISOString().split('T')[0];
 
     // First fast check using logs (optimization)
-    const alreadySent = await checkDigestAlreadySent(todayStr);
+    const alreadySent = await checkDigestAlreadySent(db, todayStr);
     if (alreadySent) {
         console.log('Daily digest already sent for today (log check), skipping.');
         return result;
@@ -163,7 +200,7 @@ export async function processDailyDigest(
 
     // Try to acquire distributed lock
     console.log(`Attempting to acquire lock for daily-digest-${todayStr}...`);
-    const lockAcquired = await acquireDailyDigestLock(todayStr);
+    const lockAcquired = await acquireDailyDigestLock(db, todayStr);
 
     if (!lockAcquired) {
         console.log('Could not acquire lock for daily digest, another instance is likely processing it.');
@@ -198,11 +235,19 @@ export async function processDailyDigest(
     // Send email to each designer user
     for (const designer of designerUsers) {
         try {
-            const emailResult = await sendDailyDigestEmail(
-                settings.resendApiKey,
-                designer.email!,
-                designer.name || designer.username,
+            // Generate HTML
+            const html = buildDailyDigestHTML({
+                recipientName: designer.name || designer.username,
                 digestContent
+            });
+
+            const emailResult = await sendEmailInternal(
+                settings.resendApiKey,
+                {
+                    to: designer.email!,
+                    subject: `Gün Sonu Bülteni - ${now.toLocaleDateString('tr-TR')}`,
+                    html
+                }
             );
 
             if (emailResult.success) {
@@ -210,7 +255,7 @@ export async function processDailyDigest(
                 result.sent++;
 
                 // Log success
-                await logDailyDigest({
+                await logDailyDigest(db, {
                     recipientEmail: designer.email!,
                     recipientName: designer.name || designer.username,
                     status: 'success',
@@ -222,7 +267,7 @@ export async function processDailyDigest(
                 result.failed++;
 
                 // Log failure
-                await logDailyDigest({
+                await logDailyDigest(db, {
                     recipientEmail: designer.email!,
                     recipientName: designer.name || designer.username,
                     status: 'failed',
@@ -235,7 +280,7 @@ export async function processDailyDigest(
             result.failed++;
 
             // Log failure
-            await logDailyDigest({
+            await logDailyDigest(db, {
                 recipientEmail: designer.email!,
                 recipientName: designer.name || designer.username,
                 status: 'failed',
@@ -247,4 +292,3 @@ export async function processDailyDigest(
 
     return result;
 }
-

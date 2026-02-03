@@ -21,7 +21,7 @@ import { sendTestSMS, formatPhoneNumber } from '../utils/smsService';
 import { buildWeeklyDigest } from '../utils/weeklyDigestBuilder';
 import { buildWeeklyDigestHTML, sendWeeklyDigestEmail, buildDailyDigestHTML, sendDailyDigestEmail } from '../utils/emailService';
 import { buildDailyDigest } from '../utils/dailyDigestBuilder';
-import { processDailyDigest } from '../utils/dailyDigestProcessor';
+
 
 // Add logging helper
 async function logAutomatedCheck(message: string) {
@@ -95,6 +95,9 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
   }, []);
 
   // Automatic Daily Digest Scheduler
+  // DEPRECATED: Now handled by Vercel Cron (Serverless) @ api/cron-daily-digest.ts
+  // This client-side check is disabled to prevent multiple triggers and requirement of open tab.
+  /*
   useEffect(() => {
     // Check every minute
     const intervalId = setInterval(async () => {
@@ -125,6 +128,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
 
     return () => clearInterval(intervalId);
   }, [settings.dailyDigestEnabled, settings.dailyDigestTime, settings.resendApiKey]);
+  */
 
   async function loadDepartmentUsers() {
     try {
@@ -538,10 +542,16 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Sistem otomatik olarak hatırlatma mailleri gönderecek
               </p>
-              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1">
-                <AlertCircle size={12} />
-                Hafta sonları (Cumartesi-Pazar) mail gönderilmez
-              </p>
+              <div className="flex flex-col gap-1 mt-1">
+                <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                  <AlertCircle size={12} />
+                  Hafta sonları (Cumartesi-Pazar) mail gönderilmez
+                </p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                  <Check size={12} />
+                  Sunucu (Cron) tarafından otomatik yönetilir. (Sayfayı açık tutmanıza gerek yok)
+                </p>
+              </div>
             </div>
           </label>
         </div>
