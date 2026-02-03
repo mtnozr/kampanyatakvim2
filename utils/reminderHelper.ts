@@ -49,26 +49,27 @@ export function shouldSendReminder(
     return true;
   }
 
-  if (!event.createdAt) return false;
+  // Use calendar date (event.date) instead of assignment date (event.createdAt)
+  if (!event.date) return false;
 
   // Hafta sonu kontrolü - Cumartesi ve Pazar mail gönderme
   if (isWeekend()) {
     return false;
   }
 
-  const daysElapsed = getDaysElapsed(event.createdAt);
+  const daysElapsed = getDaysElapsed(event.date);
   const reminderThreshold = reminderSettings.reminderRules[event.urgency];
 
   return daysElapsed >= reminderThreshold;
 }
 
 /**
- * Event oluşturulduğundan bu yana geçen gün sayısını hesaplar
+ * Takvim tarihinden (calendar date) bu yana geçen gün sayısını hesaplar
  */
-export function getDaysElapsed(createdAt: Date): number {
+export function getDaysElapsed(referenceDate: Date): number {
   const now = new Date();
-  const created = createdAt instanceof Date ? createdAt : new Date(createdAt);
-  const diffMs = now.getTime() - created.getTime();
+  const reference = referenceDate instanceof Date ? referenceDate : new Date(referenceDate);
+  const diffMs = now.getTime() - reference.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   return diffDays;
 }
@@ -114,7 +115,8 @@ export async function sendReminderEmail(
     }
 
     // Email HTML oluştur (custom template kullan)
-    const daysElapsed = getDaysElapsed(event.createdAt || new Date());
+    // Use calendar date (event.date) instead of assignment date (event.createdAt)
+    const daysElapsed = getDaysElapsed(event.date || new Date());
     const emailHTML = buildCustomEmailHTML({
       assigneeName: assignee.name,
       eventTitle: event.title,

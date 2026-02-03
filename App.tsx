@@ -2160,7 +2160,8 @@ function App() {
 
                 if (existingReportsSnapshot.empty) {
                   // No existing report, create one
-                  const reportDueDate = calculateReportDueDate(new Date());
+                  // Use campaign calendar date instead of completion date
+                  const reportDueDate = calculateReportDueDate(currentEvent.date);
                   await addDoc(collection(db, "reports"), {
                     title: `${currentEvent.title} Raporu`,
                     campaignId: eventId,

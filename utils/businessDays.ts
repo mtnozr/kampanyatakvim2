@@ -24,10 +24,10 @@ export function getNextBusinessDay(date: Date): Date {
 }
 
 /**
- * Calculate report due date from campaign completion
- * 30 days after completion, adjusted to next business day
+ * Calculate report due date from campaign calendar date
+ * 30 days after campaign calendar date, adjusted to next business day
  */
-export function calculateReportDueDate(completionDate: Date): Date {
-    const thirtyDaysLater = addDays(completionDate, 30);
+export function calculateReportDueDate(campaignDate: Date): Date {
+    const thirtyDaysLater = addDays(campaignDate, 30);
     return getNextBusinessDay(thirtyDaysLater);
 }
