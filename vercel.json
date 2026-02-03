@@ -5,10 +5,4 @@
             "destination": "/index.html"
         }
     ],
-    "crons": [
-        {
-            "path": "/api/cron-daily-digest",
-            "schedule": "*/15 * * * *"
-        }
-    ]
 }
