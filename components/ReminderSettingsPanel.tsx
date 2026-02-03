@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 import { sendTestEmail } from '../utils/emailService';
 import { sendTestSMS } from '../utils/smsService';
+import { saveReminderLog } from '../utils/reminderHelper';
 
 import { buildWeeklyDigest } from '../utils/weeklyDigestBuilder';
 import { buildWeeklyDigestHTML, sendWeeklyDigestEmail, buildDailyDigestHTML, sendDailyDigestEmail } from '../utils/emailService';
@@ -163,6 +164,21 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
 
     try {
       const result = await sendTestEmail(settings.resendApiKey, testEmail);
+
+      // Log to Firestore
+      await saveReminderLog({
+        eventId: 'test-email',
+        eventType: 'campaign',
+        eventTitle: '🧪 Test Email',
+        recipientEmail: testEmail,
+        recipientName: 'Test Kullanıcı',
+        urgency: 'High',
+        sentAt: new Date(),
+        status: result.success ? 'success' : 'failed',
+        errorMessage: result.error,
+        emailProvider: 'resend',
+        messageId: result.messageId,
+      });
 
       if (result.success) {
         setTestMessage('✅ Test email gönderildi!');
@@ -365,6 +381,21 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
             digestContent
           );
 
+          // Log to Firestore
+          await saveReminderLog({
+            eventId: `daily-digest-${new Date().toISOString().split('T')[0]}`,
+            eventType: 'campaign',
+            eventTitle: '📅 Gün Sonu Bülteni',
+            recipientEmail: recipient.email!,
+            recipientName: recipient.username,
+            urgency: 'Medium',
+            sentAt: new Date(),
+            status: result.success ? 'success' : 'failed',
+            errorMessage: result.error,
+            emailProvider: 'resend',
+            messageId: result.messageId,
+          });
+
           if (result.success) {
             sentCount++;
           } else {
@@ -413,6 +444,21 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
             digestContent.weekStart,
             digestContent.weekEnd
           );
+
+          // Log to Firestore
+          await saveReminderLog({
+            eventId: `weekly-digest-${digestContent.weekStart.toISOString().split('T')[0]}`,
+            eventType: 'campaign',
+            eventTitle: '📊 Haftalık Bülten',
+            recipientEmail: recipient.email!,
+            recipientName: recipient.username,
+            urgency: 'Medium',
+            sentAt: new Date(),
+            status: result.success ? 'success' : 'failed',
+            errorMessage: result.error,
+            emailProvider: 'resend',
+            messageId: result.messageId,
+          });
 
           if (result.success) {
             sentCount++;

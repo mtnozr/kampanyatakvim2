@@ -186,8 +186,9 @@ export async function sendReminderEmail(
 
 /**
  * Reminder log'u Firestore'a kaydeder
+ * Export edilerek test email ve digest gönderimlerinde de kullanılabilir
  */
-async function saveReminderLog(log: Omit<ReminderLog, 'id'>): Promise<void> {
+export async function saveReminderLog(log: Omit<ReminderLog, 'id'>): Promise<void> {
   try {
     const logsRef = collection(db, 'reminderLogs');
     await addDoc(logsRef, {
