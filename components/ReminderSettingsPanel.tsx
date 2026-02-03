@@ -180,7 +180,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
       // Log to Firestore
       try {
         console.log('Saving test email log to Firestore...');
-        await saveReminderLog({
+        const logData: any = {
           eventId: 'test-email-' + Date.now(),
           eventType: 'campaign',
           eventTitle: '🧪 Test Email',
@@ -189,10 +189,18 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
           urgency: 'High',
           sentAt: new Date(),
           status: result.success ? 'success' : 'failed',
-          errorMessage: result.error,
           emailProvider: 'resend',
-          messageId: result.messageId,
-        });
+        };
+
+        // Only add optional fields if they have values
+        if (result.error) {
+          logData.errorMessage = result.error;
+        }
+        if (result.messageId) {
+          logData.messageId = result.messageId;
+        }
+
+        await saveReminderLog(logData);
         console.log('Test email log saved successfully');
       } catch (logError) {
         console.error('Error saving test email log:', logError);
@@ -402,7 +410,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
 
           // Log to Firestore
           try {
-            await saveReminderLog({
+            const logData: any = {
               eventId: `daily-digest-${new Date().toISOString().split('T')[0]}-${recipient.id}`,
               eventType: 'campaign',
               eventTitle: '📅 Gün Sonu Bülteni',
@@ -411,10 +419,18 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
               urgency: 'Medium',
               sentAt: new Date(),
               status: result.success ? 'success' : 'failed',
-              errorMessage: result.error,
               emailProvider: 'resend',
-              messageId: result.messageId,
-            });
+            };
+
+            // Only add optional fields if they have values
+            if (result.error) {
+              logData.errorMessage = result.error;
+            }
+            if (result.messageId) {
+              logData.messageId = result.messageId;
+            }
+
+            await saveReminderLog(logData);
             console.log('Daily digest log saved for:', recipient.username);
           } catch (logError) {
             console.error('Error saving daily digest log:', logError);
@@ -476,7 +492,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
 
           // Log to Firestore
           try {
-            await saveReminderLog({
+            const logData: any = {
               eventId: `weekly-digest-${digestContent.weekStart.toISOString().split('T')[0]}-${recipient.id}`,
               eventType: 'campaign',
               eventTitle: '📊 Haftalık Bülten',
@@ -485,10 +501,18 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
               urgency: 'Medium',
               sentAt: new Date(),
               status: result.success ? 'success' : 'failed',
-              errorMessage: result.error,
               emailProvider: 'resend',
-              messageId: result.messageId,
-            });
+            };
+
+            // Only add optional fields if they have values
+            if (result.error) {
+              logData.errorMessage = result.error;
+            }
+            if (result.messageId) {
+              logData.messageId = result.messageId;
+            }
+
+            await saveReminderLog(logData);
             console.log('Weekly digest log saved for:', recipient.username);
           } catch (logError) {
             console.error('Error saving weekly digest log:', logError);
