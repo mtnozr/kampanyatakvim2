@@ -2998,27 +2998,29 @@ function App() {
               </button>
             )}
 
-            {/* View Mode Toggle */}
-            <div className="flex items-center bg-gray-100 dark:bg-slate-700 rounded-lg p-0.5">
-              <button
-                onClick={() => setViewMode('month')}
-                className={`px-2 py-1 text-xs font-semibold rounded-md transition-colors ${viewMode === 'month'
-                  ? 'bg-white dark:bg-slate-600 text-violet-700 dark:text-violet-300 shadow-sm'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                  }`}
-              >
-                Ay
-              </button>
-              <button
-                onClick={() => setViewMode('week')}
-                className={`px-2 py-1 text-xs font-semibold rounded-md transition-colors ${viewMode === 'week'
-                  ? 'bg-white dark:bg-slate-600 text-violet-700 dark:text-violet-300 shadow-sm'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                  }`}
-              >
-                Hafta
-              </button>
-            </div>
+            {/* View Mode Toggle - Only show for main calendar tab */}
+            {activeTab === 'kampanya' && (
+              <div className="flex items-center bg-gray-100 dark:bg-slate-700 rounded-lg p-0.5">
+                <button
+                  onClick={() => setViewMode('month')}
+                  className={`px-2 py-1 text-xs font-semibold rounded-md transition-colors ${viewMode === 'month'
+                    ? 'bg-white dark:bg-slate-600 text-violet-700 dark:text-violet-300 shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                    }`}
+                >
+                  Ay
+                </button>
+                <button
+                  onClick={() => setViewMode('week')}
+                  className={`px-2 py-1 text-xs font-semibold rounded-md transition-colors ${viewMode === 'week'
+                    ? 'bg-white dark:bg-slate-600 text-violet-700 dark:text-violet-300 shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                    }`}
+                >
+                  Hafta
+                </button>
+              </div>
+            )}
 
             <button onClick={resetToToday} className="bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 dark:border dark:border-violet-700/50 px-3 py-1.5 rounded-lg text-sm font-semibold hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors">
               Bugün
