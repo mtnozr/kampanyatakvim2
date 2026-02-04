@@ -1234,43 +1234,135 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
                     </div>
 
                     <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                         Bülten Alacak Kişiler ({(settings.personalDailyBulletinRecipients || []).length} seçili)
                       </label>
+
+                      {/* Quick Select Buttons */}
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const allUserIds = departmentUsers.filter(u => u.email).map(u => u.id);
+                            setSettings({ ...settings, personalDailyBulletinRecipients: allUserIds });
+                          }}
+                          className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded text-xs font-medium transition-colors"
+                        >
+                          ✓ Tümünü Seç
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSettings({ ...settings, personalDailyBulletinRecipients: [] })}
+                          className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-300 rounded text-xs font-medium transition-colors"
+                        >
+                          ✗ Tümünü Kaldır
+                        </button>
+                      </div>
+
+                      {/* Role-based Selection */}
+                      <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                        <p className="text-xs font-semibold text-blue-800 dark:text-blue-200 mb-2">Rol Bazlı Seçim:</p>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const designers = departmentUsers.filter(u => u.isDesigner && u.email).map(u => u.id);
+                              const current = settings.personalDailyBulletinRecipients || [];
+                              const updated = [...new Set([...current, ...designers])];
+                              setSettings({ ...settings, personalDailyBulletinRecipients: updated });
+                            }}
+                            className="px-2.5 py-1 bg-white dark:bg-slate-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded text-xs border border-blue-300 dark:border-blue-600 transition-colors"
+                          >
+                            + Tasarımcılar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const kampanyaYapan = departmentUsers.filter(u => u.isKampanyaYapan && u.email).map(u => u.id);
+                              const current = settings.personalDailyBulletinRecipients || [];
+                              const updated = [...new Set([...current, ...kampanyaYapan])];
+                              setSettings({ ...settings, personalDailyBulletinRecipients: updated });
+                            }}
+                            className="px-2.5 py-1 bg-white dark:bg-slate-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded text-xs border border-blue-300 dark:border-blue-600 transition-colors"
+                          >
+                            + Kampanya Yapanlar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const analitik = departmentUsers.filter(u => u.isAnalitik && u.email).map(u => u.id);
+                              const current = settings.personalDailyBulletinRecipients || [];
+                              const updated = [...new Set([...current, ...analitik])];
+                              setSettings({ ...settings, personalDailyBulletinRecipients: updated });
+                            }}
+                            className="px-2.5 py-1 bg-white dark:bg-slate-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded text-xs border border-blue-300 dark:border-blue-600 transition-colors"
+                          >
+                            + Analitik
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const businessUnit = departmentUsers.filter(u => u.isBusinessUnit && u.email).map(u => u.id);
+                              const current = settings.personalDailyBulletinRecipients || [];
+                              const updated = [...new Set([...current, ...businessUnit])];
+                              setSettings({ ...settings, personalDailyBulletinRecipients: updated });
+                            }}
+                            className="px-2.5 py-1 bg-white dark:bg-slate-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded text-xs border border-blue-300 dark:border-blue-600 transition-colors"
+                          >
+                            + İş Birimi
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Individual User Selection */}
                       <div className="max-h-60 overflow-y-auto border border-blue-200 dark:border-blue-700 rounded-lg p-3 bg-white dark:bg-slate-800">
                         {departmentUsers.length === 0 ? (
                           <p className="text-sm text-gray-500 dark:text-gray-400">Kullanıcı bulunamadı</p>
                         ) : (
                           <div className="space-y-2">
-                            {departmentUsers.map(user => (
-                              <label
-                                key={user.id}
-                                className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 p-2 rounded transition-colors"
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={(settings.personalDailyBulletinRecipients || []).includes(user.id)}
-                                  onChange={(e) => {
-                                    const current = settings.personalDailyBulletinRecipients || [];
-                                    const updated = e.target.checked
-                                      ? [...current, user.id]
-                                      : current.filter(id => id !== user.id);
-                                    setSettings({ ...settings, personalDailyBulletinRecipients: updated });
-                                  }}
-                                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-200"
-                                />
-                                <div className="flex-1">
-                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    {user.username}
-                                  </span>
-                                  {user.email && (
-                                    <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-                                      ({user.email})
-                                    </span>
-                                  )}
-                                </div>
-                              </label>
-                            ))}
+                            {departmentUsers.map(user => {
+                              const roles = [];
+                              if (user.isDesigner) roles.push('Tasarımcı');
+                              if (user.isKampanyaYapan) roles.push('Kampanya');
+                              if (user.isAnalitik) roles.push('Analitik');
+                              if (user.isBusinessUnit) roles.push('İş Birimi');
+                              const roleText = roles.length > 0 ? roles.join(', ') : 'Rol yok';
+
+                              return (
+                                <label
+                                  key={user.id}
+                                  className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 p-2 rounded transition-colors"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={(settings.personalDailyBulletinRecipients || []).includes(user.id)}
+                                    onChange={(e) => {
+                                      const current = settings.personalDailyBulletinRecipients || [];
+                                      const updated = e.target.checked
+                                        ? [...current, user.id]
+                                        : current.filter(id => id !== user.id);
+                                      setSettings({ ...settings, personalDailyBulletinRecipients: updated });
+                                    }}
+                                    className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-200"
+                                  />
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        {user.username}
+                                      </span>
+                                      <span className="text-xs px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded">
+                                        {roleText}
+                                      </span>
+                                    </div>
+                                    {user.email && (
+                                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                                        {user.email}
+                                      </span>
+                                    )}
+                                  </div>
+                                </label>
+                              );
+                            })}
                           </div>
                         )}
                       </div>
