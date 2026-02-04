@@ -495,6 +495,9 @@ async function processDailyDigest(
 
     console.log(`Sending to ${designerUsers.length} designer users`);
 
+    // OPTIMIZATION 4: Collect logs and batch write them at the end
+    const logsToWrite: any[] = [];
+
     // Send email to each designer
     for (const designer of designerUsers) {
         try {
@@ -516,7 +519,8 @@ async function processDailyDigest(
                 console.log(`✅ Sent to ${designer.name || designer.username}`);
                 result.sent++;
 
-                await logDailyDigest(db, {
+                // Collect log data instead of writing immediately
+                logsToWrite.push({
                     recipientEmail: designer.email!,
                     recipientName: designer.name || designer.username,
                     status: 'success',
@@ -527,7 +531,7 @@ async function processDailyDigest(
                 console.error(`❌ Failed to send to ${designer.name}: ${emailResult.error}`);
                 result.failed++;
 
-                await logDailyDigest(db, {
+                logsToWrite.push({
                     recipientEmail: designer.email!,
                     recipientName: designer.name || designer.username,
                     status: 'failed',
@@ -539,7 +543,7 @@ async function processDailyDigest(
             console.error(`Error sending to ${designer.name}:`, error);
             result.failed++;
 
-            await logDailyDigest(db, {
+            logsToWrite.push({
                 recipientEmail: designer.email!,
                 recipientName: designer.name || designer.username,
                 status: 'failed',
@@ -547,6 +551,41 @@ async function processDailyDigest(
                 errorMessage: error instanceof Error ? error.message : 'Unknown error',
             });
         }
+    }
+
+    // Batch write all logs at once (saves Firestore writes)
+    console.log(`Writing ${logsToWrite.length} logs in batch...`);
+    const batch = db.batch();
+    for (const logData of logsToWrite) {
+        const logRef = db.collection('reminderLogs').doc();
+        const dateStr = logData.digestContent.date.toLocaleDateString('tr-TR', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+
+        batch.set(logRef, {
+            eventId: `daily-digest-${logData.digestContent.date.toISOString().split('T')[0]}`,
+            eventType: 'daily-digest',
+            eventTitle: `Gün Sonu Bülteni - ${dateStr}`,
+            recipientEmail: logData.recipientEmail,
+            recipientName: logData.recipientName,
+            urgency: 'Medium',
+            sentAt: Timestamp.now(),
+            status: logData.status,
+            errorMessage: logData.errorMessage,
+            emailProvider: 'resend',
+            messageId: logData.messageId,
+            digestStats: {
+                completedCount: logData.digestContent.totalCompleted,
+                incompleteCount: logData.digestContent.totalIncomplete,
+            },
+        });
+    }
+
+    if (logsToWrite.length > 0) {
+        await batch.commit();
+        console.log('✅ Batch write completed');
     }
 
     return result;
@@ -595,10 +634,25 @@ export default async function handler(
             return res.status(200).json({ status: 'skipped', reason: 'no_time_set' });
         }
 
-        // Fetch Data
+        // Fetch Data (OPTIMIZED)
         console.log('Fetching data...');
 
-        const campaignsSnapshot = await db.collection('events').get();
+        // Calculate today's date range (Turkey time)
+        const now = new Date();
+        const turkeyTime = new Date(now.getTime() + (3 * 60 * 60 * 1000));
+        const startOfDay = new Date(turkeyTime);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(turkeyTime);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        // OPTIMIZATION 1: Only fetch today's events instead of all events
+        const campaignsSnapshot = await db.collection('events')
+            .where('date', '>=', Timestamp.fromDate(startOfDay))
+            .where('date', '<=', Timestamp.fromDate(endOfDay))
+            .get();
+
+        console.log(`Fetched ${campaignsSnapshot.size} events for today`);
+
         const campaigns = campaignsSnapshot.docs.map(doc => {
             const data = doc.data();
             return {
@@ -609,17 +663,48 @@ export default async function handler(
             };
         }) as CalendarEvent[];
 
-        const usersSnapshot = await db.collection('users').get();
-        const users = usersSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-        })) as User[];
+        // Get unique assignee IDs from today's campaigns
+        const assigneeIds = [...new Set(campaigns.map(c => c.assigneeId).filter(Boolean))];
 
-        const deptUsersSnapshot = await db.collection('departmentUsers').get();
-        const deptUsers = deptUsersSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-        })) as DepartmentUser[];
+        // OPTIMIZATION 2: Only fetch users that are assigned to today's campaigns
+        let users: User[] = [];
+        if (assigneeIds.length > 0) {
+            // Firestore 'in' query supports max 10 items, so batch if needed
+            const userBatches = [];
+            for (let i = 0; i < assigneeIds.length; i += 10) {
+                const batch = assigneeIds.slice(i, i + 10);
+                const snapshot = await db.collection('users')
+                    .where(admin.firestore.FieldPath.documentId(), 'in', batch)
+                    .get();
+                userBatches.push(...snapshot.docs);
+            }
+            users = userBatches.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+            })) as User[];
+            console.log(`Fetched ${users.length} assigned users`);
+        }
+
+        // OPTIMIZATION 3: Only fetch department users that are in email recipients list
+        const recipientIds = settings.emailCcRecipients || [];
+        let deptUsers: DepartmentUser[] = [];
+
+        if (recipientIds.length > 0) {
+            // Batch fetch in groups of 10
+            const deptUserBatches = [];
+            for (let i = 0; i < recipientIds.length; i += 10) {
+                const batch = recipientIds.slice(i, i + 10);
+                const snapshot = await db.collection('departmentUsers')
+                    .where(admin.firestore.FieldPath.documentId(), 'in', batch)
+                    .get();
+                deptUserBatches.push(...snapshot.docs);
+            }
+            deptUsers = deptUserBatches.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+            })) as DepartmentUser[];
+            console.log(`Fetched ${deptUsers.length} department users`);
+        }
 
         // Process
         console.log('Processing digest...');
