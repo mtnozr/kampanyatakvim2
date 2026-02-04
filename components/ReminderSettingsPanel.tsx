@@ -493,12 +493,47 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
 
       // Build bulletin for first recipient as preview
       const firstRecipient = selectedRecipients[0];
+
+      // DEBUG: Log data for troubleshooting
+      const today = new Date();
+      console.log('=== PERSONAL BULLETIN DEBUG ===');
+      console.log('Recipient:', firstRecipient.username, '(ID:', firstRecipient.id + ')');
+      console.log('Today:', today.toLocaleDateString('tr-TR'));
+      console.log('Total campaigns in DB:', campaigns.length);
+      console.log('Total reports in DB:', reports.length);
+      console.log('Total analytics tasks in DB:', analyticsTasks.length);
+
+      // Log campaigns for today
+      const todayCampaigns = campaigns.filter(c => {
+        const sameDay = c.date.getFullYear() === today.getFullYear() &&
+                        c.date.getMonth() === today.getMonth() &&
+                        c.date.getDate() === today.getDate();
+        return sameDay;
+      });
+      console.log('Campaigns for today:', todayCampaigns.length);
+      todayCampaigns.forEach(c => {
+        console.log('  -', c.title, '| Date:', c.date.toLocaleString('tr-TR'), '| AssigneeId:', c.assigneeId, '| Status:', c.status);
+      });
+
+      // Log user's campaigns for today
+      const userTodayCampaigns = todayCampaigns.filter(c => c.assigneeId === firstRecipient.id);
+      console.log('User campaigns for today:', userTodayCampaigns.length);
+      userTodayCampaigns.forEach(c => {
+        console.log('  -', c.title, '| Status:', c.status);
+      });
+
       const bulletinContent = buildPersonalBulletin(
         campaigns,
         reports,
         analyticsTasks,
         firstRecipient.id
       );
+
+      console.log('Bulletin result - Campaigns:', bulletinContent.campaigns.length);
+      console.log('Bulletin result - Reports:', bulletinContent.reports.length);
+      console.log('Bulletin result - Analytics:', bulletinContent.analyticsTasks.length);
+      console.log('Bulletin result - Total:', bulletinContent.totalCount);
+      console.log('=== END DEBUG ===');
 
       const previewHTML = buildPersonalBulletinHTML({
         recipientName: firstRecipient.username,
