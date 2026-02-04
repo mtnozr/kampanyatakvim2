@@ -227,9 +227,14 @@ export interface ReminderSettings {
   weeklyDigestIncludeOverdueReports?: boolean;  // Include overdue reports section
   weeklyDigestIncludeThisWeekCampaigns?: boolean; // Include this week's campaigns
 
-  // Daily Digest Settings
+  // Daily Digest Settings (Team summary - end of day)
   dailyDigestEnabled?: boolean;            // Enable/disable daily digest
   dailyDigestTime?: string;                // Time in HH:mm format (e.g., "17:00")
+
+  // Personal Daily Bulletin Settings (Individual task lists - start of day)
+  personalDailyBulletinEnabled?: boolean;  // Enable/disable personal daily bulletin
+  personalDailyBulletinTime?: string;      // Time in HH:mm format (e.g., "09:00")
+  personalDailyBulletinRecipients?: string[]; // Array of department user IDs to receive bulletins
 
   // CC Recipients for all emails
   emailCcRecipients?: string[];  // Array of department user IDs to CC on all emails
