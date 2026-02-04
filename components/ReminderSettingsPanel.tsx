@@ -475,7 +475,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
   async function handleOpenPersonalBulletinPreview() {
     setIsBuildingPersonalBulletin(true);
     try {
-      const { campaigns, reports, analyticsTasks, deptUsers } = await fetchPanelData();
+      const { campaigns, reports, analyticsTasks, deptUsers, users } = await fetchPanelData();
 
       const selectedRecipients = deptUsers.filter(user => {
         const isSelected = (settings.personalDailyBulletinRecipients || []).includes(user.id);
@@ -494,57 +494,24 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
       // Build bulletin for first recipient as preview
       const firstRecipient = selectedRecipients[0];
 
+      // IMPORTANT: Find the corresponding user ID from 'users' collection by email match
+      // Campaigns use users.id for assigneeId, not departmentUsers.id
+      const matchingUser = users.find(u => u.email === firstRecipient.email);
+      const userIdForCampaigns = matchingUser?.id || firstRecipient.id;
+      console.log('DepartmentUser ID:', firstRecipient.id, '| Matching User ID:', userIdForCampaigns);
+
       // DEBUG: Log data for troubleshooting
       const today = new Date();
       console.log('=== PERSONAL BULLETIN DEBUG ===');
-      console.log('Recipient:', firstRecipient.username, '(ID:', firstRecipient.id + ')');
+      console.log('Recipient:', firstRecipient.username, '(DeptUser ID:', firstRecipient.id, '| Users ID:', userIdForCampaigns + ')');
       console.log('Today:', today.toLocaleDateString('tr-TR'));
-      console.log('Total campaigns in DB:', campaigns.length);
-      console.log('Total reports in DB:', reports.length);
-      console.log('Total analytics tasks in DB:', analyticsTasks.length);
 
-      // Log ALL campaigns assigned to this user with detailed date info
-      const allUserCampaigns = campaigns.filter(c => c.assigneeId === firstRecipient.id);
-      console.log('ALL campaigns assigned to user:', allUserCampaigns.length);
-      allUserCampaigns.forEach(c => {
-        const year = c.date.getFullYear();
-        const month = c.date.getMonth();
-        const day = c.date.getDate();
-        const todayYear = today.getFullYear();
-        const todayMonth = today.getMonth();
-        const todayDay = today.getDate();
-        const matches = (year === todayYear && month === todayMonth && day === todayDay);
-        console.log('  -', c.title,
-          '| Date:', c.date.toLocaleString('tr-TR'),
-          '| Y/M/D:', year + '/' + month + '/' + day,
-          '| Matches today?', matches,
-          '| Status:', c.status);
-      });
-
-      // Log campaigns for today
-      const todayCampaigns = campaigns.filter(c => {
-        const sameDay = c.date.getFullYear() === today.getFullYear() &&
-                        c.date.getMonth() === today.getMonth() &&
-                        c.date.getDate() === today.getDate();
-        return sameDay;
-      });
-      console.log('Campaigns for today (all users):', todayCampaigns.length);
-      todayCampaigns.forEach(c => {
-        console.log('  -', c.title, '| Date:', c.date.toLocaleString('tr-TR'), '| AssigneeId:', c.assigneeId, '| Status:', c.status);
-      });
-
-      // Log user's campaigns for today
-      const userTodayCampaigns = todayCampaigns.filter(c => c.assigneeId === firstRecipient.id);
-      console.log('User campaigns for today:', userTodayCampaigns.length);
-      userTodayCampaigns.forEach(c => {
-        console.log('  -', c.title, '| Status:', c.status);
-      });
-
+      // Use the correct user ID (from users collection) for campaigns
       const bulletinContent = buildPersonalBulletin(
         campaigns,
         reports,
         analyticsTasks,
-        firstRecipient.id
+        userIdForCampaigns  // Use matched user ID, not departmentUser ID
       );
 
       console.log('Bulletin result - Campaigns:', bulletinContent.campaigns.length);
@@ -585,15 +552,19 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
     let failedCount = 0;
 
     try {
-      const { campaigns, reports, analyticsTasks } = await fetchPanelData();
+      const { campaigns, reports, analyticsTasks, users } = await fetchPanelData();
 
       for (const recipient of personalBulletinRecipients) {
         try {
+          // Find the matching user ID from users collection by email
+          const matchingUser = users.find(u => u.email === recipient.email);
+          const userIdForCampaigns = matchingUser?.id || recipient.id;
+
           const bulletinContent = buildPersonalBulletin(
             campaigns,
             reports,
             analyticsTasks,
-            recipient.id
+            userIdForCampaigns  // Use matched user ID
           );
 
           const result = await sendPersonalBulletinEmail(

@@ -53,6 +53,12 @@ interface DepartmentUser {
     email?: string;
 }
 
+interface User {
+    id: string;
+    name: string;
+    email: string;
+}
+
 interface PersonalBulletinContent {
     campaigns: CalendarEvent[];
     reports: Report[];
@@ -468,6 +474,7 @@ async function processPersonalBulletins(
     reports: Report[],
     analyticsTasks: AnalyticsTask[],
     departmentUsers: DepartmentUser[],
+    users: User[],
     settings: ReminderSettings
 ): Promise<ProcessResult> {
     const result: ProcessResult = { sent: 0, failed: 0, skipped: 0 };
@@ -536,12 +543,18 @@ async function processPersonalBulletins(
                 continue;
             }
 
+            // Find matching user from 'users' collection by email
+            // Campaigns use users.id for assigneeId, not departmentUsers.id
+            const matchingUser = users.find(u => u.email === user.email);
+            const userIdForCampaigns = matchingUser?.id || user.id;
+            console.log(`User ${user.username}: deptUserId=${user.id}, usersId=${userIdForCampaigns}`);
+
             // Build bulletin content for this user
             const bulletinContent = buildPersonalBulletin(
                 campaigns,
                 reports,
                 analyticsTasks,
-                user.id,
+                userIdForCampaigns,  // Use matched user ID
                 now
             );
 
@@ -717,7 +730,14 @@ export default async function handler(
             })) as DepartmentUser[];
         }
 
-        console.log(`Found ${campaigns.length} campaigns, ${reports.length} reports, ${analyticsTasks.length} analytics tasks`);
+        // Fetch users collection (campaigns use users.id for assigneeId)
+        const usersSnapshot = await db.collection('users').get();
+        const users = usersSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+        })) as User[];
+
+        console.log(`Found ${campaigns.length} campaigns, ${reports.length} reports, ${analyticsTasks.length} analytics tasks, ${users.length} users`);
 
         // Process
         const result = await processPersonalBulletins(
@@ -726,6 +746,7 @@ export default async function handler(
             reports,
             analyticsTasks,
             deptUsers,
+            users,
             settings
         );
 
