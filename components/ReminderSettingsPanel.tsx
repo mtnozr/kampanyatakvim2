@@ -503,11 +503,22 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
       console.log('Total reports in DB:', reports.length);
       console.log('Total analytics tasks in DB:', analyticsTasks.length);
 
-      // Log ALL campaigns assigned to this user
+      // Log ALL campaigns assigned to this user with detailed date info
       const allUserCampaigns = campaigns.filter(c => c.assigneeId === firstRecipient.id);
       console.log('ALL campaigns assigned to user:', allUserCampaigns.length);
       allUserCampaigns.forEach(c => {
-        console.log('  -', c.title, '| Date:', c.date.toLocaleString('tr-TR'), '| Status:', c.status);
+        const year = c.date.getFullYear();
+        const month = c.date.getMonth();
+        const day = c.date.getDate();
+        const todayYear = today.getFullYear();
+        const todayMonth = today.getMonth();
+        const todayDay = today.getDate();
+        const matches = (year === todayYear && month === todayMonth && day === todayDay);
+        console.log('  -', c.title,
+          '| Date:', c.date.toLocaleString('tr-TR'),
+          '| Y/M/D:', year + '/' + month + '/' + day,
+          '| Matches today?', matches,
+          '| Status:', c.status);
       });
 
       // Log campaigns for today
