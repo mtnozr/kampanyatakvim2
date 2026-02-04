@@ -18,8 +18,9 @@ import { sendTestSMS } from '../utils/smsService';
 import { saveReminderLog } from '../utils/reminderHelper';
 
 import { buildWeeklyDigest } from '../utils/weeklyDigestBuilder';
-import { buildWeeklyDigestHTML, sendWeeklyDigestEmail, buildDailyDigestHTML, sendDailyDigestEmail } from '../utils/emailService';
+import { buildWeeklyDigestHTML, sendWeeklyDigestEmail, buildDailyDigestHTML, sendDailyDigestEmail, buildPersonalBulletinHTML, sendPersonalBulletinEmail } from '../utils/emailService';
 import { buildDailyDigest } from '../utils/dailyDigestBuilder';
+import { buildPersonalBulletin } from '../utils/personalBulletinBuilder';
 
 type TabType = 'general' | 'reminders' | 'digests' | 'reports' | 'recipients' | 'testing' | 'logs';
 
@@ -70,6 +71,12 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
   const [isBuildingDailyDigest, setIsBuildingDailyDigest] = useState(false);
   const [isSendingDailyDigest, setIsSendingDailyDigest] = useState(false);
   const [dailyDigestRecipients, setDailyDigestRecipients] = useState<DepartmentUser[]>([]);
+
+  const [personalBulletinPreviewOpen, setPersonalBulletinPreviewOpen] = useState(false);
+  const [personalBulletinPreviewHTML, setPersonalBulletinPreviewHTML] = useState('');
+  const [isBuildingPersonalBulletin, setIsBuildingPersonalBulletin] = useState(false);
+  const [isSendingPersonalBulletin, setIsSendingPersonalBulletin] = useState(false);
+  const [personalBulletinRecipients, setPersonalBulletinRecipients] = useState<DepartmentUser[]>([]);
 
   const [saveMessage, setSaveMessage] = useState('');
   const [testMessage, setTestMessage] = useState('');
@@ -462,6 +469,140 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
       alert('Gönderim sırasında hata oluştu.');
     } finally {
       setIsSendingDailyDigest(false);
+    }
+  }
+
+  async function handleOpenPersonalBulletinPreview() {
+    setIsBuildingPersonalBulletin(true);
+    try {
+      const { campaigns, reports, analyticsTasks, deptUsers } = await fetchPanelData();
+
+      const selectedRecipients = deptUsers.filter(user => {
+        const isSelected = (settings.personalDailyBulletinRecipients || []).includes(user.id);
+        return user.email && isSelected;
+      });
+
+      if (selectedRecipients.length === 0) {
+        setProcessMessage('⚠️ Lütfen önce "Bildirimler > Özetler" sekmesinden kişisel bülten alıcılarını seçin.');
+        setTimeout(() => setProcessMessage(''), 4000);
+        setIsBuildingPersonalBulletin(false);
+        return;
+      }
+
+      setPersonalBulletinRecipients(selectedRecipients);
+
+      // Build bulletin for first recipient as preview
+      const firstRecipient = selectedRecipients[0];
+      const bulletinContent = buildPersonalBulletin(
+        campaigns,
+        reports,
+        analyticsTasks,
+        firstRecipient.id
+      );
+
+      const previewHTML = buildPersonalBulletinHTML({
+        recipientName: firstRecipient.username,
+        campaigns: bulletinContent.campaigns,
+        reports: bulletinContent.reports,
+        analyticsTasks: bulletinContent.analyticsTasks,
+        date: bulletinContent.date,
+        totalCount: bulletinContent.totalCount
+      });
+
+      setPersonalBulletinPreviewHTML(previewHTML);
+      setPersonalBulletinPreviewOpen(true);
+
+    } catch (error) {
+      console.error('Error building personal bulletin preview:', error);
+      setProcessMessage('❌ Önizleme hazırlanırken bir hata oluştu.');
+      setTimeout(() => setProcessMessage(''), 4000);
+    } finally {
+      setIsBuildingPersonalBulletin(false);
+    }
+  }
+
+  async function handleSendPersonalBulletinManually() {
+    if (!settings.resendApiKey) {
+      alert('API Key eksik!');
+      return;
+    }
+
+    setIsSendingPersonalBulletin(true);
+    let sentCount = 0;
+    let failedCount = 0;
+
+    try {
+      const { campaigns, reports, analyticsTasks } = await fetchPanelData();
+
+      for (const recipient of personalBulletinRecipients) {
+        try {
+          const bulletinContent = buildPersonalBulletin(
+            campaigns,
+            reports,
+            analyticsTasks,
+            recipient.id
+          );
+
+          const result = await sendPersonalBulletinEmail(
+            settings.resendApiKey,
+            recipient.email!,
+            recipient.username,
+            bulletinContent
+          );
+
+          // Log to Firestore
+          try {
+            const logData: any = {
+              eventId: `personal-bulletin-${new Date().toISOString().split('T')[0]}-${recipient.id}`,
+              eventType: 'campaign',
+              eventTitle: '📋 Kişisel Günlük Bülten',
+              recipientEmail: recipient.email!,
+              recipientName: recipient.username,
+              urgency: 'Medium',
+              sentAt: new Date(),
+              status: result.success ? 'success' : 'failed',
+              emailProvider: 'resend',
+            };
+
+            if (result.error) {
+              logData.errorMessage = result.error;
+            }
+            if (result.messageId) {
+              logData.messageId = result.messageId;
+            }
+
+            await saveReminderLog(logData);
+            console.log('Personal bulletin log saved for:', recipient.username);
+          } catch (logError) {
+            console.error('Error saving personal bulletin log:', logError);
+          }
+
+          if (result.success) {
+            sentCount++;
+          } else {
+            console.error(`Failed to send to ${recipient.username}:`, result.error);
+            failedCount++;
+          }
+        } catch (error) {
+          console.error(`Error sending to ${recipient.username}:`, error);
+          failedCount++;
+        }
+      }
+
+      setPersonalBulletinPreviewOpen(false);
+      setProcessMessage(`✅ Kişisel bülten gönderimi tamamlandı!\nGönderilen: ${sentCount}, Başarısız: ${failedCount}`);
+
+      // Reload logs after a short delay
+      setTimeout(() => {
+        loadRecentLogs();
+        setProcessMessage('');
+      }, 2000);
+
+    } catch (error) {
+      console.error('Error sending personal bulletins:', error);
+      alert('Gönderim sırasında hata oluştu.');
+    } finally {
+      setIsSendingPersonalBulletin(false);
     }
   }
 
@@ -1140,6 +1281,24 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
                   </>
                 )}
 
+                <button
+                  onClick={handleOpenPersonalBulletinPreview}
+                  disabled={isBuildingPersonalBulletin || !settings.resendApiKey}
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all flex items-center gap-2 disabled:opacity-50 shadow-sm mb-4"
+                >
+                  {isBuildingPersonalBulletin ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Hazırlanıyor...
+                    </>
+                  ) : (
+                    <>
+                      <Eye size={18} />
+                      Önizle ve Manuel Gönder
+                    </>
+                  )}
+                </button>
+
                 <div className="bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700 rounded-lg p-4 text-sm">
                   <p className="text-blue-800 dark:text-blue-200 mb-2">
                     <strong>ℹ️ Nasıl Çalışır?</strong>
@@ -1563,6 +1722,65 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
                 className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
               >
                 {isSendingDailyDigest ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Gönderiliyor...
+                  </>
+                ) : (
+                  <>
+                    <Send size={18} />
+                    Onayla ve Gönder
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Personal Bulletin Preview Modal */}
+      {personalBulletinPreviewOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Eye size={20} className="text-blue-600" />
+                Kişisel Günlük Bülten Önizleme
+              </h3>
+              <button
+                onClick={() => setPersonalBulletinPreviewOpen(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-800">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                <strong>Alıcılar ({personalBulletinRecipients.length}):</strong> {personalBulletinRecipients.map(u => u.username).join(', ')}
+              </p>
+              <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
+                💡 Önizleme ilk alıcı için gösterilir. Her kullanıcı kendi işlerini alır.
+              </p>
+            </div>
+
+            <div className="flex-1 overflow-auto p-6 bg-gray-100 dark:bg-slate-900">
+              <div className="bg-white rounded shadow-lg mx-auto max-w-2xl" dangerouslySetInnerHTML={{ __html: personalBulletinPreviewHTML }} />
+            </div>
+
+            <div className="p-4 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-3 bg-gray-50 dark:bg-slate-800/50 rounded-b-xl">
+              <button
+                onClick={() => setPersonalBulletinPreviewOpen(false)}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md font-medium transition-colors"
+              >
+                Kapat
+              </button>
+              <button
+                onClick={handleSendPersonalBulletinManually}
+                disabled={isSendingPersonalBulletin}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                {isSendingPersonalBulletin ? (
                   <>
                     <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     Gönderiliyor...
