@@ -503,6 +503,13 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
       console.log('Total reports in DB:', reports.length);
       console.log('Total analytics tasks in DB:', analyticsTasks.length);
 
+      // Log ALL campaigns assigned to this user
+      const allUserCampaigns = campaigns.filter(c => c.assigneeId === firstRecipient.id);
+      console.log('ALL campaigns assigned to user:', allUserCampaigns.length);
+      allUserCampaigns.forEach(c => {
+        console.log('  -', c.title, '| Date:', c.date.toLocaleString('tr-TR'), '| Status:', c.status);
+      });
+
       // Log campaigns for today
       const todayCampaigns = campaigns.filter(c => {
         const sameDay = c.date.getFullYear() === today.getFullYear() &&
@@ -510,7 +517,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
                         c.date.getDate() === today.getDate();
         return sameDay;
       });
-      console.log('Campaigns for today:', todayCampaigns.length);
+      console.log('Campaigns for today (all users):', todayCampaigns.length);
       todayCampaigns.forEach(c => {
         console.log('  -', c.title, '| Date:', c.date.toLocaleString('tr-TR'), '| AssigneeId:', c.assigneeId, '| Status:', c.status);
       });
