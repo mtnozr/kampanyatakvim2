@@ -480,19 +480,26 @@ async function processPersonalBulletins(
     const result: ProcessResult = { sent: 0, failed: 0, skipped: 0 };
     const now = new Date();
 
+    console.log('=== PERSONAL BULLETIN PROCESS START ===');
+    console.log('personalDailyBulletinEnabled:', settings.personalDailyBulletinEnabled);
+    console.log('personalDailyBulletinTime:', settings.personalDailyBulletinTime);
+    console.log('recipientIds count:', settings.personalDailyBulletinRecipients?.length || 0);
+
     if (!settings.personalDailyBulletinEnabled) {
-        console.log('Personal daily bulletin is disabled');
+        console.log('❌ REASON: Personal daily bulletin is disabled');
         return result;
     }
 
     if (!settings.personalDailyBulletinTime) {
-        console.log('No bulletin time configured');
+        console.log('❌ REASON: No bulletin time configured');
         return result;
     }
 
     // Check if it's weekend
+    const dayOfWeek = now.getDay();
+    console.log('Day of week:', dayOfWeek, '(0=Sun, 6=Sat)');
     if (isWeekend(now)) {
-        console.log('Skipping bulletin - weekend');
+        console.log('❌ REASON: Skipping bulletin - weekend');
         return result;
     }
 
@@ -504,11 +511,15 @@ async function processPersonalBulletins(
     const currentHour = turkeyTime.getHours();
     const currentMinute = turkeyTime.getMinutes();
 
+    console.log('Target time:', `${targetHour}:${targetMinute} Turkey`);
+    console.log('Current time:', `${currentHour}:${currentMinute} Turkey`);
+
     // Only process if it's time
     const isTime = currentHour > targetHour || (currentHour === targetHour && currentMinute >= targetMinute);
 
+    console.log('Is time to send?', isTime);
     if (!isTime) {
-        console.log('Not time yet for bulletin');
+        console.log('❌ REASON: Not time yet for bulletin');
         return result;
     }
 
