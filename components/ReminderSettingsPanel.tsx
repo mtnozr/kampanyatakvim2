@@ -494,46 +494,24 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
       // Build bulletin for first recipient as preview
       const firstRecipient = selectedRecipients[0];
 
-      // IMPORTANT: Find the corresponding user ID from 'users' collection
+      // Find the corresponding user ID from 'users' collection
       // Campaigns use users.id for assigneeId, not departmentUsers.id
-      // Try matching by email first, then by name
-      console.log('=== USER MATCHING DEBUG ===');
-      console.log('DeptUser:', firstRecipient.username, '| Email:', firstRecipient.email);
-      console.log('Users in DB:', users.length);
-      users.forEach(u => console.log('  User:', u.name, '| Email:', u.email, '| ID:', u.id));
-
       let matchingUser = users.find(u => u.email && firstRecipient.email && u.email.toLowerCase() === firstRecipient.email.toLowerCase());
 
       // If no email match, try matching by name
       if (!matchingUser) {
-        console.log('No email match, trying name match...');
         matchingUser = users.find(u => u.name && firstRecipient.username && u.name.toLowerCase() === firstRecipient.username.toLowerCase());
       }
 
       const userIdForCampaigns = matchingUser?.id || firstRecipient.id;
-      console.log('Matched User:', matchingUser ? matchingUser.name : 'NONE');
-      console.log('DepartmentUser ID:', firstRecipient.id, '| Final User ID for campaigns:', userIdForCampaigns);
-      console.log('=== END USER MATCHING ===');
 
-      // DEBUG: Log data for troubleshooting
-      const today = new Date();
-      console.log('=== PERSONAL BULLETIN DEBUG ===');
-      console.log('Recipient:', firstRecipient.username, '(DeptUser ID:', firstRecipient.id, '| Users ID:', userIdForCampaigns + ')');
-      console.log('Today:', today.toLocaleDateString('tr-TR'));
-
-      // Use the correct user ID (from users collection) for campaigns
+      // Build bulletin with the correct user ID
       const bulletinContent = buildPersonalBulletin(
         campaigns,
         reports,
         analyticsTasks,
-        userIdForCampaigns  // Use matched user ID, not departmentUser ID
+        userIdForCampaigns
       );
-
-      console.log('Bulletin result - Campaigns:', bulletinContent.campaigns.length);
-      console.log('Bulletin result - Reports:', bulletinContent.reports.length);
-      console.log('Bulletin result - Analytics:', bulletinContent.analyticsTasks.length);
-      console.log('Bulletin result - Total:', bulletinContent.totalCount);
-      console.log('=== END DEBUG ===');
 
       const previewHTML = buildPersonalBulletinHTML({
         recipientName: firstRecipient.username,

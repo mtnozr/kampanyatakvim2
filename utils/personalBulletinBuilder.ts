@@ -24,33 +24,13 @@ export function buildPersonalBulletin(
   userId: string,
   targetDate: Date = new Date()
 ): PersonalBulletinContent {
-  console.log('>>> INSIDE buildPersonalBulletin <<<');
-  console.log('UserId:', userId);
-  console.log('TargetDate:', targetDate.toLocaleString('tr-TR'));
-  console.log('TargetDate Y/M/D:', targetDate.getFullYear() + '/' + targetDate.getMonth() + '/' + targetDate.getDate());
-  console.log('Total campaigns input:', campaigns.length);
-
   // Filter campaigns for this user and date (active campaigns: not cancelled or completed)
   const userCampaigns = campaigns.filter(c => {
     const dateMatch = isSameDay(c.date, targetDate);
     const userMatch = c.assigneeId === userId;
     const statusOk = c.status !== 'İptal Edildi' && c.status !== 'Tamamlandı';
-    const result = dateMatch && userMatch && statusOk;
-
-    if (userMatch && dateMatch) {
-      console.log('  Campaign:', c.title,
-        '| DateMatch:', dateMatch,
-        '| UserMatch:', userMatch,
-        '| StatusOk:', statusOk,
-        '| Status:', c.status,
-        '| INCLUDED:', result);
-    }
-
-    return result;
+    return dateMatch && userMatch && statusOk;
   });
-
-  console.log('Filtered userCampaigns:', userCampaigns.length);
-  console.log('<<< END buildPersonalBulletin >>>');
 
   // Filter reports for this user and date
   const userReports = reports.filter(r =>
