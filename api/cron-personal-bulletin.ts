@@ -142,11 +142,11 @@ function buildPersonalBulletin(
     userId: string,
     targetDate: Date = new Date()
 ): PersonalBulletinContent {
-    // Filter for today and assigned to this user
+    // Filter for today and assigned to this user - only "Planlandı" status
     const userCampaigns = campaigns.filter(c =>
         isSameDay(c.date, targetDate) &&
         c.assigneeId === userId &&
-        c.status !== 'İptal Edildi'
+        c.status === 'Planlandı'
     );
 
     const userReports = reports.filter(r =>

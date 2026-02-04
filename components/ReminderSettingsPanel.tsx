@@ -1200,7 +1200,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
                       Kişisel Günlük Bülten
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      Her kullanıcıya o günkü kampanya, rapor ve analitik işlerini gönderir (Hafta içi)
+                      Her kullanıcıya o günkü "Planlandı" durumundaki kampanya, rapor ve analitik işlerini gönderir (Hafta içi)
                     </p>
                   </div>
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -1367,7 +1367,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
                         )}
                       </div>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                        💡 İpucu: Her kullanıcı sadece kendine atanan kampanya, rapor ve analitik işleri alır. İşi olmayan günlerde email gönderilmez.
+                        💡 İpucu: Her kullanıcı sadece kendine atanan ve "Planlandı" durumundaki kampanya, rapor ve analitik işlerini alır. İşi olmayan günlerde email gönderilmez.
                       </p>
                     </div>
                   </>
@@ -1399,6 +1399,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
                     <li>Her sabah belirlenen saatte çalışır</li>
                     <li>Sadece seçili kişilere gönderilir</li>
                     <li>Her kişi SADECE kendi işlerini görür</li>
+                    <li>Kampanyalar: Sadece "Planlandı" durumundakiler gösterilir</li>
                     <li>Email 3 kategoriye ayrılır: Kampanya, Rapor, Analitik</li>
                     <li>Kullanıcının o gün işi yoksa email gönderilmez</li>
                     <li>Haftasonları otomatik atlanır</li>

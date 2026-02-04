@@ -972,13 +972,16 @@ export function buildPersonalBulletinHTML(params: {
 
   const campaignsHTML = campaigns.length > 0 ? `
     <h3 style="margin: 24px 0 16px 0; font-size: 18px; color: #8B5CF6; font-weight: 600;">
-      🎯 Kampanyalar (${campaigns.length})
+      🎯 Planlanmış Kampanyalar (${campaigns.length})
     </h3>
     <div style="background-color: #F5F3FF; border: 1px solid #8B5CF6; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+      <div style="background-color: #DDD6FE; padding: 8px 12px; border-radius: 4px; margin-bottom: 12px;">
+        <span style="font-size: 12px; color: #5B21B6; font-weight: 600;">📌 Sadece "Planlandı" durumundaki kampanyalar gösterilir</span>
+      </div>
       ${campaigns.map(c => `
         <div style="padding: 12px; border-bottom: 1px solid #C4B5FD; margin-bottom: 8px;">
           <strong style="color: #6B21A8;">${c.title}</strong><br/>
-          <span style="font-size: 12px; color: #7C3AED;">Aciliyet: ${getUrgencyLabel(c.urgency)} | Durum: ${c.status}</span>
+          <span style="font-size: 12px; color: #7C3AED;">Aciliyet: ${getUrgencyLabel(c.urgency)}</span>
         </div>
       `).join('')}
     </div>
@@ -1018,11 +1021,12 @@ export function buildPersonalBulletinHTML(params: {
       <html lang="tr">
       <body style="margin: 0; padding: 0; font-family: sans-serif; background-color: #F8F9FE;">
         <div style="max-width: 650px; margin: 40px auto; background: white; border-radius: 12px; padding: 32px;">
-          <h1 style="color: #1F2937; text-align: center;">☀️ Günlük Bülten</h1>
+          <h1 style="color: #1F2937; text-align: center;">📋 Kişisel Günlük Bülten</h1>
           <p style="text-align: center; color: #6B7280;">${dateStr}</p>
           <p>Günaydın <strong>${recipientName}</strong>,</p>
           <div style="background-color: #F0FDF4; border: 1px solid #86EFAC; border-radius: 8px; padding: 24px; text-align: center;">
-            <p style="font-size: 18px; color: #166534; font-weight: 600;">🎉 Bugün için göreviniz yok!</p>
+            <p style="font-size: 18px; color: #166534; font-weight: 600;">🎉 Bugün için planlanmış işiniz yok!</p>
+            <p style="font-size: 13px; color: #065F46; margin-top: 8px;">Sadece "Planlandı" durumundaki işler bu bültende gösterilir.</p>
           </div>
         </div>
       </body>
@@ -1035,10 +1039,10 @@ export function buildPersonalBulletinHTML(params: {
     <html lang="tr">
     <body style="margin: 0; padding: 0; font-family: sans-serif; background-color: #F8F9FE;">
       <div style="max-width: 650px; margin: 40px auto; background: white; border-radius: 12px; padding: 32px;">
-        <h1 style="color: #1F2937; text-align: center;">☀️ Günlük Bülten</h1>
+        <h1 style="color: #1F2937; text-align: center;">📋 Kişisel Günlük Bülten</h1>
         <p style="text-align: center; color: #6B7280;">${dateStr}</p>
         <p>Günaydın <strong>${recipientName}</strong>,</p>
-        <p style="color: #4B5563;">Bugün yapmanız gereken <strong>${totalCount} iş</strong> bulunmaktadır:</p>
+        <p style="color: #4B5563;">Bugün yapmanız gereken <strong>${totalCount} planlanmış iş</strong> bulunmaktadır:</p>
         ${campaignsHTML}
         ${reportsHTML}
         ${analyticsHTML}
