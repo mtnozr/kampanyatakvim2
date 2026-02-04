@@ -1049,6 +1049,111 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
                   )}
                 </button>
               </div>
+
+              {/* Personal Daily Bulletin */}
+              <div className="p-6 bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                      <Mail size={20} className="text-blue-600" />
+                      Kişisel Günlük Bülten
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      Her kullanıcıya o günkü kampanya, rapor ve analitik işlerini gönderir (Hafta içi)
+                    </p>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={settings.personalDailyBulletinEnabled || false}
+                      onChange={(e) => setSettings({ ...settings, personalDailyBulletinEnabled: e.target.checked })}
+                      className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-200"
+                    />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Otomatik Gönder
+                    </span>
+                  </label>
+                </div>
+
+                {settings.personalDailyBulletinEnabled && (
+                  <>
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Gönderim Saati (Türkiye Saati - Sadece hafta içi)
+                      </label>
+                      <input
+                        type="time"
+                        value={settings.personalDailyBulletinTime || '09:00'}
+                        onChange={(e) => setSettings({ ...settings, personalDailyBulletinTime: e.target.value })}
+                        className="px-3 py-2 border border-blue-300 dark:border-blue-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-200 dark:bg-slate-700 dark:text-white"
+                      />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        🔔 Her kullanıcı sadece kendi işlerini görür. Haftasonları otomatik atlanır.
+                      </p>
+                    </div>
+
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Bülten Alacak Kişiler ({(settings.personalDailyBulletinRecipients || []).length} seçili)
+                      </label>
+                      <div className="max-h-60 overflow-y-auto border border-blue-200 dark:border-blue-700 rounded-lg p-3 bg-white dark:bg-slate-800">
+                        {departmentUsers.length === 0 ? (
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Kullanıcı bulunamadı</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {departmentUsers.map(user => (
+                              <label
+                                key={user.id}
+                                className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 p-2 rounded transition-colors"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={(settings.personalDailyBulletinRecipients || []).includes(user.id)}
+                                  onChange={(e) => {
+                                    const current = settings.personalDailyBulletinRecipients || [];
+                                    const updated = e.target.checked
+                                      ? [...current, user.id]
+                                      : current.filter(id => id !== user.id);
+                                    setSettings({ ...settings, personalDailyBulletinRecipients: updated });
+                                  }}
+                                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-200"
+                                />
+                                <div className="flex-1">
+                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {user.username}
+                                  </span>
+                                  {user.email && (
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                                      ({user.email})
+                                    </span>
+                                  )}
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                        💡 İpucu: Her kullanıcı sadece kendine atanan kampanya, rapor ve analitik işleri alır. İşi olmayan günlerde email gönderilmez.
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                <div className="bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700 rounded-lg p-4 text-sm">
+                  <p className="text-blue-800 dark:text-blue-200 mb-2">
+                    <strong>ℹ️ Nasıl Çalışır?</strong>
+                  </p>
+                  <ul className="text-blue-700 dark:text-blue-300 space-y-1 ml-4 list-disc">
+                    <li>Her sabah belirlenen saatte çalışır</li>
+                    <li>Sadece seçili kişilere gönderilir</li>
+                    <li>Her kişi SADECE kendi işlerini görür</li>
+                    <li>Email 3 kategoriye ayrılır: Kampanya, Rapor, Analitik</li>
+                    <li>Kullanıcının o gün işi yoksa email gönderilmez</li>
+                    <li>Haftasonları otomatik atlanır</li>
+                  </ul>
+                </div>
+              </div>
             </div>
           )}
 
