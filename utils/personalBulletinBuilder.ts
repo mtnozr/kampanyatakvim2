@@ -24,11 +24,12 @@ export function buildPersonalBulletin(
   userId: string,
   targetDate: Date = new Date()
 ): PersonalBulletinContent {
-  // Filter campaigns for this user and date - only "Planlandı" status
+  // Filter campaigns for this user and date (active campaigns: not cancelled or completed)
   const userCampaigns = campaigns.filter(c =>
     isSameDay(c.date, targetDate) &&
     c.assigneeId === userId &&
-    c.status === 'Planlandı'
+    c.status !== 'İptal Edildi' &&
+    c.status !== 'Tamamlandı'
   );
 
   // Filter reports for this user and date
