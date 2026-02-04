@@ -543,11 +543,16 @@ async function processPersonalBulletins(
                 continue;
             }
 
-            // Find matching user from 'users' collection by email
+            // Find matching user from 'users' collection by email or name
             // Campaigns use users.id for assigneeId, not departmentUsers.id
-            const matchingUser = users.find(u => u.email === user.email);
+            let matchingUser = users.find(u => u.email && user.email && u.email.toLowerCase() === user.email.toLowerCase());
+            if (!matchingUser) {
+                // Try matching by name if email doesn't work
+                const userName = user.name || user.username;
+                matchingUser = users.find(u => u.name && userName && u.name.toLowerCase() === userName.toLowerCase());
+            }
             const userIdForCampaigns = matchingUser?.id || user.id;
-            console.log(`User ${user.username}: deptUserId=${user.id}, usersId=${userIdForCampaigns}`);
+            console.log(`User ${user.username}: deptUserId=${user.id}, matchedUserId=${userIdForCampaigns}`);
 
             // Build bulletin content for this user
             const bulletinContent = buildPersonalBulletin(

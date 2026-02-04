@@ -494,11 +494,26 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
       // Build bulletin for first recipient as preview
       const firstRecipient = selectedRecipients[0];
 
-      // IMPORTANT: Find the corresponding user ID from 'users' collection by email match
+      // IMPORTANT: Find the corresponding user ID from 'users' collection
       // Campaigns use users.id for assigneeId, not departmentUsers.id
-      const matchingUser = users.find(u => u.email === firstRecipient.email);
+      // Try matching by email first, then by name
+      console.log('=== USER MATCHING DEBUG ===');
+      console.log('DeptUser:', firstRecipient.username, '| Email:', firstRecipient.email);
+      console.log('Users in DB:', users.length);
+      users.forEach(u => console.log('  User:', u.name, '| Email:', u.email, '| ID:', u.id));
+
+      let matchingUser = users.find(u => u.email && firstRecipient.email && u.email.toLowerCase() === firstRecipient.email.toLowerCase());
+
+      // If no email match, try matching by name
+      if (!matchingUser) {
+        console.log('No email match, trying name match...');
+        matchingUser = users.find(u => u.name && firstRecipient.username && u.name.toLowerCase() === firstRecipient.username.toLowerCase());
+      }
+
       const userIdForCampaigns = matchingUser?.id || firstRecipient.id;
-      console.log('DepartmentUser ID:', firstRecipient.id, '| Matching User ID:', userIdForCampaigns);
+      console.log('Matched User:', matchingUser ? matchingUser.name : 'NONE');
+      console.log('DepartmentUser ID:', firstRecipient.id, '| Final User ID for campaigns:', userIdForCampaigns);
+      console.log('=== END USER MATCHING ===');
 
       // DEBUG: Log data for troubleshooting
       const today = new Date();
@@ -556,8 +571,11 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
 
       for (const recipient of personalBulletinRecipients) {
         try {
-          // Find the matching user ID from users collection by email
-          const matchingUser = users.find(u => u.email === recipient.email);
+          // Find the matching user ID from users collection by email or name
+          let matchingUser = users.find(u => u.email && recipient.email && u.email.toLowerCase() === recipient.email.toLowerCase());
+          if (!matchingUser) {
+            matchingUser = users.find(u => u.name && recipient.username && u.name.toLowerCase() === recipient.username.toLowerCase());
+          }
           const userIdForCampaigns = matchingUser?.id || recipient.id;
 
           const bulletinContent = buildPersonalBulletin(
