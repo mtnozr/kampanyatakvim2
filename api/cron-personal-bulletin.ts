@@ -151,31 +151,39 @@ function buildPersonalBulletin(
     campaigns: CalendarEvent[],
     reports: Report[],
     analyticsTasks: AnalyticsTask[],
-    userIds: string[],
+    recipientEmail: string,
+    idToEmail: Map<string, string>,
     targetDate: Date = new Date()
 ): PersonalBulletinContent {
-    // Filter for today and assigned to this user (try all possible user IDs)
-    // Active campaigns: not cancelled or completed
-    const userCampaigns = campaigns.filter(c =>
-        isSameDay(c.date, targetDate) &&
-        userIds.includes(c.assigneeId || '') &&
-        c.status !== 'İptal Edildi' &&
-        c.status !== 'Tamamlandı'
-    );
+    const email = recipientEmail.toLowerCase().trim();
 
-    const userReports = reports.filter(r =>
-        isSameDay(r.dueDate, targetDate) &&
-        userIds.includes(r.assigneeId || '') &&
-        r.status !== 'done'
-    );
+    // Simple: campaign's assigneeId → resolve to email → match with recipient email
+    const userCampaigns = campaigns.filter(c => {
+        if (!c.assigneeId) return false;
+        const assigneeEmail = idToEmail.get(c.assigneeId);
+        return assigneeEmail === email &&
+            isSameDay(c.date, targetDate) &&
+            c.status !== 'İptal Edildi' &&
+            c.status !== 'Tamamlandı';
+    });
 
-    const userTasks = analyticsTasks.filter(t =>
-        isSameDay(t.date, targetDate) &&
-        userIds.includes(t.assigneeId || '') &&
-        t.status !== 'İptal Edildi'
-    );
+    const userReports = reports.filter(r => {
+        if (!r.assigneeId) return false;
+        const assigneeEmail = idToEmail.get(r.assigneeId);
+        return assigneeEmail === email &&
+            isSameDay(r.dueDate, targetDate) &&
+            r.status !== 'done';
+    });
 
-    console.log(`  buildPersonalBulletin: userIds=${userIds.join(',')}, campaigns=${userCampaigns.length}, reports=${userReports.length}, analytics=${userTasks.length}`);
+    const userTasks = analyticsTasks.filter(t => {
+        if (!t.assigneeId) return false;
+        const assigneeEmail = idToEmail.get(t.assigneeId);
+        return assigneeEmail === email &&
+            isSameDay(t.date, targetDate) &&
+            t.status !== 'İptal Edildi';
+    });
+
+    console.log(`  buildPersonalBulletin: email=${email}, campaigns=${userCampaigns.length}, reports=${userReports.length}, analytics=${userTasks.length}`);
 
     return {
         campaigns: userCampaigns,
@@ -545,18 +553,41 @@ async function processPersonalBulletins(
         return result;
     }
 
-    // Get recipients
+    // Get recipients (filter from all departmentUsers)
     const recipientIds = settings.personalDailyBulletinRecipients || [];
     const recipients = departmentUsers.filter(user =>
         recipientIds.includes(user.id) && user.email
     );
 
     if (recipients.length === 0) {
-        console.log('No recipients configured');
+        console.log('❌ No recipients with email found. recipientIds:', JSON.stringify(recipientIds));
+        console.log('  departmentUsers count:', departmentUsers.length);
+        console.log('  departmentUser IDs:', departmentUsers.map(u => u.id).join(', '));
         return result;
     }
 
     console.log(`Processing bulletins for ${recipients.length} users`);
+
+    // ===== EMAIL-BASED MATCHING =====
+    // Simple approach: build ID→email map, match campaigns to recipients by email
+    const idToEmail = new Map<string, string>();
+
+    // Map all user IDs to their emails (from users collection)
+    for (const u of users) {
+        if (u.email) idToEmail.set(u.id, u.email.toLowerCase().trim());
+    }
+    // Map all departmentUser IDs to their emails
+    for (const du of departmentUsers) {
+        if (du.email) idToEmail.set(du.id, du.email.toLowerCase().trim());
+    }
+
+    console.log(`Built ID→email map with ${idToEmail.size} entries`);
+
+    // Debug: show which campaign assignees we can resolve
+    for (const c of campaigns) {
+        const resolvedEmail = c.assigneeId ? idToEmail.get(c.assigneeId) : 'no-assignee';
+        console.log(`  Campaign "${c.title}" | assigneeId=${c.assigneeId} → email=${resolvedEmail || 'UNRESOLVED'} | status=${c.status}`);
+    }
 
     // Get CC recipient emails from settings
     const ccRecipientEmails: string[] = [];
@@ -567,72 +598,46 @@ async function processPersonalBulletins(
                 ccRecipientEmails.push(ccUser.email);
             }
         }
-        console.log(`Found ${ccRecipientEmails.length} CC recipients for personal bulletins`);
+        console.log(`Found ${ccRecipientEmails.length} CC recipients`);
     }
 
     // ⚠️ TEMPORARY TEST LIMIT: Maximum 3 emails per run
     const MAX_EMAILS_PER_RUN = 3;
     let emailsSentCount = 0;
 
-    // Send bulletin to each user
+    // Send bulletin to each recipient
     for (const user of recipients) {
-        // Check if we've reached the test limit
         if (emailsSentCount >= MAX_EMAILS_PER_RUN) {
             console.log(`⚠️ TEST LIMIT REACHED: Stopped after sending ${MAX_EMAILS_PER_RUN} emails`);
             result.skipped += (recipients.length - emailsSentCount);
             break;
         }
 
+        if (!user.email) {
+            console.log(`⚠️ Skipping ${user.username}: no email`);
+            result.skipped++;
+            continue;
+        }
+
         try {
-            const todayStr = now.toISOString().split('T')[0];
+            console.log(`\nProcessing: ${user.name || user.username} (${user.email})`);
 
-            // ⚠️ TEMP: Disabled for testing - allow multiple sends per day
-            // Check if already sent today
-            // const alreadySent = await checkBulletinAlreadySent(db, todayStr, user.id);
-            // if (alreadySent) {
-            //     console.log(`Bulletin already sent to ${user.name || user.username} today`);
-            //     result.skipped++;
-            //     continue;
-            // }
-
-            // Build list of all possible user IDs for this person
-            // Campaigns might use users.id OR departmentUsers.id for assigneeId
-            const possibleUserIds: string[] = [user.id]; // departmentUsers.id
-
-            // Also try matching to 'users' collection by email or name
-            let matchingUser = users.find(u => u.email && user.email && u.email.toLowerCase() === user.email.toLowerCase());
-            if (!matchingUser) {
-                const userName = user.name || user.username;
-                matchingUser = users.find(u => u.name && userName && u.name.toLowerCase() === userName.toLowerCase());
-            }
-            if (matchingUser && !possibleUserIds.includes(matchingUser.id)) {
-                possibleUserIds.push(matchingUser.id);
-            }
-
-            console.log(`User ${user.username}: email=${user.email}, deptUserId=${user.id}, matchedUserId=${matchingUser?.id || 'NO_MATCH'}, matchedBy=${matchingUser ? (matchingUser.email?.toLowerCase() === user.email?.toLowerCase() ? 'email' : 'name') : 'none'}, possibleIds=[${possibleUserIds.join(',')}]`);
-
-            // Build bulletin content for this user (tries all possible IDs)
+            // Build bulletin - matches by EMAIL, not by ID
             const bulletinContent = buildPersonalBulletin(
                 campaigns,
                 reports,
                 analyticsTasks,
-                possibleUserIds,
+                user.email,
+                idToEmail,
                 now
             );
 
-            // Skip if user has no tasks today
             const totalTasks = bulletinContent.campaigns.length +
                              bulletinContent.reports.length +
                              bulletinContent.analyticsTasks.length;
 
             if (totalTasks === 0) {
-                console.log(`⚠️ No tasks for ${user.name || user.username} today (possibleIds=[${possibleUserIds.join(',')}]), skipping email`);
-                // Debug: show all campaign assigneeIds to help troubleshoot
-                if (campaigns.length > 0) {
-                    const allAssigneeIds = [...new Set(campaigns.map(c => c.assigneeId).filter(Boolean))];
-                    console.log(`  Available campaign assigneeIds: [${allAssigneeIds.join(',')}]`);
-                    console.log(`  None of possibleIds [${possibleUserIds.join(',')}] matched any assigneeId`);
-                }
+                console.log(`⚠️ No tasks for ${user.name || user.username} (${user.email}), skipping`);
                 result.skipped++;
                 continue;
             }
@@ -789,78 +794,51 @@ export default async function handler(
             };
         }) as AnalyticsTask[];
 
-        // Fetch department users (only recipients)
+        // Fetch ALL department users (needed for email mapping)
+        const deptUsersSnapshot = await db.collection('departmentUsers').get();
+        const allDeptUsers = deptUsersSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+        })) as DepartmentUser[];
+
+        // Filter to only recipients
         const recipientIds = settings.personalDailyBulletinRecipients || [];
-        let deptUsers: DepartmentUser[] = [];
+        const deptUsers = allDeptUsers.filter(u => recipientIds.includes(u.id));
 
-        if (recipientIds.length > 0) {
-            const deptUserBatches = [];
-            for (let i = 0; i < recipientIds.length; i += 10) {
-                const batch = recipientIds.slice(i, i + 10);
-                const snapshot = await db.collection('departmentUsers')
-                    .where(admin.firestore.FieldPath.documentId(), 'in', batch)
-                    .get();
-                deptUserBatches.push(...snapshot.docs);
-            }
-            deptUsers = deptUserBatches.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-            })) as DepartmentUser[];
-        }
-
-        // Fetch users collection (campaigns use users.id for assigneeId)
+        // Fetch ALL users collection (for ID→email mapping)
         const usersSnapshot = await db.collection('users').get();
         const users = usersSnapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data(),
         })) as User[];
 
-        console.log(`Found ${campaigns.length} campaigns, ${reports.length} reports, ${analyticsTasks.length} analytics tasks, ${users.length} users, ${deptUsers.length} deptUsers`);
+        console.log(`Found: ${campaigns.length} campaigns, ${reports.length} reports, ${analyticsTasks.length} analytics, ${users.length} users, ${allDeptUsers.length} deptUsers, ${deptUsers.length} recipients`);
+        console.log('recipientIds from settings:', JSON.stringify(recipientIds));
 
-        // Debug: Log all found campaigns
-        console.log('=== CAMPAIGNS FOUND FOR TODAY ===');
-        campaigns.forEach(c => {
-            console.log(`  Campaign: "${c.title}" | date: ${c.date.toISOString()} | assigneeId: ${c.assigneeId} | status: ${c.status}`);
-        });
-
-        // Debug: Log all found reports
-        console.log('=== REPORTS FOUND FOR TODAY ===');
-        reports.forEach(r => {
-            console.log(`  Report: "${r.title}" | dueDate: ${r.dueDate.toISOString()} | assigneeId: ${r.assigneeId} | status: ${r.status}`);
-        });
-
-        // Debug: Log all found analytics tasks
-        console.log('=== ANALYTICS TASKS FOUND FOR TODAY ===');
-        analyticsTasks.forEach(t => {
-            console.log(`  Task: "${t.title}" | date: ${t.date.toISOString()} | assigneeId: ${t.assigneeId} | status: ${t.status}`);
-        });
-
-        // Debug: Log department users
-        console.log('=== DEPARTMENT USERS (RECIPIENTS) ===');
-        deptUsers.forEach(u => {
-            console.log(`  DeptUser: id=${u.id} | name=${u.name} | username=${u.username} | email=${u.email}`);
-        });
-
-        // Debug: Log users collection
-        console.log('=== USERS COLLECTION ===');
-        users.forEach(u => {
-            console.log(`  User: id=${u.id} | name=${u.name} | email=${u.email}`);
-        });
-
-        // Process
+        // Process (pass ALL deptUsers for email mapping, recipients are filtered inside)
         const result = await processPersonalBulletins(
             db,
             campaigns,
             reports,
             analyticsTasks,
-            deptUsers,
+            allDeptUsers,
             users,
             settings
         );
 
+        // Include diagnostic info in response for debugging
+        const diagnostics = {
+            queryRange: { start: startOfDay.toISOString(), end: endOfDay.toISOString() },
+            turkeyDate: `${turkeyYear}-${String(turkeyMonth + 1).padStart(2, '0')}-${String(turkeyDate).padStart(2, '0')}`,
+            campaignsFound: campaigns.map(c => ({ title: c.title, assigneeId: c.assigneeId, date: c.date.toISOString(), status: c.status })),
+            recipientIds,
+            recipientsResolved: deptUsers.map(u => ({ id: u.id, name: u.name, email: u.email })),
+        };
+
         return res.status(200).json({
             success: true,
-            result
+            result,
+            diagnostics
         });
 
     } catch (error) {
