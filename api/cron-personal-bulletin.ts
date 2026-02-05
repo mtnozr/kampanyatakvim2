@@ -578,13 +578,14 @@ async function processPersonalBulletins(
         try {
             const todayStr = now.toISOString().split('T')[0];
 
+            // ⚠️ TEMP: Disabled for testing - allow multiple sends per day
             // Check if already sent today
-            const alreadySent = await checkBulletinAlreadySent(db, todayStr, user.id);
-            if (alreadySent) {
-                console.log(`Bulletin already sent to ${user.name || user.username} today`);
-                result.skipped++;
-                continue;
-            }
+            // const alreadySent = await checkBulletinAlreadySent(db, todayStr, user.id);
+            // if (alreadySent) {
+            //     console.log(`Bulletin already sent to ${user.name || user.username} today`);
+            //     result.skipped++;
+            //     continue;
+            // }
 
             // Find matching user from 'users' collection by email or name
             // Campaigns use users.id for assigneeId, not departmentUsers.id

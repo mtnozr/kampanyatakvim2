@@ -448,13 +448,14 @@ async function processAnalyticsBulletins(
         try {
             const todayStr = now.toISOString().split('T')[0];
 
+            // ⚠️ TEMP: Disabled for testing - allow multiple sends per day
             // Check if already sent today
-            const alreadySent = await checkBulletinAlreadySent(db, todayStr, user.id);
-            if (alreadySent) {
-                console.log(`Bulletin already sent to ${user.name} today`);
-                result.skipped++;
-                continue;
-            }
+            // const alreadySent = await checkBulletinAlreadySent(db, todayStr, user.id);
+            // if (alreadySent) {
+            //     console.log(`Bulletin already sent to ${user.name} today`);
+            //     result.skipped++;
+            //     continue;
+            // }
 
             // Build bulletin content for this user
             const bulletinContent = buildAnalyticsBulletin(
