@@ -131,21 +131,30 @@ function initFirebaseAdmin() {
 
 // ===== UTILITY FUNCTIONS =====
 
+// Turkey timezone offset (UTC+3)
+const TURKEY_OFFSET_MS = 3 * 60 * 60 * 1000;
+
 function startOfWeek(date: Date): Date {
-    const day = date.getDay();
+    // Calculate in Turkey timezone
+    const turkeyTime = new Date(date.getTime() + TURKEY_OFFSET_MS);
+    const day = turkeyTime.getUTCDay();
     const diff = (day === 0 ? -6 : 1) - day; // Monday = 1
-    const result = new Date(date);
-    result.setDate(date.getDate() + diff);
-    result.setHours(0, 0, 0, 0);
-    return result;
+    const turkeyYear = turkeyTime.getUTCFullYear();
+    const turkeyMonth = turkeyTime.getUTCMonth();
+    const turkeyDate = turkeyTime.getUTCDate() + diff;
+    // Return Turkey Monday 00:00:00 as UTC
+    return new Date(Date.UTC(turkeyYear, turkeyMonth, turkeyDate, 0, 0, 0) - TURKEY_OFFSET_MS);
 }
 
 function endOfWeek(date: Date): Date {
     const start = startOfWeek(date);
-    const result = new Date(start);
-    result.setDate(start.getDate() + 6); // Sunday
-    result.setHours(23, 59, 59, 999);
-    return result;
+    // Add 6 days + 23:59:59.999 in Turkey time
+    const turkeyStart = new Date(start.getTime() + TURKEY_OFFSET_MS);
+    const turkeyYear = turkeyStart.getUTCFullYear();
+    const turkeyMonth = turkeyStart.getUTCMonth();
+    const turkeyDate = turkeyStart.getUTCDate() + 6; // Sunday
+    // Return Turkey Sunday 23:59:59.999 as UTC
+    return new Date(Date.UTC(turkeyYear, turkeyMonth, turkeyDate, 23, 59, 59, 999) - TURKEY_OFFSET_MS);
 }
 
 function isBefore(date1: Date, date2: Date): boolean {

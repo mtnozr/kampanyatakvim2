@@ -108,10 +108,16 @@ function initFirebaseAdmin() {
 
 // ===== UTILITY FUNCTIONS =====
 
+// Turkey timezone offset (UTC+3)
+const TURKEY_OFFSET_MS = 3 * 60 * 60 * 1000;
+
 function isSameDay(date1: Date, date2: Date): boolean {
-    return date1.getFullYear() === date2.getFullYear() &&
-           date1.getMonth() === date2.getMonth() &&
-           date1.getDate() === date2.getDate();
+    // Compare dates in Turkey timezone (UTC+3)
+    const d1 = new Date(date1.getTime() + TURKEY_OFFSET_MS);
+    const d2 = new Date(date2.getTime() + TURKEY_OFFSET_MS);
+    return d1.getUTCFullYear() === d2.getUTCFullYear() &&
+           d1.getUTCMonth() === d2.getUTCMonth() &&
+           d1.getUTCDate() === d2.getUTCDate();
 }
 
 function getUserName(userId: string | undefined, users: User[]): string {
@@ -664,13 +670,17 @@ export default async function handler(
         // Fetch Data (OPTIMIZED)
         console.log('Fetching data...');
 
-        // Calculate today's date range (Turkey time)
+        // Calculate today's date range (Turkey time, converted back to UTC for Firestore query)
         const now = new Date();
-        const turkeyTime = new Date(now.getTime() + (3 * 60 * 60 * 1000));
-        const startOfDay = new Date(turkeyTime);
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date(turkeyTime);
-        endOfDay.setHours(23, 59, 59, 999);
+        const turkeyTime = new Date(now.getTime() + TURKEY_OFFSET_MS);
+        const turkeyYear = turkeyTime.getUTCFullYear();
+        const turkeyMonth = turkeyTime.getUTCMonth();
+        const turkeyDate = turkeyTime.getUTCDate();
+
+        // Turkey midnight in UTC: e.g. Turkey Feb 5 00:00 = UTC Feb 4 21:00
+        const startOfDay = new Date(Date.UTC(turkeyYear, turkeyMonth, turkeyDate, 0, 0, 0) - TURKEY_OFFSET_MS);
+        // Turkey end of day in UTC: e.g. Turkey Feb 5 23:59:59 = UTC Feb 5 20:59:59
+        const endOfDay = new Date(Date.UTC(turkeyYear, turkeyMonth, turkeyDate, 23, 59, 59, 999) - TURKEY_OFFSET_MS);
 
         // OPTIMIZATION 1: Only fetch today's events instead of all events
         const campaignsSnapshot = await db.collection('events')

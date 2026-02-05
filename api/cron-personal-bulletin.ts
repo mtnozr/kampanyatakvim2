@@ -119,10 +119,15 @@ function initFirebaseAdmin() {
 
 // ===== UTILITY FUNCTIONS =====
 
+const TURKEY_OFFSET_MS = 3 * 60 * 60 * 1000; // UTC+3
+
 function isSameDay(date1: Date, date2: Date): boolean {
-    return date1.getFullYear() === date2.getFullYear() &&
-           date1.getMonth() === date2.getMonth() &&
-           date1.getDate() === date2.getDate();
+    // Compare in Turkey timezone (UTC+3)
+    const d1 = new Date(date1.getTime() + TURKEY_OFFSET_MS);
+    const d2 = new Date(date2.getTime() + TURKEY_OFFSET_MS);
+    return d1.getUTCFullYear() === d2.getUTCFullYear() &&
+           d1.getUTCMonth() === d2.getUTCMonth() &&
+           d1.getUTCDate() === d2.getUTCDate();
 }
 
 function isWeekend(date: Date): boolean {
@@ -710,11 +715,19 @@ export default async function handler(
         console.log('Fetching data...');
 
         const now = new Date();
-        const turkeyTime = new Date(now.getTime() + (3 * 60 * 60 * 1000));
-        const startOfDay = new Date(turkeyTime);
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date(turkeyTime);
-        endOfDay.setHours(23, 59, 59, 999);
+        const turkeyTime = new Date(now.getTime() + TURKEY_OFFSET_MS);
+
+        // Calculate Turkey's start/end of day in UTC for Firestore query
+        // Turkey midnight = UTC 21:00 (previous day)
+        const turkeyYear = turkeyTime.getUTCFullYear();
+        const turkeyMonth = turkeyTime.getUTCMonth();
+        const turkeyDate = turkeyTime.getUTCDate();
+
+        const startOfDay = new Date(Date.UTC(turkeyYear, turkeyMonth, turkeyDate, 0, 0, 0) - TURKEY_OFFSET_MS);
+        const endOfDay = new Date(Date.UTC(turkeyYear, turkeyMonth, turkeyDate, 23, 59, 59, 999) - TURKEY_OFFSET_MS);
+
+        console.log('Turkey date:', `${turkeyYear}-${turkeyMonth + 1}-${turkeyDate}`);
+        console.log('Query range (UTC):', startOfDay.toISOString(), '->', endOfDay.toISOString());
 
         // Fetch today's campaigns
         const campaignsSnapshot = await db.collection('events')
