@@ -79,6 +79,12 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
   const [isSendingPersonalBulletin, setIsSendingPersonalBulletin] = useState(false);
   const [personalBulletinRecipients, setPersonalBulletinRecipients] = useState<DepartmentUser[]>([]);
 
+  const [analyticsBulletinPreviewOpen, setAnalyticsBulletinPreviewOpen] = useState(false);
+  const [analyticsBulletinPreviewHTML, setAnalyticsBulletinPreviewHTML] = useState('');
+  const [isBuildingAnalyticsBulletin, setIsBuildingAnalyticsBulletin] = useState(false);
+  const [isSendingAnalyticsBulletin, setIsSendingAnalyticsBulletin] = useState(false);
+  const [analyticsBulletinRecipients, setAnalyticsBulletinRecipients] = useState<AnalyticsUser[]>([]);
+
   const [analyticsUsers, setAnalyticsUsers] = useState<AnalyticsUser[]>([]);
 
   const [saveMessage, setSaveMessage] = useState('');
@@ -642,6 +648,136 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
       alert('Gönderim sırasında hata oluştu.');
     } finally {
       setIsSendingPersonalBulletin(false);
+    }
+  }
+
+  async function handleOpenAnalyticsBulletinPreview() {
+    setIsBuildingAnalyticsBulletin(true);
+    try {
+      const { analyticsTasks } = await fetchPanelData();
+
+      const selectedRecipients = analyticsUsers.filter(user => {
+        const isSelected = (settings.analyticsDailyBulletinRecipients || []).includes(user.id);
+        return user.email && isSelected;
+      });
+
+      if (selectedRecipients.length === 0) {
+        setProcessMessage('⚠️ Lütfen önce analitik bülten alıcılarını seçin.');
+        setTimeout(() => setProcessMessage(''), 4000);
+        setIsBuildingAnalyticsBulletin(false);
+        return;
+      }
+
+      setAnalyticsBulletinRecipients(selectedRecipients);
+
+      // Build bulletin for first recipient as preview
+      const firstRecipient = selectedRecipients[0];
+
+      // Build bulletin content
+      const bulletinContent = buildAnalyticsBulletin(
+        analyticsTasks,
+        firstRecipient.id
+      );
+
+      const previewHTML = buildAnalyticsBulletinHTML({
+        recipientName: firstRecipient.name,
+        analyticsTasks: bulletinContent.analyticsTasks,
+        date: bulletinContent.date,
+        totalCount: bulletinContent.totalCount
+      });
+
+      setAnalyticsBulletinPreviewHTML(previewHTML);
+      setAnalyticsBulletinPreviewOpen(true);
+
+    } catch (error) {
+      console.error('Error building analytics bulletin preview:', error);
+      setProcessMessage('❌ Önizleme hazırlanırken bir hata oluştu.');
+      setTimeout(() => setProcessMessage(''), 4000);
+    } finally {
+      setIsBuildingAnalyticsBulletin(false);
+    }
+  }
+
+  async function handleSendAnalyticsBulletinManually() {
+    if (!settings.resendApiKey) {
+      alert('API Key eksik!');
+      return;
+    }
+
+    setIsSendingAnalyticsBulletin(true);
+    let sentCount = 0;
+    let failedCount = 0;
+
+    try {
+      const { analyticsTasks } = await fetchPanelData();
+
+      for (const recipient of analyticsBulletinRecipients) {
+        try {
+          const bulletinContent = buildAnalyticsBulletin(
+            analyticsTasks,
+            recipient.id
+          );
+
+          const result = await sendAnalyticsBulletinEmail(
+            settings.resendApiKey,
+            recipient.email!,
+            recipient.name,
+            bulletinContent
+          );
+
+          // Log to Firestore
+          try {
+            const logData: any = {
+              eventId: `analytics-bulletin-${new Date().toISOString().split('T')[0]}-${recipient.id}`,
+              eventType: 'analytics',
+              eventTitle: '📈 Analitik Günlük Bülten',
+              recipientEmail: recipient.email!,
+              recipientName: recipient.name,
+              urgency: 'Medium',
+              sentAt: new Date(),
+              status: result.success ? 'success' : 'failed',
+              emailProvider: 'resend',
+            };
+
+            if (result.error) {
+              logData.errorMessage = result.error;
+            }
+            if (result.messageId) {
+              logData.messageId = result.messageId;
+            }
+
+            await saveReminderLog(logData);
+            console.log('Analytics bulletin log saved for:', recipient.name);
+          } catch (logError) {
+            console.error('Error saving analytics bulletin log:', logError);
+          }
+
+          if (result.success) {
+            sentCount++;
+          } else {
+            console.error(`Failed to send to ${recipient.name}:`, result.error);
+            failedCount++;
+          }
+        } catch (error) {
+          console.error(`Error sending to ${recipient.name}:`, error);
+          failedCount++;
+        }
+      }
+
+      setAnalyticsBulletinPreviewOpen(false);
+      setProcessMessage(`✅ Analitik bülten gönderimi tamamlandı!\nGönderilen: ${sentCount}, Başarısız: ${failedCount}`);
+
+      // Reload logs after a short delay
+      setTimeout(() => {
+        loadRecentLogs();
+        setProcessMessage('');
+      }, 2000);
+
+    } catch (error) {
+      console.error('Error sending analytics bulletins:', error);
+      alert('Gönderim sırasında hata oluştu.');
+    } finally {
+      setIsSendingAnalyticsBulletin(false);
     }
   }
 
@@ -1556,6 +1692,24 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
                   </>
                 )}
 
+                <button
+                  onClick={handleOpenAnalyticsBulletinPreview}
+                  disabled={isBuildingAnalyticsBulletin || !settings.resendApiKey}
+                  className="px-5 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-medium transition-all flex items-center gap-2 disabled:opacity-50 shadow-sm mb-4"
+                >
+                  {isBuildingAnalyticsBulletin ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Hazırlanıyor...
+                    </>
+                  ) : (
+                    <>
+                      <Eye size={18} />
+                      Önizle ve Manuel Gönder
+                    </>
+                  )}
+                </button>
+
                 <div className="bg-cyan-100 dark:bg-cyan-900/30 border border-cyan-300 dark:border-cyan-700 rounded-lg p-4 text-sm">
                   <p className="text-cyan-800 dark:text-cyan-200 mb-2">
                     <strong>ℹ️ Nasıl Çalışır?</strong>
@@ -2038,6 +2192,64 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
                 className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
               >
                 {isSendingPersonalBulletin ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Gönderiliyor...
+                  </>
+                ) : (
+                  <>
+                    <Send size={18} />
+                    Onayla ve Gönder
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {analyticsBulletinPreviewOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Eye size={20} className="text-cyan-600" />
+                Analitik Günlük Bülten Önizleme
+              </h3>
+              <button
+                onClick={() => setAnalyticsBulletinPreviewOpen(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-4 bg-cyan-50 dark:bg-cyan-900/20 border-b border-cyan-100 dark:border-cyan-800">
+              <p className="text-sm text-cyan-800 dark:text-cyan-200">
+                <strong>Alıcılar ({analyticsBulletinRecipients.length}):</strong> {analyticsBulletinRecipients.map(u => u.name).join(', ')}
+              </p>
+              <p className="text-xs text-cyan-600 dark:text-cyan-300 mt-1">
+                💡 Önizleme ilk alıcı için gösterilir. Her kullanıcı kendi analitik işlerini alır.
+              </p>
+            </div>
+
+            <div className="flex-1 overflow-auto p-6 bg-gray-100 dark:bg-slate-900">
+              <div className="bg-white rounded shadow-lg mx-auto max-w-2xl" dangerouslySetInnerHTML={{ __html: analyticsBulletinPreviewHTML }} />
+            </div>
+
+            <div className="p-4 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-3 bg-gray-50 dark:bg-slate-800/50 rounded-b-xl">
+              <button
+                onClick={() => setAnalyticsBulletinPreviewOpen(false)}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md font-medium transition-colors"
+              >
+                Kapat
+              </button>
+              <button
+                onClick={handleSendAnalyticsBulletinManually}
+                disabled={isSendingAnalyticsBulletin}
+                className="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-md font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                {isSendingAnalyticsBulletin ? (
                   <>
                     <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     Gönderiliyor...
