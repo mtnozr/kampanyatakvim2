@@ -231,11 +231,6 @@ export interface ReminderSettings {
   dailyDigestEnabled?: boolean;            // Enable/disable daily digest
   dailyDigestTime?: string;                // Time in HH:mm format (e.g., "17:00")
 
-  // Personal Daily Bulletin Settings (Individual task lists - start of day)
-  personalDailyBulletinEnabled?: boolean;  // Enable/disable personal daily bulletin
-  personalDailyBulletinTime?: string;      // Time in HH:mm format (e.g., "09:00")
-  personalDailyBulletinRecipients?: string[]; // Array of department user IDs to receive bulletins
-
   // Analytics Daily Bulletin Settings (Analytics tasks summary)
   analyticsDailyBulletinEnabled?: boolean;  // Enable/disable analytics daily bulletin
   analyticsDailyBulletinTime?: string;      // Time in HH:mm format (e.g., "09:00")

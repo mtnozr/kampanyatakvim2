@@ -943,7 +943,7 @@ export async function sendDailyDigestEmail(
   });
 }
 
-// ===== PERSONAL DAILY BULLETIN =====
+// ===== ANALYTICS DAILY BULLETIN =====
 
 function getUrgencyLabel(urgency: string): string {
   const labels: Record<string, string> = {
@@ -953,134 +953,6 @@ function getUrgencyLabel(urgency: string): string {
     'Low': 'Düşük',
   };
   return labels[urgency] || urgency;
-}
-
-export function buildPersonalBulletinHTML(params: {
-  recipientName: string;
-  campaigns: any[];
-  reports: any[];
-  analyticsTasks: any[];
-  date: Date;
-  totalCount: number;
-}): string {
-  const { recipientName, campaigns, reports, analyticsTasks, date, totalCount } = params;
-
-  const dateStr = date.toLocaleDateString('tr-TR', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    weekday: 'long'
-  });
-
-  const campaignsHTML = campaigns.length > 0 ? `
-    <h3 style="margin: 24px 0 16px 0; font-size: 18px; color: #8B5CF6; font-weight: 600;">
-      🎯 Aktif Kampanyalar (${campaigns.length})
-    </h3>
-    <div style="background-color: #F5F3FF; border: 1px solid #8B5CF6; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
-      ${campaigns.map(c => `
-        <div style="padding: 12px; border-bottom: 1px solid #C4B5FD; margin-bottom: 8px;">
-          <strong style="color: #6B21A8;">${c.title}</strong><br/>
-          <span style="font-size: 12px; color: #7C3AED;">Aciliyet: ${getUrgencyLabel(c.urgency)} | Durum: ${c.status || 'Planlandı'}</span>
-        </div>
-      `).join('')}
-    </div>
-  ` : '';
-
-  const reportsHTML = reports.length > 0 ? `
-    <h3 style="margin: 24px 0 16px 0; font-size: 18px; color: #EF4444; font-weight: 600;">
-      📊 Raporlar (${reports.length})
-    </h3>
-    <div style="background-color: #FEF2F2; border: 1px solid #EF4444; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
-      ${reports.map(r => `
-        <div style="padding: 12px; border-bottom: 1px solid #FECACA; margin-bottom: 8px;">
-          <strong style="color: #991B1B;">${r.title}</strong><br/>
-          <span style="font-size: 12px; color: #DC2626;">Kampanya: ${r.campaignTitle || '-'} | Durum: ${r.status === 'pending' ? 'Bekliyor' : 'Tamamlandı'}</span>
-        </div>
-      `).join('')}
-    </div>
-  ` : '';
-
-  const analyticsHTML = analyticsTasks.length > 0 ? `
-    <h3 style="margin: 24px 0 16px 0; font-size: 18px; color: #3B82F6; font-weight: 600;">
-      📈 Analitik İşler (${analyticsTasks.length})
-    </h3>
-    <div style="background-color: #EFF6FF; border: 1px solid #3B82F6; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
-      ${analyticsTasks.map(t => `
-        <div style="padding: 12px; border-bottom: 1px solid #93C5FD; margin-bottom: 8px;">
-          <strong style="color: #1E40AF;">${t.title}</strong><br/>
-          <span style="font-size: 12px; color: #2563EB;">Aciliyet: ${getUrgencyLabel(t.urgency)} | Durum: ${t.status || 'Planlandı'}</span>
-        </div>
-      `).join('')}
-    </div>
-  ` : '';
-
-  if (totalCount === 0) {
-    return `
-      <!DOCTYPE html>
-      <html lang="tr">
-      <body style="margin: 0; padding: 0; font-family: sans-serif; background-color: #F8F9FE;">
-        <div style="max-width: 650px; margin: 40px auto; background: white; border-radius: 12px; padding: 32px;">
-          <h1 style="color: #1F2937; text-align: center;">📋 Kişisel Günlük Bülten</h1>
-          <p style="text-align: center; color: #6B7280;">${dateStr}</p>
-          <p>Günaydın <strong>${recipientName}</strong>,</p>
-          <div style="background-color: #F0FDF4; border: 1px solid #86EFAC; border-radius: 8px; padding: 24px; text-align: center;">
-            <p style="font-size: 18px; color: #166534; font-weight: 600;">🎉 Bugün için işiniz yok!</p>
-            <p style="font-size: 13px; color: #065F46; margin-top: 8px;">İptal edilmiş ve tamamlanmış işler hariç tutulur.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-  }
-
-  return `
-    <!DOCTYPE html>
-    <html lang="tr">
-    <body style="margin: 0; padding: 0; font-family: sans-serif; background-color: #F8F9FE;">
-      <div style="max-width: 650px; margin: 40px auto; background: white; border-radius: 12px; padding: 32px;">
-        <h1 style="color: #1F2937; text-align: center;">📋 Kişisel Günlük Bülten</h1>
-        <p style="text-align: center; color: #6B7280;">${dateStr}</p>
-        <p>Günaydın <strong>${recipientName}</strong>,</p>
-        <p style="color: #4B5563;">Bugün yapmanız gereken <strong>${totalCount} iş</strong> bulunmaktadır:</p>
-        ${campaignsHTML}
-        ${reportsHTML}
-        ${analyticsHTML}
-        <div style="text-align: center; margin: 32px 0;">
-          <a href="https://www.kampanyatakvimi.net.tr" style="display: inline-block; background: #8B5CF6; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600;">Takvime Git →</a>
-        </div>
-        <p style="text-align: center; font-size: 12px; color: #6B7280;">Kampanya Takvimi © ${new Date().getFullYear()}</p>
-      </div>
-    </body>
-    </html>
-  `;
-}
-
-export async function sendPersonalBulletinEmail(
-  resendApiKey: string,
-  recipientEmail: string,
-  recipientName: string,
-  bulletinContent: { campaigns: any[]; reports: any[]; analyticsTasks: any[]; date: Date; totalCount: number },
-  ccEmails?: string[]
-): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const html = buildPersonalBulletinHTML({
-    recipientName,
-    ...bulletinContent
-  });
-
-  const dateStr = bulletinContent.date.toLocaleDateString('tr-TR');
-  const subject = `📋 Kişisel Günlük Bülten - ${dateStr} (${bulletinContent.totalCount} İş)`;
-
-  return sendEmailWithResend(resendApiKey, {
-    to: recipientEmail,
-    toName: recipientName,
-    subject,
-    html,
-    eventId: `personal-bulletin-${bulletinContent.date.toISOString().split('T')[0]}`,
-    eventTitle: `Kişisel Günlük Bülten - ${dateStr}`,
-    eventType: 'campaign',
-    urgency: 'Medium',
-    cc: ccEmails,
-  });
 }
 
 /**
