@@ -17,6 +17,9 @@ interface Settings {
     personalBulletinEnabled?: boolean;
     personalBulletinTime?: string;
     personalBulletinRecipients?: string[]; // user IDs from 'users' collection
+    personalDailyBulletinEnabled?: boolean;
+    personalDailyBulletinTime?: string;
+    personalDailyBulletinRecipients?: string[]; // legacy fields
 }
 
 interface Campaign {
@@ -226,12 +229,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const settings = settingsDoc.data() as Settings;
 
-        if (!settings.personalBulletinEnabled) {
+        const personalBulletinEnabled = settings.personalBulletinEnabled ?? settings.personalDailyBulletinEnabled;
+        const personalBulletinTime = settings.personalBulletinTime ?? settings.personalDailyBulletinTime;
+        const personalBulletinRecipients = settings.personalBulletinRecipients ?? settings.personalDailyBulletinRecipients ?? [];
+
+        if (!personalBulletinEnabled) {
             log('❌ Kişisel bülten devre dışı');
             return res.status(200).json({ success: false, reason: 'disabled', logs });
         }
 
-        if (!settings.personalBulletinTime) {
+        if (!personalBulletinTime) {
             log('❌ Saat ayarlanmamış');
             return res.status(200).json({ success: false, reason: 'no_time', logs });
         }
@@ -241,7 +248,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(200).json({ success: false, reason: 'no_api_key', logs });
         }
 
-        const recipientIds = settings.personalBulletinRecipients || [];
+        const recipientIds = personalBulletinRecipients;
         if (recipientIds.length === 0) {
             log('❌ Alıcı seçilmemiş');
             return res.status(200).json({ success: false, reason: 'no_recipients', logs });
@@ -252,8 +259,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(200).json({ success: false, reason: 'weekend', logs });
         }
 
-        if (!isTimeReached(settings.personalBulletinTime)) {
-            log(`❌ Henüz saat olmadı (hedef: ${settings.personalBulletinTime})`);
+        if (!isTimeReached(personalBulletinTime)) {
+            log(`❌ Henüz saat olmadı (hedef: ${personalBulletinTime})`);
             return res.status(200).json({ success: false, reason: 'not_time', logs });
         }
 
