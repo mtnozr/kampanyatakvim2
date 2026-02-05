@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Send, Check, X, AlertCircle, Mail, Settings, Eye, Smartphone, Users, FileText, Clock, Bell, TestTube, BarChart3 } from 'lucide-react';
+import { Save, Send, Check, X, AlertCircle, Mail, Settings, Eye, Smartphone, Users, FileText, Clock, Bell, TestTube, BarChart3, UserCircle } from 'lucide-react';
 import { ReminderSettings, ReminderLog, CalendarEvent, AnalyticsTask, User, AnalyticsUser, Report, DepartmentUser } from '../types';
 import { db } from '../firebase';
 import {
@@ -80,6 +80,14 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
 
   const [analyticsUsers, setAnalyticsUsers] = useState<AnalyticsUser[]>([]);
 
+  // Personal Daily Bulletin states
+  const [users, setUsers] = useState<User[]>([]);
+  const [personalBulletinPreviewOpen, setPersonalBulletinPreviewOpen] = useState(false);
+  const [personalBulletinPreviewHTML, setPersonalBulletinPreviewHTML] = useState('');
+  const [isBuildingPersonalBulletin, setIsBuildingPersonalBulletin] = useState(false);
+  const [isSendingPersonalBulletin, setIsSendingPersonalBulletin] = useState(false);
+  const [personalBulletinRecipients, setPersonalBulletinRecipients] = useState<User[]>([]);
+
   const [saveMessage, setSaveMessage] = useState('');
   const [testMessage, setTestMessage] = useState('');
   const [testSMSMessage, setTestSMSMessage] = useState('');
@@ -90,6 +98,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
     loadRecentLogs();
     loadDepartmentUsers();
     loadAnalyticsUsers();
+    loadUsers();
   }, []);
 
   async function loadDepartmentUsers() {
@@ -119,6 +128,21 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
       setAnalyticsUsers(users);
     } catch (error) {
       console.error('Error loading analytics users:', error);
+    }
+  }
+
+  async function loadUsers() {
+    try {
+      const usersRef = collection(db, 'users');
+      const snapshot = await getDocs(usersRef);
+      const usersList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as User));
+      usersList.sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+      setUsers(usersList);
+    } catch (error) {
+      console.error('Error loading users:', error);
     }
   }
 
@@ -617,6 +641,120 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
       alert('Gönderim sırasında hata oluştu.');
     } finally {
       setIsSendingAnalyticsBulletin(false);
+    }
+  }
+
+  async function handleOpenPersonalBulletinPreview() {
+    setIsBuildingPersonalBulletin(true);
+    try {
+      const selectedRecipients = users.filter(user => {
+        const isSelected = (settings.personalBulletinRecipients || []).includes(user.id);
+        return user.email && isSelected;
+      });
+
+      if (selectedRecipients.length === 0) {
+        setProcessMessage('⚠️ Lütfen önce kişisel bülten alıcılarını seçin.');
+        setTimeout(() => setProcessMessage(''), 4000);
+        setIsBuildingPersonalBulletin(false);
+        return;
+      }
+
+      setPersonalBulletinRecipients(selectedRecipients);
+
+      // Build sample preview HTML
+      const today = new Date();
+      const turkeyDateStr = today.toLocaleDateString('tr-TR');
+      const previewHTML = buildPersonalBulletinPreviewHTML(selectedRecipients[0].name, turkeyDateStr);
+
+      setPersonalBulletinPreviewHTML(previewHTML);
+      setPersonalBulletinPreviewOpen(true);
+
+    } catch (error) {
+      console.error('Error building personal bulletin preview:', error);
+      setProcessMessage('❌ Önizleme hazırlanırken bir hata oluştu.');
+      setTimeout(() => setProcessMessage(''), 4000);
+    } finally {
+      setIsBuildingPersonalBulletin(false);
+    }
+  }
+
+  function buildPersonalBulletinPreviewHTML(name: string, dateStr: string): string {
+    return `
+    <!DOCTYPE html>
+    <html><head><meta charset="UTF-8"></head>
+    <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background: #F3F4F6;">
+        <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <div style="background: linear-gradient(135deg, #7C3AED, #5B21B6); color: white; padding: 24px; text-align: center;">
+                <h1 style="margin: 0; font-size: 24px;">📋 Kişisel Günlük Bülten</h1>
+                <p style="margin: 8px 0 0; opacity: 0.9;">${dateStr}</p>
+            </div>
+            <div style="padding: 24px;">
+                <p style="margin: 0 0 20px; color: #374151;">Merhaba <strong>${name}</strong>,</p>
+                <p style="margin: 0 0 20px; color: #6B7280;">Bu bir önizlemedir. Gerçek bülten, kullanıcının atanmış kampanyalarını içerecektir.</p>
+
+                <div style="margin-bottom: 24px;">
+                    <h3 style="color: #DC2626; margin-bottom: 12px;">⚠️ Geciken Kampanyalar (Örnek)</h3>
+                    <div style="background: #FEF2F2; border-radius: 8px; padding: 16px;">
+                        <p style="color: #991B1B; margin: 0;">Burada geciken kampanyalar listelenecektir.</p>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 24px;">
+                    <h3 style="color: #7C3AED; margin-bottom: 12px;">📅 Bugünkü Kampanyalar (Örnek)</h3>
+                    <div style="background: #F5F3FF; border-radius: 8px; padding: 16px;">
+                        <p style="color: #5B21B6; margin: 0;">Burada bugünkü kampanyalar listelenecektir.</p>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-top: 24px;">
+                    <a href="https://www.kampanyatakvimi.net.tr" style="display: inline-block; background: #7C3AED; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">Takvime Git →</a>
+                </div>
+            </div>
+            <div style="background: #F9FAFB; padding: 16px; text-align: center; color: #9CA3AF; font-size: 12px;">
+                Bu otomatik bir bildirimdir. Kampanya Takvimi © ${new Date().getFullYear()}
+            </div>
+        </div>
+    </body>
+    </html>
+    `;
+  }
+
+  async function handleSendPersonalBulletinManually() {
+    if (!settings.resendApiKey) {
+      alert('API Key eksik!');
+      return;
+    }
+
+    setIsSendingPersonalBulletin(true);
+
+    try {
+      // Call the cron endpoint to send the bulletin
+      const cronUrl = `/api/cron-personal-bulletin?key=${process.env.NEXT_PUBLIC_CRON_SECRET_KEY || ''}`;
+
+      setProcessMessage('📧 Kişisel bülten gönderimi başlatılıyor...\nCron endpoint çağrılıyor...');
+
+      const response = await fetch(cronUrl);
+      const result = await response.json();
+
+      setPersonalBulletinPreviewOpen(false);
+
+      if (result.success) {
+        setProcessMessage(`✅ Kişisel bülten gönderimi tamamlandı!\nGönderilen: ${result.sent}, Atlanan: ${result.skipped}`);
+      } else {
+        setProcessMessage(`⚠️ Gönderim durumu: ${result.reason}\nLogs: ${result.logs?.slice(-3).join('\n') || 'Yok'}`);
+      }
+
+      setTimeout(() => {
+        loadRecentLogs();
+        setProcessMessage('');
+      }, 5000);
+
+    } catch (error) {
+      console.error('Error sending personal bulletins:', error);
+      setProcessMessage('❌ Gönderim sırasında hata oluştu: ' + (error instanceof Error ? error.message : 'Bilinmeyen hata'));
+      setTimeout(() => setProcessMessage(''), 5000);
+    } finally {
+      setIsSendingPersonalBulletin(false);
     }
   }
 
@@ -1415,6 +1553,150 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
                   </ul>
                 </div>
               </div>
+
+              {/* Personal Daily Bulletin */}
+              <div className="p-6 bg-violet-50 dark:bg-violet-900/10 rounded-lg border border-violet-200 dark:border-violet-800">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                      <UserCircle size={20} className="text-violet-600" />
+                      Kişisel Günlük Bülten
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      Her kullanıcıya kendi kampanyalarını gönderir (Geciken + Bugünkü)
+                    </p>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={settings.personalBulletinEnabled || false}
+                      onChange={(e) => setSettings({ ...settings, personalBulletinEnabled: e.target.checked })}
+                      className="w-5 h-5 text-violet-600 rounded focus:ring-2 focus:ring-violet-200"
+                    />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Otomatik Gönder
+                    </span>
+                  </label>
+                </div>
+
+                {settings.personalBulletinEnabled && (
+                  <>
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Gönderim Saati (Türkiye Saati - Sadece hafta içi)
+                      </label>
+                      <input
+                        type="time"
+                        value={settings.personalBulletinTime || '09:00'}
+                        onChange={(e) => setSettings({ ...settings, personalBulletinTime: e.target.value })}
+                        className="px-3 py-2 border border-violet-300 dark:border-violet-700 rounded-lg text-sm focus:ring-2 focus:ring-violet-200 dark:bg-slate-700 dark:text-white"
+                      />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        📋 Her kullanıcı sadece kendi kampanyalarını görür. Haftasonları otomatik atlanır.
+                      </p>
+                    </div>
+
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                        Bülten Alacak Kişiler ({(settings.personalBulletinRecipients || []).length} seçili)
+                      </label>
+
+                      {/* Quick Select Buttons */}
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const allUserIds = users.filter(u => u.email).map(u => u.id);
+                            setSettings({ ...settings, personalBulletinRecipients: allUserIds });
+                          }}
+                          className="px-3 py-1.5 bg-violet-100 hover:bg-violet-200 dark:bg-violet-900/30 dark:hover:bg-violet-900/50 text-violet-700 dark:text-violet-300 rounded text-xs font-medium transition-colors"
+                        >
+                          ✓ Tümünü Seç
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSettings({ ...settings, personalBulletinRecipients: [] })}
+                          className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-300 rounded text-xs font-medium transition-colors"
+                        >
+                          ✗ Tümünü Kaldır
+                        </button>
+                      </div>
+
+                      {/* Individual User Selection */}
+                      <div className="max-h-60 overflow-y-auto border border-violet-200 dark:border-violet-700 rounded-lg p-3 bg-white dark:bg-slate-800">
+                        {users.length === 0 ? (
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Kullanıcı bulunamadı</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {users.map(user => (
+                              <label
+                                key={user.id}
+                                className="flex items-center gap-2 cursor-pointer hover:bg-violet-50 dark:hover:bg-violet-900/20 p-2 rounded transition-colors"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={(settings.personalBulletinRecipients || []).includes(user.id)}
+                                  onChange={(e) => {
+                                    const current = settings.personalBulletinRecipients || [];
+                                    const updated = e.target.checked
+                                      ? [...current, user.id]
+                                      : current.filter(id => id !== user.id);
+                                    setSettings({ ...settings, personalBulletinRecipients: updated });
+                                  }}
+                                  className="w-4 h-4 text-violet-600 rounded focus:ring-violet-200"
+                                />
+                                <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">
+                                  {user.emoji} {user.name}
+                                </span>
+                                {user.email && (
+                                  <span className="text-xs text-gray-500 dark:text-gray-400">{user.email}</span>
+                                )}
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                        💡 İpucu: Buradaki kullanıcılar kampanya atanabilecek kişilerdir. Her kişi sadece kendine atanan kampanyaları alır.
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                <button
+                  onClick={handleOpenPersonalBulletinPreview}
+                  disabled={isBuildingPersonalBulletin || !settings.resendApiKey}
+                  className="px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium transition-all flex items-center gap-2 disabled:opacity-50 shadow-sm mb-4"
+                >
+                  {isBuildingPersonalBulletin ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Hazırlanıyor...
+                    </>
+                  ) : (
+                    <>
+                      <Eye size={18} />
+                      Önizle ve Manuel Gönder
+                    </>
+                  )}
+                </button>
+
+                <div className="bg-violet-100 dark:bg-violet-900/30 border border-violet-300 dark:border-violet-700 rounded-lg p-4 text-sm">
+                  <p className="text-violet-800 dark:text-violet-200 mb-2">
+                    <strong>ℹ️ Nasıl Çalışır?</strong>
+                  </p>
+                  <ul className="text-violet-700 dark:text-violet-300 space-y-1 ml-4 list-disc">
+                    <li>Her sabah belirlenen saatte çalışır</li>
+                    <li>Sadece seçili kullanıcılara gönderilir</li>
+                    <li>Her kişi SADECE kendi kampanyalarını görür</li>
+                    <li><strong>Geciken kampanyalar:</strong> Tarihi geçmiş ve tamamlanmamış</li>
+                    <li><strong>Bugünkü kampanyalar:</strong> Bugün tarihi olan aktif kampanyalar</li>
+                    <li>Kampanyası olmayan günlerde email gönderilmez</li>
+                    <li>Haftasonları otomatik atlanır</li>
+                  </ul>
+                </div>
+              </div>
             </div>
           )}
 
@@ -1821,6 +2103,65 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
                 className="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-md font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
               >
                 {isSendingAnalyticsBulletin ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Gönderiliyor...
+                  </>
+                ) : (
+                  <>
+                    <Send size={18} />
+                    Onayla ve Gönder
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Personal Bulletin Preview Modal */}
+      {personalBulletinPreviewOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Eye size={20} className="text-violet-600" />
+                Kişisel Günlük Bülten Önizleme
+              </h3>
+              <button
+                onClick={() => setPersonalBulletinPreviewOpen(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-4 bg-violet-50 dark:bg-violet-900/20 border-b border-violet-100 dark:border-violet-800">
+              <p className="text-sm text-violet-800 dark:text-violet-200">
+                <strong>Alıcılar ({personalBulletinRecipients.length}):</strong> {personalBulletinRecipients.map(u => u.name).join(', ')}
+              </p>
+              <p className="text-xs text-violet-600 dark:text-violet-300 mt-1">
+                💡 Önizleme ilk alıcı için gösterilir. Her kullanıcı kendi kampanyalarını alır.
+              </p>
+            </div>
+
+            <div className="flex-1 overflow-auto p-6 bg-gray-100 dark:bg-slate-900">
+              <div className="bg-white rounded shadow-lg mx-auto max-w-2xl" dangerouslySetInnerHTML={{ __html: personalBulletinPreviewHTML }} />
+            </div>
+
+            <div className="p-4 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-3 bg-gray-50 dark:bg-slate-800/50 rounded-b-xl">
+              <button
+                onClick={() => setPersonalBulletinPreviewOpen(false)}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md font-medium transition-colors"
+              >
+                Kapat
+              </button>
+              <button
+                onClick={handleSendPersonalBulletinManually}
+                disabled={isSendingPersonalBulletin}
+                className="px-6 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-md font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                {isSendingPersonalBulletin ? (
                   <>
                     <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     Gönderiliyor...
