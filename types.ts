@@ -222,7 +222,7 @@ export interface ReminderSettings {
 
   // Weekly Digest Settings
   weeklyDigestEnabled?: boolean;           // Enable/disable weekly digest
-  weeklyDigestDay?: number;                // Day of week (1=Monday, 7=Sunday)
+  weeklyDigestDay?: number;                // Day of week (0=Sunday, 1=Monday, 2=Tuesday, ..., 6=Saturday)
   weeklyDigestTime?: string;               // Time in HH:mm format (e.g., "09:00")
   weeklyDigestIncludeOverdueReports?: boolean;  // Include overdue reports section
   weeklyDigestIncludeThisWeekCampaigns?: boolean; // Include this week's campaigns

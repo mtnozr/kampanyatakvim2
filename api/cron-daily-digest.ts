@@ -434,11 +434,18 @@ async function processDailyDigest(
     const result: ProcessResult = { sent: 0, failed: 0, skipped: 0 };
     const now = new Date();
 
+    console.log('=== DAILY DIGEST PROCESS START ===');
+    console.log('dailyDigestEnabled:', settings.dailyDigestEnabled);
+    console.log('dailyDigestTime:', settings.dailyDigestTime);
+    console.log('emailCcRecipients count:', settings.emailCcRecipients?.length || 0);
+
     if (!settings.dailyDigestEnabled) {
+        console.log('❌ REASON: Daily digest is disabled');
         return result;
     }
 
     if (!settings.dailyDigestTime) {
+        console.log('❌ REASON: No daily digest time configured');
         return result;
     }
 
@@ -450,10 +457,15 @@ async function processDailyDigest(
     const currentHour = turkeyTime.getHours();
     const currentMinute = turkeyTime.getMinutes();
 
+    console.log('Target time:', `${targetHour}:${targetMinute} Turkey`);
+    console.log('Current time:', `${currentHour}:${currentMinute} Turkey`);
+
     // Only process if it's time
     const isTime = currentHour > targetHour || (currentHour === targetHour && currentMinute >= targetMinute);
 
+    console.log('Is time to send?', isTime);
     if (!isTime) {
+        console.log('❌ REASON: Not time yet for daily digest');
         return result;
     }
 

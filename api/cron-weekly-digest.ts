@@ -488,9 +488,56 @@ async function processWeeklyDigest(
     settings: ReminderSettings
 ): Promise<ProcessResult> {
     const result: ProcessResult = { sent: 0, failed: 0, skipped: 0 };
+    const now = new Date();
+
+    console.log('=== WEEKLY DIGEST PROCESS START ===');
+    console.log('weeklyDigestEnabled:', settings.weeklyDigestEnabled);
+    console.log('weeklyDigestDay:', settings.weeklyDigestDay);
+    console.log('weeklyDigestTime:', settings.weeklyDigestTime);
+    console.log('emailCcRecipients count:', settings.emailCcRecipients?.length || 0);
 
     if (!settings.weeklyDigestEnabled) {
-        console.log('Weekly digest is disabled');
+        console.log('❌ REASON: Weekly digest is disabled');
+        return result;
+    }
+
+    if (!settings.weeklyDigestDay && settings.weeklyDigestDay !== 0) {
+        console.log('❌ REASON: No weekly digest day configured');
+        return result;
+    }
+
+    if (!settings.weeklyDigestTime) {
+        console.log('❌ REASON: No weekly digest time configured');
+        return result;
+    }
+
+    // Convert server time (UTC) to Turkey time (UTC+3)
+    const turkeyTime = new Date(now.getTime() + (3 * 60 * 60 * 1000));
+    const currentDay = turkeyTime.getDay(); // 0=Sunday, 1=Monday, etc.
+    const currentHour = turkeyTime.getHours();
+    const currentMinute = turkeyTime.getMinutes();
+
+    console.log('Target day:', settings.weeklyDigestDay, '(0=Sun, 1=Mon, etc.)');
+    console.log('Current day:', currentDay);
+
+    // Check if it's the right day
+    if (currentDay !== settings.weeklyDigestDay) {
+        console.log('❌ REASON: Not the configured day yet');
+        return result;
+    }
+
+    // Parse configured time
+    const [targetHour, targetMinute] = settings.weeklyDigestTime.split(':').map(Number);
+
+    console.log('Target time:', `${targetHour}:${targetMinute} Turkey`);
+    console.log('Current time:', `${currentHour}:${currentMinute} Turkey`);
+
+    // Check if it's time
+    const isTime = currentHour > targetHour || (currentHour === targetHour && currentMinute >= targetMinute);
+
+    console.log('Is time to send?', isTime);
+    if (!isTime) {
+        console.log('❌ REASON: Not time yet for weekly digest');
         return result;
     }
 
