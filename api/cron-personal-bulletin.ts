@@ -151,28 +151,31 @@ function buildPersonalBulletin(
     campaigns: CalendarEvent[],
     reports: Report[],
     analyticsTasks: AnalyticsTask[],
-    userId: string,
+    userIds: string[],
     targetDate: Date = new Date()
 ): PersonalBulletinContent {
-    // Filter for today and assigned to this user (active campaigns: not cancelled or completed)
+    // Filter for today and assigned to this user (try all possible user IDs)
+    // Active campaigns: not cancelled or completed
     const userCampaigns = campaigns.filter(c =>
         isSameDay(c.date, targetDate) &&
-        c.assigneeId === userId &&
+        userIds.includes(c.assigneeId || '') &&
         c.status !== 'İptal Edildi' &&
         c.status !== 'Tamamlandı'
     );
 
     const userReports = reports.filter(r =>
         isSameDay(r.dueDate, targetDate) &&
-        r.assigneeId === userId &&
+        userIds.includes(r.assigneeId || '') &&
         r.status !== 'done'
     );
 
     const userTasks = analyticsTasks.filter(t =>
         isSameDay(t.date, targetDate) &&
-        t.assigneeId === userId &&
+        userIds.includes(t.assigneeId || '') &&
         t.status !== 'İptal Edildi'
     );
+
+    console.log(`  buildPersonalBulletin: userIds=${userIds.join(',')}, campaigns=${userCampaigns.length}, reports=${userReports.length}, analytics=${userTasks.length}`);
 
     return {
         campaigns: userCampaigns,
@@ -592,23 +595,28 @@ async function processPersonalBulletins(
             //     continue;
             // }
 
-            // Find matching user from 'users' collection by email or name
-            // Campaigns use users.id for assigneeId, not departmentUsers.id
+            // Build list of all possible user IDs for this person
+            // Campaigns might use users.id OR departmentUsers.id for assigneeId
+            const possibleUserIds: string[] = [user.id]; // departmentUsers.id
+
+            // Also try matching to 'users' collection by email or name
             let matchingUser = users.find(u => u.email && user.email && u.email.toLowerCase() === user.email.toLowerCase());
             if (!matchingUser) {
-                // Try matching by name if email doesn't work
                 const userName = user.name || user.username;
                 matchingUser = users.find(u => u.name && userName && u.name.toLowerCase() === userName.toLowerCase());
             }
-            const userIdForCampaigns = matchingUser?.id || user.id;
-            console.log(`User ${user.username}: deptUserId=${user.id}, matchedUserId=${userIdForCampaigns}`);
+            if (matchingUser && !possibleUserIds.includes(matchingUser.id)) {
+                possibleUserIds.push(matchingUser.id);
+            }
 
-            // Build bulletin content for this user
+            console.log(`User ${user.username}: email=${user.email}, deptUserId=${user.id}, matchedUserId=${matchingUser?.id || 'NO_MATCH'}, matchedBy=${matchingUser ? (matchingUser.email?.toLowerCase() === user.email?.toLowerCase() ? 'email' : 'name') : 'none'}, possibleIds=[${possibleUserIds.join(',')}]`);
+
+            // Build bulletin content for this user (tries all possible IDs)
             const bulletinContent = buildPersonalBulletin(
                 campaigns,
                 reports,
                 analyticsTasks,
-                userIdForCampaigns,  // Use matched user ID
+                possibleUserIds,
                 now
             );
 
@@ -618,7 +626,13 @@ async function processPersonalBulletins(
                              bulletinContent.analyticsTasks.length;
 
             if (totalTasks === 0) {
-                console.log(`No tasks for ${user.name || user.username} today, skipping`);
+                console.log(`⚠️ No tasks for ${user.name || user.username} today (possibleIds=[${possibleUserIds.join(',')}]), skipping email`);
+                // Debug: show all campaign assigneeIds to help troubleshoot
+                if (campaigns.length > 0) {
+                    const allAssigneeIds = [...new Set(campaigns.map(c => c.assigneeId).filter(Boolean))];
+                    console.log(`  Available campaign assigneeIds: [${allAssigneeIds.join(',')}]`);
+                    console.log(`  None of possibleIds [${possibleUserIds.join(',')}] matched any assigneeId`);
+                }
                 result.skipped++;
                 continue;
             }
@@ -801,7 +815,37 @@ export default async function handler(
             ...doc.data(),
         })) as User[];
 
-        console.log(`Found ${campaigns.length} campaigns, ${reports.length} reports, ${analyticsTasks.length} analytics tasks, ${users.length} users`);
+        console.log(`Found ${campaigns.length} campaigns, ${reports.length} reports, ${analyticsTasks.length} analytics tasks, ${users.length} users, ${deptUsers.length} deptUsers`);
+
+        // Debug: Log all found campaigns
+        console.log('=== CAMPAIGNS FOUND FOR TODAY ===');
+        campaigns.forEach(c => {
+            console.log(`  Campaign: "${c.title}" | date: ${c.date.toISOString()} | assigneeId: ${c.assigneeId} | status: ${c.status}`);
+        });
+
+        // Debug: Log all found reports
+        console.log('=== REPORTS FOUND FOR TODAY ===');
+        reports.forEach(r => {
+            console.log(`  Report: "${r.title}" | dueDate: ${r.dueDate.toISOString()} | assigneeId: ${r.assigneeId} | status: ${r.status}`);
+        });
+
+        // Debug: Log all found analytics tasks
+        console.log('=== ANALYTICS TASKS FOUND FOR TODAY ===');
+        analyticsTasks.forEach(t => {
+            console.log(`  Task: "${t.title}" | date: ${t.date.toISOString()} | assigneeId: ${t.assigneeId} | status: ${t.status}`);
+        });
+
+        // Debug: Log department users
+        console.log('=== DEPARTMENT USERS (RECIPIENTS) ===');
+        deptUsers.forEach(u => {
+            console.log(`  DeptUser: id=${u.id} | name=${u.name} | username=${u.username} | email=${u.email}`);
+        });
+
+        // Debug: Log users collection
+        console.log('=== USERS COLLECTION ===');
+        users.forEach(u => {
+            console.log(`  User: id=${u.id} | name=${u.name} | email=${u.email}`);
+        });
 
         // Process
         const result = await processPersonalBulletins(
