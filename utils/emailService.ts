@@ -1078,3 +1078,166 @@ export async function sendPersonalBulletinEmail(
     urgency: 'Medium',
   });
 }
+
+/**
+ * Build Analytics Daily Bulletin HTML
+ */
+export function buildAnalyticsBulletinHTML(params: {
+  recipientName: string;
+  analyticsTasks: any[];
+  date: Date;
+  totalCount: number;
+}): string {
+  const { recipientName, analyticsTasks, date, totalCount } = params;
+
+  const dateStr = date.toLocaleDateString('tr-TR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    weekday: 'long'
+  });
+
+  const analyticsHTML = analyticsTasks.length > 0 ? `
+    <h3 style="margin: 24px 0 16px 0; font-size: 18px; color: #3B82F6; font-weight: 600;">
+      📈 Analitik İşler (${analyticsTasks.length})
+    </h3>
+    <table width="100%" cellpadding="8" cellspacing="0" style="background-color: #EFF6FF; border: 1px solid #3B82F6; border-radius: 8px; margin-bottom: 24px;">
+      <thead>
+        <tr style="background-color: #DBEAFE;">
+          <th style="text-align: left; font-size: 12px; color: #1E40AF; font-weight: 600; padding: 12px 8px;">İş</th>
+          <th style="text-align: center; font-size: 12px; color: #1E40AF; font-weight: 600; padding: 12px 8px;">Aciliyet</th>
+          <th style="text-align: center; font-size: 12px; color: #1E40AF; font-weight: 600; padding: 12px 8px;">Durum</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${analyticsTasks.map(task => `
+          <tr style="border-top: 1px solid #93C5FD;">
+            <td style="font-size: 13px; color: #1E40AF; padding: 8px;"><strong>${task.title}</strong></td>
+            <td style="font-size: 13px; color: #1E40AF; padding: 8px; text-align: center;">${getUrgencyLabel(task.urgency)}</td>
+            <td style="font-size: 13px; color: #1E40AF; padding: 8px; text-align: center;">${task.status || 'Planlandı'}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  ` : '';
+
+  if (totalCount === 0) {
+    return `
+      <!DOCTYPE html>
+      <html lang="tr">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Analitik Günlük Bülten</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #F8F9FE;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F8F9FE; padding: 40px 20px;">
+          <tr>
+            <td align="center">
+              <table width="650" cellpadding="0" cellspacing="0" style="background-color: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <tr>
+                  <td style="background-color: #F9FAFB; padding: 32px; text-align: center; border-bottom: 1px solid #E5E7EB;">
+                    <h1 style="margin: 0; color: #1F2937; font-size: 28px; font-weight: 700;">📈 Analitik Günlük Bülten</h1>
+                    <p style="margin: 8px 0 0 0; color: #6B7280; font-size: 16px; font-weight: 500;">${dateStr}</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 32px;">
+                    <p style="margin: 0 0 24px 0; font-size: 16px; color: #1F2937;">Günaydın <strong>${recipientName}</strong>,</p>
+                    <div style="background-color: #F0FDF4; border: 1px solid #86EFAC; border-radius: 8px; padding: 24px; text-align: center;">
+                      <p style="margin: 0; font-size: 18px; color: #166534; font-weight: 600;">
+                        🎉 Bugün için analitik işiniz yok!
+                      </p>
+                      <p style="margin: 12px 0 0 0; font-size: 14px; color: #15803D;">
+                        Harika bir gün geçirin!
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="background-color: #F9FAFB; padding: 24px; text-align: center; border-top: 1px solid #E5E7EB;">
+                    <p style="margin: 0 0 8px 0; font-size: 12px; color: #6B7280;">Bu otomatik bir günlük bültendir.</p>
+                    <p style="margin: 0; font-size: 12px; color: #9CA3AF;">Kampanya Takvimi © ${new Date().getFullYear()}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+  }
+
+  return `
+    <!DOCTYPE html>
+    <html lang="tr">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Analitik Günlük Bülten</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #F8F9FE;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F8F9FE; padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <table width="650" cellpadding="0" cellspacing="0" style="background-color: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+              <tr>
+                <td style="background-color: #F9FAFB; padding: 32px; text-align: center; border-bottom: 1px solid #E5E7EB;">
+                  <h1 style="margin: 0; color: #1F2937; font-size: 28px; font-weight: 700;">📈 Analitik Günlük Bülten</h1>
+                  <p style="margin: 8px 0 0 0; color: #6B7280; font-size: 16px; font-weight: 500;">${dateStr}</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 32px;">
+                  <p style="margin: 0 0 24px 0; font-size: 16px; color: #1F2937;">Günaydın <strong>${recipientName}</strong>,</p>
+                  <p style="margin: 0 0 24px 0; font-size: 14px; color: #4B5563; line-height: 1.6;">Bugün yapmanız gereken <strong>${totalCount} analitik iş</strong> bulunmaktadır:</p>
+                  ${analyticsHTML}
+                  <div style="text-align: center; margin: 32px 0;">
+                    <a href="https://www.kampanyatakvimi.net.tr" style="display: inline-block; background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%); color: #FFFFFF; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);">Analitik Takvime Git →</a>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td style="background-color: #F9FAFB; padding: 24px; text-align: center; border-top: 1px solid #E5E7EB;">
+                  <p style="margin: 0 0 8px 0; font-size: 12px; color: #6B7280;">Bu otomatik bir günlük bültendir.</p>
+                  <p style="margin: 0; font-size: 12px; color: #9CA3AF;">Kampanya Takvimi © ${new Date().getFullYear()}</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * Send Analytics Daily Bulletin Email
+ */
+export async function sendAnalyticsBulletinEmail(
+  resendApiKey: string,
+  recipientEmail: string,
+  recipientName: string,
+  bulletinContent: { analyticsTasks: any[]; date: Date; totalCount: number }
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const html = buildAnalyticsBulletinHTML({
+    recipientName,
+    ...bulletinContent
+  });
+
+  const dateStr = bulletinContent.date.toLocaleDateString('tr-TR');
+  const subject = `📈 Analitik Günlük Bülten - ${dateStr} (${bulletinContent.totalCount} İş)`;
+
+  return sendEmailWithResend(resendApiKey, {
+    to: recipientEmail,
+    toName: recipientName,
+    subject,
+    html,
+    eventId: `analytics-bulletin-${bulletinContent.date.toISOString().split('T')[0]}`,
+    eventTitle: `Analitik Günlük Bülten - ${dateStr}`,
+    eventType: 'analytics',
+    urgency: 'Medium',
+  });
+}

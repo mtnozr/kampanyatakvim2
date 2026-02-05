@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Send, Check, X, AlertCircle, Mail, Settings, Eye, Smartphone, Users, FileText, Clock, Bell, TestTube } from 'lucide-react';
+import { Save, Send, Check, X, AlertCircle, Mail, Settings, Eye, Smartphone, Users, FileText, Clock, Bell, TestTube, BarChart3 } from 'lucide-react';
 import { ReminderSettings, ReminderLog, CalendarEvent, AnalyticsTask, User, AnalyticsUser, Report, DepartmentUser } from '../types';
 import { db } from '../firebase';
 import {
@@ -18,9 +18,10 @@ import { sendTestSMS } from '../utils/smsService';
 import { saveReminderLog } from '../utils/reminderHelper';
 
 import { buildWeeklyDigest } from '../utils/weeklyDigestBuilder';
-import { buildWeeklyDigestHTML, sendWeeklyDigestEmail, buildDailyDigestHTML, sendDailyDigestEmail, buildPersonalBulletinHTML, sendPersonalBulletinEmail } from '../utils/emailService';
+import { buildWeeklyDigestHTML, sendWeeklyDigestEmail, buildDailyDigestHTML, sendDailyDigestEmail, buildPersonalBulletinHTML, sendPersonalBulletinEmail, buildAnalyticsBulletinHTML, sendAnalyticsBulletinEmail } from '../utils/emailService';
 import { buildDailyDigest } from '../utils/dailyDigestBuilder';
 import { buildPersonalBulletin } from '../utils/personalBulletinBuilder';
+import { buildAnalyticsBulletin } from '../utils/analyticsBulletinBuilder';
 
 type TabType = 'general' | 'reminders' | 'digests' | 'reports' | 'recipients' | 'testing' | 'logs';
 
@@ -78,6 +79,8 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
   const [isSendingPersonalBulletin, setIsSendingPersonalBulletin] = useState(false);
   const [personalBulletinRecipients, setPersonalBulletinRecipients] = useState<DepartmentUser[]>([]);
 
+  const [analyticsUsers, setAnalyticsUsers] = useState<AnalyticsUser[]>([]);
+
   const [saveMessage, setSaveMessage] = useState('');
   const [testMessage, setTestMessage] = useState('');
   const [testSMSMessage, setTestSMSMessage] = useState('');
@@ -87,6 +90,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
     loadSettings();
     loadRecentLogs();
     loadDepartmentUsers();
+    loadAnalyticsUsers();
   }, []);
 
   async function loadDepartmentUsers() {
@@ -101,6 +105,21 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
       setDepartmentUsers(users);
     } catch (error) {
       console.error('Error loading department users:', error);
+    }
+  }
+
+  async function loadAnalyticsUsers() {
+    try {
+      const analyticsUsersRef = collection(db, 'analyticsUsers');
+      const snapshot = await getDocs(analyticsUsersRef);
+      const users = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as AnalyticsUser));
+      users.sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+      setAnalyticsUsers(users);
+    } catch (error) {
+      console.error('Error loading analytics users:', error);
     }
   }
 
@@ -1422,6 +1441,131 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
                     <li>İptal edilmiş ve tamamlanmış işler gösterilmez</li>
                     <li>Email 3 kategoriye ayrılır: Kampanya, Rapor, Analitik</li>
                     <li>Kullanıcının o gün işi yoksa email gönderilmez</li>
+                    <li>Haftasonları otomatik atlanır</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Analytics Daily Bulletin */}
+              <div className="p-6 bg-cyan-50 dark:bg-cyan-900/10 rounded-lg border border-cyan-200 dark:border-cyan-800">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                      <BarChart3 size={20} className="text-cyan-600" />
+                      Analitik Günlük Bülten
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      Her kullanıcıya o günkü aktif analitik işlerini gönderir (Hafta içi)
+                    </p>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={settings.analyticsDailyBulletinEnabled || false}
+                      onChange={(e) => setSettings({ ...settings, analyticsDailyBulletinEnabled: e.target.checked })}
+                      className="w-5 h-5 text-cyan-600 rounded focus:ring-2 focus:ring-cyan-200"
+                    />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Otomatik Gönder
+                    </span>
+                  </label>
+                </div>
+
+                {settings.analyticsDailyBulletinEnabled && (
+                  <>
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Gönderim Saati (Türkiye Saati - Sadece hafta içi)
+                      </label>
+                      <input
+                        type="time"
+                        value={settings.analyticsDailyBulletinTime || '09:00'}
+                        onChange={(e) => setSettings({ ...settings, analyticsDailyBulletinTime: e.target.value })}
+                        className="px-3 py-2 border border-cyan-300 dark:border-cyan-700 rounded-lg text-sm focus:ring-2 focus:ring-cyan-200 dark:bg-slate-700 dark:text-white"
+                      />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        📊 Her kullanıcı sadece kendi analitik işlerini görür. Haftasonları otomatik atlanır.
+                      </p>
+                    </div>
+
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                        Bülten Alacak Kişiler ({(settings.analyticsDailyBulletinRecipients || []).length} seçili)
+                      </label>
+
+                      {/* Quick Select Buttons */}
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const allUserIds = analyticsUsers.filter(u => u.email).map(u => u.id);
+                            setSettings({ ...settings, analyticsDailyBulletinRecipients: allUserIds });
+                          }}
+                          className="px-3 py-1.5 bg-cyan-100 hover:bg-cyan-200 dark:bg-cyan-900/30 dark:hover:bg-cyan-900/50 text-cyan-700 dark:text-cyan-300 rounded text-xs font-medium transition-colors"
+                        >
+                          ✓ Tümünü Seç
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSettings({ ...settings, analyticsDailyBulletinRecipients: [] })}
+                          className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-300 rounded text-xs font-medium transition-colors"
+                        >
+                          ✗ Tümünü Kaldır
+                        </button>
+                      </div>
+
+                      {/* Individual User Selection */}
+                      <div className="max-h-60 overflow-y-auto border border-cyan-200 dark:border-cyan-700 rounded-lg p-3 bg-white dark:bg-slate-800">
+                        {analyticsUsers.length === 0 ? (
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Analitik kullanıcı bulunamadı</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {analyticsUsers.map(user => (
+                              <label
+                                key={user.id}
+                                className="flex items-center gap-2 cursor-pointer hover:bg-cyan-50 dark:hover:bg-cyan-900/20 p-2 rounded transition-colors"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={(settings.analyticsDailyBulletinRecipients || []).includes(user.id)}
+                                  onChange={(e) => {
+                                    const current = settings.analyticsDailyBulletinRecipients || [];
+                                    const updated = e.target.checked
+                                      ? [...current, user.id]
+                                      : current.filter(id => id !== user.id);
+                                    setSettings({ ...settings, analyticsDailyBulletinRecipients: updated });
+                                  }}
+                                  className="w-4 h-4 text-cyan-600 rounded focus:ring-cyan-200"
+                                />
+                                <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">
+                                  {user.emoji} {user.name}
+                                </span>
+                                {user.email && (
+                                  <span className="text-xs text-gray-500 dark:text-gray-400">{user.email}</span>
+                                )}
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                        💡 İpucu: Her kullanıcı sadece kendine atanan aktif analitik işleri alır. İşi olmayan günlerde email gönderilmez.
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                <div className="bg-cyan-100 dark:bg-cyan-900/30 border border-cyan-300 dark:border-cyan-700 rounded-lg p-4 text-sm">
+                  <p className="text-cyan-800 dark:text-cyan-200 mb-2">
+                    <strong>ℹ️ Nasıl Çalışır?</strong>
+                  </p>
+                  <ul className="text-cyan-700 dark:text-cyan-300 space-y-1 ml-4 list-disc">
+                    <li>Her sabah belirlenen saatte çalışır</li>
+                    <li>Sadece seçili analitik kullanıcılara gönderilir</li>
+                    <li>Her kişi SADECE kendi analitik işlerini görür</li>
+                    <li>İptal edilmiş ve tamamlanmış işler gösterilmez</li>
+                    <li>Kullanıcının o gün analitik işi yoksa email gönderilmez</li>
                     <li>Haftasonları otomatik atlanır</li>
                   </ul>
                 </div>

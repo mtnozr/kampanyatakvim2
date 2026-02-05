@@ -236,6 +236,11 @@ export interface ReminderSettings {
   personalDailyBulletinTime?: string;      // Time in HH:mm format (e.g., "09:00")
   personalDailyBulletinRecipients?: string[]; // Array of department user IDs to receive bulletins
 
+  // Analytics Daily Bulletin Settings (Analytics tasks summary)
+  analyticsDailyBulletinEnabled?: boolean;  // Enable/disable analytics daily bulletin
+  analyticsDailyBulletinTime?: string;      // Time in HH:mm format (e.g., "09:00")
+  analyticsDailyBulletinRecipients?: string[]; // Array of analytics user IDs to receive bulletins
+
   // CC Recipients for all emails
   emailCcRecipients?: string[];  // Array of department user IDs to CC on all emails
 
