@@ -20,9 +20,9 @@ Firebase Console'da `reminderSettings/default` dokümanına şu alanları ekleyi
 
 ```json
 {
-  "personalDailyBulletinEnabled": true,
-  "personalDailyBulletinTime": "09:00",
-  "personalDailyBulletinRecipients": [
+  "personalBulletinEnabled": true,
+  "personalBulletinTime": "09:00",
+  "personalBulletinRecipients": [
     "user-id-1",
     "user-id-2",
     "user-id-3"
@@ -30,7 +30,9 @@ Firebase Console'da `reminderSettings/default` dokümanına şu alanları ekleyi
 }
 ```
 
-**personalDailyBulletinRecipients:** `departmentUsers` collection'ındaki kullanıcı ID'leri
+**personalBulletinRecipients:** `users` collection'ındaki kullanıcı ID'leri
+
+> Not: Eski alan adları (`personalDailyBulletinEnabled`, `personalDailyBulletinTime`, `personalDailyBulletinRecipients`) ile kayıtlı ayarlar da desteklenir.
 
 ### 2. Cron-Job.org Ayarları
 
