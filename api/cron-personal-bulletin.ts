@@ -562,8 +562,19 @@ async function processPersonalBulletins(
         console.log(`Found ${ccRecipientEmails.length} CC recipients for personal bulletins`);
     }
 
+    // ⚠️ TEMPORARY TEST LIMIT: Maximum 3 emails per run
+    const MAX_EMAILS_PER_RUN = 3;
+    let emailsSentCount = 0;
+
     // Send bulletin to each user
     for (const user of recipients) {
+        // Check if we've reached the test limit
+        if (emailsSentCount >= MAX_EMAILS_PER_RUN) {
+            console.log(`⚠️ TEST LIMIT REACHED: Stopped after sending ${MAX_EMAILS_PER_RUN} emails`);
+            result.skipped += (recipients.length - emailsSentCount);
+            break;
+        }
+
         try {
             const todayStr = now.toISOString().split('T')[0];
 
@@ -624,6 +635,7 @@ async function processPersonalBulletins(
             if (emailResult.success) {
                 console.log(`✅ Sent to ${user.name || user.username}`);
                 result.sent++;
+                emailsSentCount++;
 
                 await logPersonalBulletin(db, {
                     recipientEmail: user.email!,

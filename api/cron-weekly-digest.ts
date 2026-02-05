@@ -571,8 +571,19 @@ async function processWeeklyDigest(
 
     console.log(`Sending to ${designerUsers.length} designer users`);
 
+    // ⚠️ TEMPORARY TEST LIMIT: Maximum 3 emails per run
+    const MAX_EMAILS_PER_RUN = 3;
+    let emailsSentCount = 0;
+
     // Send email to each designer
     for (const designer of designerUsers) {
+        // Check if we've reached the test limit
+        if (emailsSentCount >= MAX_EMAILS_PER_RUN) {
+            console.log(`⚠️ TEST LIMIT REACHED: Stopped after sending ${MAX_EMAILS_PER_RUN} emails`);
+            result.skipped += (designerUsers.length - emailsSentCount);
+            break;
+        }
+
         try {
             const html = buildWeeklyDigestHTML({
                 recipientName: designer.name || designer.username,
@@ -593,6 +604,7 @@ async function processWeeklyDigest(
             if (emailResult.success) {
                 console.log(`✅ Sent to ${designer.name || designer.username}`);
                 result.sent++;
+                emailsSentCount++;
 
                 await logWeeklyDigest(db, {
                     recipientEmail: designer.email!,

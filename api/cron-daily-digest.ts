@@ -510,8 +510,19 @@ async function processDailyDigest(
     // OPTIMIZATION 4: Collect logs and batch write them at the end
     const logsToWrite: any[] = [];
 
+    // ⚠️ TEMPORARY TEST LIMIT: Maximum 3 emails per run
+    const MAX_EMAILS_PER_RUN = 3;
+    let emailsSentCount = 0;
+
     // Send email to each designer
     for (const designer of designerUsers) {
+        // Check if we've reached the test limit
+        if (emailsSentCount >= MAX_EMAILS_PER_RUN) {
+            console.log(`⚠️ TEST LIMIT REACHED: Stopped after sending ${MAX_EMAILS_PER_RUN} emails`);
+            result.skipped += (designerUsers.length - emailsSentCount);
+            break;
+        }
+
         try {
             const html = buildDailyDigestHTML({
                 recipientName: designer.name || designer.username,
@@ -530,6 +541,7 @@ async function processDailyDigest(
             if (emailResult.success) {
                 console.log(`✅ Sent to ${designer.name || designer.username}`);
                 result.sent++;
+                emailsSentCount++;
 
                 // Collect log data instead of writing immediately
                 logsToWrite.push({
