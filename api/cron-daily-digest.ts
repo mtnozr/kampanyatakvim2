@@ -469,22 +469,25 @@ async function processDailyDigest(
         return result;
     }
 
+    // ⚠️ TEMP: Disabled for testing - allow multiple sends per day
     // Check if already sent today
-    const todayStr = now.toISOString().split('T')[0];
-    const alreadySent = await checkDigestAlreadySent(db, todayStr);
-    if (alreadySent) {
-        console.log('Daily digest already sent for today');
-        return result;
-    }
+    // const todayStr = now.toISOString().split('T')[0];
+    // const alreadySent = await checkDigestAlreadySent(db, todayStr);
+    // if (alreadySent) {
+    //     console.log('Daily digest already sent for today');
+    //     return result;
+    // }
 
+    // ⚠️ TEMP: Disabled lock for testing
     // Acquire lock
-    const lockAcquired = await acquireDailyDigestLock(db, todayStr);
-    if (!lockAcquired) {
-        console.log('Could not acquire lock for daily digest');
-        return result;
-    }
+    // const todayStr = now.toISOString().split('T')[0];
+    // const lockAcquired = await acquireDailyDigestLock(db, todayStr);
+    // if (!lockAcquired) {
+    //     console.log('Could not acquire lock for daily digest');
+    //     return result;
+    // }
 
-    console.log('Lock acquired. Processing daily digest...');
+    console.log('Processing daily digest (lock disabled for testing)...');
 
     if (!settings.resendApiKey) {
         console.error('Resend API key is not configured');

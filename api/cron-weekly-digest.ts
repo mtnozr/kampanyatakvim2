@@ -550,13 +550,14 @@ async function processWeeklyDigest(
     console.log('Building weekly digest content...');
     const digestContent = buildWeeklyDigest(reports, campaigns, users);
 
+    // ⚠️ TEMP: Disabled for testing - allow multiple sends
     // Check if already sent this week
-    const weekStr = digestContent.weekStart.toISOString().split('T')[0];
-    const alreadySent = await checkWeeklyDigestAlreadySent(db, weekStr);
-    if (alreadySent) {
-        console.log('Weekly digest already sent for this week');
-        return result;
-    }
+    // const weekStr = digestContent.weekStart.toISOString().split('T')[0];
+    // const alreadySent = await checkWeeklyDigestAlreadySent(db, weekStr);
+    // if (alreadySent) {
+    //     console.log('Weekly digest already sent for this week');
+    //     return result;
+    // }
 
     // Filter designer users
     const designerUsers = departmentUsers.filter(user => {
