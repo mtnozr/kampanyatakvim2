@@ -105,6 +105,19 @@ export async function processReportDelayNotifications(
         return result;
     }
 
+    // Get CC recipient emails from settings
+    const ccRecipientEmails: string[] = [];
+    if (settings.emailCcRecipients && settings.emailCcRecipients.length > 0) {
+        // Find users with matching IDs and get their emails
+        for (const recipientId of settings.emailCcRecipients) {
+            const ccUser = users.find(u => u.id === recipientId);
+            if (ccUser && ccUser.email) {
+                ccRecipientEmails.push(ccUser.email);
+            }
+        }
+        console.log(`Found ${ccRecipientEmails.length} CC recipients for delay notifications`);
+    }
+
     // Filter overdue reports (status = pending and dueDate < now)
     const overdueReports = reports.filter(report => {
         if (report.status !== 'pending') return false;
@@ -147,7 +160,7 @@ export async function processReportDelayNotifications(
         // Calculate days overdue
         const daysOverdue = differenceInDays(now, report.dueDate);
 
-        // Send email
+        // Send email with CC recipients
         try {
             const emailResult = await sendReportDelayEmail(
                 settings.resendApiKey,
@@ -158,7 +171,8 @@ export async function processReportDelayNotifications(
                     title: report.title,
                     campaignTitle: report.campaignTitle,
                 },
-                daysOverdue
+                daysOverdue,
+                ccRecipientEmails.length > 0 ? ccRecipientEmails : undefined
             );
 
             if (emailResult.success) {

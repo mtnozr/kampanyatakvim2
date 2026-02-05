@@ -15,6 +15,7 @@ interface ReminderSettings {
     personalDailyBulletinEnabled?: boolean;
     personalDailyBulletinTime?: string;
     personalDailyBulletinRecipients?: string[];
+    emailCcRecipients?: string[];
 }
 
 interface CalendarEvent {
@@ -381,20 +382,28 @@ async function sendEmailInternal(apiKey: string, params: {
     to: string;
     subject: string;
     html: string;
+    cc?: string[];
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
+        const emailBody: any = {
+            from: 'Kampanya Takvimi <hatirlatma@kampanyatakvimi.net.tr>',
+            to: params.to,
+            subject: params.subject,
+            html: params.html,
+        };
+
+        // Add CC if provided
+        if (params.cc && params.cc.length > 0) {
+            emailBody.cc = params.cc;
+        }
+
         const response = await fetch('https://api.resend.com/emails', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${apiKey}`,
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                from: 'Kampanya Takvimi <hatirlatma@kampanyatakvimi.net.tr>',
-                to: params.to,
-                subject: params.subject,
-                html: params.html,
-            }),
+            body: JSON.stringify(emailBody),
         });
 
         if (!response.ok) {
@@ -541,6 +550,18 @@ async function processPersonalBulletins(
 
     console.log(`Processing bulletins for ${recipients.length} users`);
 
+    // Get CC recipient emails from settings
+    const ccRecipientEmails: string[] = [];
+    if (settings.emailCcRecipients && settings.emailCcRecipients.length > 0) {
+        for (const ccRecipientId of settings.emailCcRecipients) {
+            const ccUser = departmentUsers.find(u => u.id === ccRecipientId);
+            if (ccUser && ccUser.email) {
+                ccRecipientEmails.push(ccUser.email);
+            }
+        }
+        console.log(`Found ${ccRecipientEmails.length} CC recipients for personal bulletins`);
+    }
+
     // Send bulletin to each user
     for (const user of recipients) {
         try {
@@ -595,7 +616,8 @@ async function processPersonalBulletins(
                 {
                     to: user.email!,
                     subject: `Günlük Bülten - ${now.toLocaleDateString('tr-TR')} (${totalTasks} İş)`,
-                    html
+                    html,
+                    cc: ccRecipientEmails.length > 0 ? ccRecipientEmails : undefined
                 }
             );
 

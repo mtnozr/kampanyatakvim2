@@ -541,7 +541,8 @@ export async function sendReportDelayEmail(
   recipientEmail: string,
   recipientName: string,
   report: { id: string; title: string; campaignTitle?: string },
-  daysOverdue: number
+  daysOverdue: number,
+  ccEmails?: string[]
 ): Promise<EmailResponse> {
   const html = buildReportDelayEmailHTML({
     assigneeName: recipientName,
@@ -561,6 +562,7 @@ export async function sendReportDelayEmail(
     eventTitle: report.title,
     eventType: 'campaign', // Reports are related to campaigns
     urgency: 'High', // Overdue reports are high urgency
+    cc: ccEmails,
   });
 }
 
@@ -1057,7 +1059,8 @@ export async function sendPersonalBulletinEmail(
   resendApiKey: string,
   recipientEmail: string,
   recipientName: string,
-  bulletinContent: { campaigns: any[]; reports: any[]; analyticsTasks: any[]; date: Date; totalCount: number }
+  bulletinContent: { campaigns: any[]; reports: any[]; analyticsTasks: any[]; date: Date; totalCount: number },
+  ccEmails?: string[]
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const html = buildPersonalBulletinHTML({
     recipientName,
@@ -1076,6 +1079,7 @@ export async function sendPersonalBulletinEmail(
     eventTitle: `Kişisel Günlük Bülten - ${dateStr}`,
     eventType: 'campaign',
     urgency: 'Medium',
+    cc: ccEmails,
   });
 }
 

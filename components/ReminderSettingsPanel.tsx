@@ -23,7 +23,7 @@ import { buildDailyDigest } from '../utils/dailyDigestBuilder';
 import { buildPersonalBulletin } from '../utils/personalBulletinBuilder';
 import { buildAnalyticsBulletin } from '../utils/analyticsBulletinBuilder';
 
-type TabType = 'general' | 'reminders' | 'digests' | 'reports' | 'recipients' | 'testing' | 'logs';
+type TabType = 'general' | 'reminders' | 'digests' | 'reports' | 'testing' | 'logs';
 
 export default function ReminderSettingsPanel() {
   const [activeTab, setActiveTab] = useState<TabType>('general');
@@ -868,7 +868,6 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
     { id: 'reminders' as TabType, label: 'Hatırlatmalar', icon: Bell },
     { id: 'digests' as TabType, label: 'Bültenler', icon: Mail },
     { id: 'reports' as TabType, label: 'Rapor Bildirimleri', icon: FileText },
-    { id: 'recipients' as TabType, label: 'Alıcılar', icon: Users },
     { id: 'testing' as TabType, label: 'Test Araçları', icon: TestTube },
     { id: 'logs' as TabType, label: 'Gönderim Geçmişi', icon: Clock },
   ];
@@ -1207,6 +1206,75 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
           {/* Digests Tab */}
           {activeTab === 'digests' && (
             <div className="space-y-8">
+              {/* Bulletin Recipients */}
+              <div className="p-6 bg-purple-50 dark:bg-purple-900/10 rounded-lg border border-purple-200 dark:border-purple-800">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+                  👥 Bülten Alıcıları
+                </h3>
+
+                <div className="mb-4 p-4 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+                  <p className="text-sm text-purple-900 dark:text-purple-200 font-medium mb-2">
+                    📧 E-posta Gönderim Kuralları:
+                  </p>
+                  <ul className="text-xs text-purple-800 dark:text-purple-300 space-y-1.5 ml-4">
+                    <li className="flex items-start gap-2">
+                      <span className="text-purple-600 dark:text-purple-400">•</span>
+                      <span><strong>Gün Sonu Bülteni ve Haftalık Bülten:</strong> Seçilen kullanıcılara doğrudan (TO) gönderilir</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-purple-600 dark:text-purple-400">•</span>
+                      <span><strong>Gecikme Bildirimleri ve Kişisel Bültenler:</strong> Seçilen kullanıcılar CC'ye eklenir</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {departmentUsers.length === 0 ? (
+                  <p className="text-sm text-gray-400 italic">Yükleniyor...</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {departmentUsers
+                      .filter(user => user.isDesigner)
+                      .map(user => (
+                        <label
+                          key={user.id}
+                          className="flex items-center gap-3 p-4 rounded-lg border border-purple-200 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-900/30 cursor-pointer transition-colors"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={(settings.emailCcRecipients || []).includes(user.id)}
+                            onChange={(e) => {
+                              const currentCc = settings.emailCcRecipients || [];
+                              if (e.target.checked) {
+                                setSettings({ ...settings, emailCcRecipients: [...currentCc, user.id] });
+                              } else {
+                                setSettings({ ...settings, emailCcRecipients: currentCc.filter(id => id !== user.id) });
+                              }
+                            }}
+                            className="w-5 h-5 text-purple-600 rounded focus:ring-2 focus:ring-purple-200"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-medium text-gray-800 dark:text-gray-200 block truncate">
+                              {user.username}
+                              <span className="ml-2 text-xs text-purple-600 dark:text-purple-400">(Designer)</span>
+                            </span>
+                            {user.email && (
+                              <span className="text-xs text-gray-500 dark:text-gray-400 block truncate">{user.email}</span>
+                            )}
+                          </div>
+                        </label>
+                      ))}
+                  </div>
+                )}
+
+                {(settings.emailCcRecipients?.length || 0) > 0 && (
+                  <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <p className="text-sm text-green-800 dark:text-green-200">
+                      ✅ <strong>{settings.emailCcRecipients?.length}</strong> kullanıcı seçildi
+                    </p>
+                  </div>
+                )}
+              </div>
+
               {/* Daily Digest */}
               <div className="p-6 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-800">
                 <div className="flex items-start justify-between mb-4">
@@ -1789,67 +1857,6 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
                   <li>Her rapor için 24 saatte bir kez bildirim gönderilir (spam önleme)</li>
                 </ul>
               </div>
-            </div>
-          )}
-
-          {/* Recipients Tab */}
-          {activeTab === 'recipients' && (
-            <div className="space-y-4">
-              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <p className="text-sm text-blue-900 dark:text-blue-200 font-medium mb-2">
-                  👥 Bülten Alıcıları
-                </p>
-                <p className="text-xs text-blue-800 dark:text-blue-300">
-                  Seçilen Designer kullanıcıları günlük ve haftalık bülten maillerini alacaktır.
-                  Ayrıca tüm hatırlatma maillerine CC olarak eklenirler.
-                </p>
-              </div>
-
-              {departmentUsers.length === 0 ? (
-                <p className="text-sm text-gray-400 italic">Yükleniyor...</p>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {departmentUsers
-                    .filter(user => user.isDesigner)
-                    .map(user => (
-                      <label
-                        key={user.id}
-                        className="flex items-center gap-3 p-4 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={(settings.emailCcRecipients || []).includes(user.id)}
-                          onChange={(e) => {
-                            const currentCc = settings.emailCcRecipients || [];
-                            if (e.target.checked) {
-                              setSettings({ ...settings, emailCcRecipients: [...currentCc, user.id] });
-                            } else {
-                              setSettings({ ...settings, emailCcRecipients: currentCc.filter(id => id !== user.id) });
-                            }
-                          }}
-                          className="w-5 h-5 text-purple-600 rounded focus:ring-2 focus:ring-purple-200"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <span className="text-sm font-medium text-gray-800 dark:text-gray-200 block truncate">
-                            {user.username}
-                            <span className="ml-2 text-xs text-purple-600 dark:text-purple-400">(Designer)</span>
-                          </span>
-                          {user.email && (
-                            <span className="text-xs text-gray-500 dark:text-gray-400 block truncate">{user.email}</span>
-                          )}
-                        </div>
-                      </label>
-                    ))}
-                </div>
-              )}
-
-              {(settings.emailCcRecipients?.length || 0) > 0 && (
-                <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                  <p className="text-sm text-green-800 dark:text-green-200">
-                    ✅ <strong>{settings.emailCcRecipients?.length}</strong> kullanıcı seçildi
-                  </p>
-                </div>
-              )}
             </div>
           )}
 
