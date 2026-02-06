@@ -4,6 +4,9 @@
  * Her kullanıcıya kendi kampanyalarını gönderir:
  * - Geciken kampanyalar (bugünden önce, tamamlanmamış)
  * - Bugünkü kampanyalar
+ *
+ * Vercel cron tarafından otomatik tetiklenir (vercel.json).
+ * Manuel tetikleme: ?key=CRON_SECRET_KEY&force=true
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
@@ -52,6 +55,8 @@ function initFirebase() {
 }
 
 // ===== TURKEY TIMEZONE (UTC+3) =====
+// Pattern: Add 3 hours to UTC timestamp, then read with getUTC* methods.
+// This gives Turkey local time components consistently regardless of server timezone.
 
 const TURKEY_OFFSET = 3 * 60 * 60 * 1000;
 
@@ -62,14 +67,6 @@ function getTurkeyNow(): Date {
 function getTurkeyToday(): { year: number; month: number; day: number } {
     const t = getTurkeyNow();
     return { year: t.getUTCFullYear(), month: t.getUTCMonth(), day: t.getUTCDate() };
-}
-
-function getTodayRange(): { start: Date; end: Date } {
-    const { year, month, day } = getTurkeyToday();
-    return {
-        start: new Date(Date.UTC(year, month, day, 0, 0, 0) - TURKEY_OFFSET),
-        end: new Date(Date.UTC(year, month, day, 23, 59, 59, 999) - TURKEY_OFFSET)
-    };
 }
 
 function isTimeReached(targetTime: string): boolean {
@@ -200,6 +197,18 @@ function buildHTML(name: string, overdue: Campaign[], today: Campaign[], dateStr
     `;
 }
 
+// ===== DUPLICATE CHECK =====
+
+async function isAlreadySentToday(db: admin.firestore.Firestore, userId: string, todayStr: string): Promise<boolean> {
+    const logId = `personal-bulletin-${todayStr}-${userId}`;
+    const snapshot = await db.collection('reminderLogs')
+        .where('eventId', '==', logId)
+        .where('status', '==', 'success')
+        .limit(1)
+        .get();
+    return !snapshot.empty;
+}
+
 // ===== MAIN HANDLER =====
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -207,13 +216,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const log = (msg: string) => { console.log(msg); logs.push(msg); };
 
     try {
-        // Auth
-        const key = Array.isArray(req.query.key) ? req.query.key[0] : req.query.key;
-        if (key !== process.env.CRON_SECRET_KEY && req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
+        // Auth - same pattern as other crons (daily-digest, weekly-digest)
+        const authHeader = req.headers.authorization;
+        const queryKey = Array.isArray(req.query.key) ? req.query.key[0] : req.query.key;
+        const expectedKey = process.env.CRON_SECRET_KEY;
+
+        if (queryKey !== expectedKey && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+            log('❌ Yetkisiz erişim');
             return res.status(401).json({ error: 'Unauthorized' });
         }
 
+        // force=true query param bypasses time/weekend checks (for manual triggers)
+        const forceParam = Array.isArray(req.query.force) ? req.query.force[0] : req.query.force;
+        const isForced = forceParam === 'true';
+
         log('=== KİŞİSEL BÜLTEN BAŞLADI ===');
+        if (isForced) log('⚡ Manuel tetikleme (force=true) - saat/hafta sonu kontrolü atlanıyor');
 
         const db = initFirebase().firestore();
 
@@ -247,14 +265,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(200).json({ success: false, reason: 'no_recipients', logs });
         }
 
-        if (isWeekend()) {
-            log('❌ Hafta sonu - atlanıyor');
-            return res.status(200).json({ success: false, reason: 'weekend', logs });
-        }
+        // Time & weekend checks (skipped when force=true)
+        if (!isForced) {
+            if (isWeekend()) {
+                log('❌ Hafta sonu - atlanıyor');
+                return res.status(200).json({ success: false, reason: 'weekend', logs });
+            }
 
-        if (!isTimeReached(settings.personalBulletinTime)) {
-            log(`❌ Henüz saat olmadı (hedef: ${settings.personalBulletinTime})`);
-            return res.status(200).json({ success: false, reason: 'not_time', logs });
+            // Log current Turkey time for debugging
+            const turkeyNow = getTurkeyNow();
+            log(`⏰ Türkiye saati: ${turkeyNow.getUTCHours()}:${String(turkeyNow.getUTCMinutes()).padStart(2, '0')} | Hedef saat: ${settings.personalBulletinTime}`);
+
+            if (!isTimeReached(settings.personalBulletinTime)) {
+                log(`❌ Henüz saat olmadı (hedef: ${settings.personalBulletinTime})`);
+                return res.status(200).json({ success: false, reason: 'not_time', logs });
+            }
         }
 
         log(`✅ Kontroller geçti. Alıcı sayısı: ${recipientIds.length}`);
@@ -262,6 +287,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Get Turkey today
         const { year, month, day } = getTurkeyToday();
         const turkeyDateStr = `${day}.${month + 1}.${year}`;
+        const todayStr = `${year}-${month + 1}-${day}`;
         log(`Türkiye tarihi: ${turkeyDateStr}`);
 
         // Fetch users (recipients)
@@ -299,8 +325,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Send to each recipient
         let sent = 0;
         let skipped = 0;
+        let alreadySent = 0;
 
         for (const user of recipients) {
+            // Duplicate check - skip if already sent today (unless forced)
+            if (!isForced) {
+                const duplicate = await isAlreadySentToday(db, user.id, todayStr);
+                if (duplicate) {
+                    log(`  ⏭️ ${user.name}: Bugün zaten gönderilmiş, atlanıyor`);
+                    alreadySent++;
+                    continue;
+                }
+            }
+
             // Filter campaigns for this user
             const userCampaigns = allCampaigns.filter(c => c.assigneeId === user.id);
 
@@ -312,21 +349,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             );
 
             // Today: date = today AND not cancelled
-            const today = userCampaigns.filter(c =>
+            const todayCampaigns = userCampaigns.filter(c =>
                 isSameTurkeyDay(c.date, year, month, day) &&
                 c.status !== 'İptal Edildi'
             );
 
-            log(`${user.name}: geciken=${overdue.length}, bugün=${today.length}`);
+            log(`${user.name}: toplam=${userCampaigns.length}, geciken=${overdue.length}, bugün=${todayCampaigns.length}`);
 
-            if (overdue.length === 0 && today.length === 0) {
+            if (overdue.length === 0 && todayCampaigns.length === 0) {
                 log(`  → Kampanya yok, atlanıyor`);
                 skipped++;
                 continue;
             }
 
-            const html = buildHTML(user.name, overdue, today, turkeyDateStr);
-            const total = overdue.length + today.length;
+            const html = buildHTML(user.name, overdue, todayCampaigns, turkeyDateStr);
+            const total = overdue.length + todayCampaigns.length;
             const subject = `📋 Günlük Bülten - ${turkeyDateStr} (${total} Kampanya${overdue.length > 0 ? ' ⚠️' : ''})`;
 
             const success = await sendEmail(settings.resendApiKey!, user.email, subject, html);
@@ -337,7 +374,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                 // Log to Firestore
                 await db.collection('reminderLogs').add({
-                    eventId: `personal-bulletin-${year}-${month + 1}-${day}-${user.id}`,
+                    eventId: `personal-bulletin-${todayStr}-${user.id}`,
                     eventType: 'personal-bulletin',
                     eventTitle: `Kişisel Günlük Bülten`,
                     recipientEmail: user.email,
@@ -352,9 +389,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
         }
 
-        log(`=== TAMAMLANDI: gönderilen=${sent}, atlanan=${skipped} ===`);
+        log(`=== TAMAMLANDI: gönderilen=${sent}, atlanan=${skipped}, zaten_gönderilmiş=${alreadySent} ===`);
 
-        return res.status(200).json({ success: true, sent, skipped, logs });
+        return res.status(200).json({ success: true, sent, skipped, alreadySent, logs });
 
     } catch (error) {
         const msg = error instanceof Error ? error.message : 'Bilinmeyen hata';
