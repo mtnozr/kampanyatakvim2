@@ -437,30 +437,20 @@ async function processAnalyticsBulletins(
 
     console.log(`Processing bulletins for ${recipients.length} users`);
 
-    // ⚠️ TEMPORARY TEST LIMIT: Maximum 3 emails per run
-    const MAX_EMAILS_PER_RUN = 3;
     let emailsSentCount = 0;
 
     // Send bulletin to each user
     for (const user of recipients) {
-        // Check if we've reached the test limit
-        if (emailsSentCount >= MAX_EMAILS_PER_RUN) {
-            console.log(`⚠️ TEST LIMIT REACHED: Stopped after sending ${MAX_EMAILS_PER_RUN} emails`);
-            result.skipped += (recipients.length - emailsSentCount);
-            break;
-        }
-
         try {
             const todayStr = now.toISOString().split('T')[0];
 
-            // ⚠️ TEMP: Disabled for testing - allow multiple sends per day
             // Check if already sent today
-            // const alreadySent = await checkBulletinAlreadySent(db, todayStr, user.id);
-            // if (alreadySent) {
-            //     console.log(`Bulletin already sent to ${user.name} today`);
-            //     result.skipped++;
-            //     continue;
-            // }
+            const alreadySent = await checkBulletinAlreadySent(db, todayStr, user.id);
+            if (alreadySent) {
+                console.log(`Bulletin already sent to ${user.name} today`);
+                result.skipped++;
+                continue;
+            }
 
             // Build bulletin content for this user
             const bulletinContent = buildAnalyticsBulletin(

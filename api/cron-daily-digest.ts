@@ -475,25 +475,22 @@ async function processDailyDigest(
         return result;
     }
 
-    // ⚠️ TEMP: Disabled for testing - allow multiple sends per day
     // Check if already sent today
-    // const todayStr = now.toISOString().split('T')[0];
-    // const alreadySent = await checkDigestAlreadySent(db, todayStr);
-    // if (alreadySent) {
-    //     console.log('Daily digest already sent for today');
-    //     return result;
-    // }
+    const todayStr = now.toISOString().split('T')[0];
+    const alreadySent = await checkDigestAlreadySent(db, todayStr);
+    if (alreadySent) {
+        console.log('Daily digest already sent for today');
+        return result;
+    }
 
-    // ⚠️ TEMP: Disabled lock for testing
-    // Acquire lock
-    // const todayStr = now.toISOString().split('T')[0];
-    // const lockAcquired = await acquireDailyDigestLock(db, todayStr);
-    // if (!lockAcquired) {
-    //     console.log('Could not acquire lock for daily digest');
-    //     return result;
-    // }
+    // Acquire lock to prevent concurrent sends
+    const lockAcquired = await acquireDailyDigestLock(db, todayStr);
+    if (!lockAcquired) {
+        console.log('Could not acquire lock for daily digest');
+        return result;
+    }
 
-    console.log('Processing daily digest (lock disabled for testing)...');
+    console.log('Processing daily digest...');
 
     if (!settings.resendApiKey) {
         console.error('Resend API key is not configured');
@@ -519,19 +516,10 @@ async function processDailyDigest(
     // OPTIMIZATION 4: Collect logs and batch write them at the end
     const logsToWrite: any[] = [];
 
-    // ⚠️ TEMPORARY TEST LIMIT: Maximum 3 emails per run
-    const MAX_EMAILS_PER_RUN = 3;
     let emailsSentCount = 0;
 
     // Send email to each designer
     for (const designer of designerUsers) {
-        // Check if we've reached the test limit
-        if (emailsSentCount >= MAX_EMAILS_PER_RUN) {
-            console.log(`⚠️ TEST LIMIT REACHED: Stopped after sending ${MAX_EMAILS_PER_RUN} emails`);
-            result.skipped += (designerUsers.length - emailsSentCount);
-            break;
-        }
-
         try {
             const html = buildDailyDigestHTML({
                 recipientName: designer.name || designer.username,

@@ -559,14 +559,13 @@ async function processWeeklyDigest(
     console.log('Building weekly digest content...');
     const digestContent = buildWeeklyDigest(reports, campaigns, users);
 
-    // ⚠️ TEMP: Disabled for testing - allow multiple sends
     // Check if already sent this week
-    // const weekStr = digestContent.weekStart.toISOString().split('T')[0];
-    // const alreadySent = await checkWeeklyDigestAlreadySent(db, weekStr);
-    // if (alreadySent) {
-    //     console.log('Weekly digest already sent for this week');
-    //     return result;
-    // }
+    const weekStr = digestContent.weekStart.toISOString().split('T')[0];
+    const alreadySent = await checkWeeklyDigestAlreadySent(db, weekStr);
+    if (alreadySent) {
+        console.log('Weekly digest already sent for this week');
+        return result;
+    }
 
     // Filter designer users
     const designerUsers = departmentUsers.filter(user => {
@@ -581,19 +580,10 @@ async function processWeeklyDigest(
 
     console.log(`Sending to ${designerUsers.length} designer users`);
 
-    // ⚠️ TEMPORARY TEST LIMIT: Maximum 3 emails per run
-    const MAX_EMAILS_PER_RUN = 3;
     let emailsSentCount = 0;
 
     // Send email to each designer
     for (const designer of designerUsers) {
-        // Check if we've reached the test limit
-        if (emailsSentCount >= MAX_EMAILS_PER_RUN) {
-            console.log(`⚠️ TEST LIMIT REACHED: Stopped after sending ${MAX_EMAILS_PER_RUN} emails`);
-            result.skipped += (designerUsers.length - emailsSentCount);
-            break;
-        }
-
         try {
             const html = buildWeeklyDigestHTML({
                 recipientName: designer.name || designer.username,
