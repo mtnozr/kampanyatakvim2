@@ -463,7 +463,7 @@ async function logWeeklyDigest(db: Firestore, params: {
     try {
         const weekRangeStr = `${params.digestContent.weekStart.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} - ${params.digestContent.weekEnd.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}`;
 
-        await db.collection('reminderLogs').add({
+        const logEntry: Record<string, any> = {
             eventId: `weekly-digest-${params.digestContent.weekStart.toISOString().split('T')[0]}`,
             eventType: 'weekly-digest',
             eventTitle: `Haftalık Bülten - ${weekRangeStr}`,
@@ -472,14 +472,15 @@ async function logWeeklyDigest(db: Firestore, params: {
             urgency: 'Medium',
             sentAt: Timestamp.now(),
             status: params.status,
-            errorMessage: params.errorMessage,
             emailProvider: 'resend',
-            messageId: params.messageId,
             digestStats: {
                 overdueReportsCount: params.digestContent.totalOverdueReports,
                 thisWeekCampaignsCount: params.digestContent.totalThisWeekCampaigns,
             },
-        });
+        };
+        if (params.errorMessage) logEntry.errorMessage = params.errorMessage;
+        if (params.messageId) logEntry.messageId = params.messageId;
+        await db.collection('reminderLogs').add(logEntry);
     } catch (error) {
         console.error('Error logging weekly digest:', error);
     }

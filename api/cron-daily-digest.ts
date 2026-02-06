@@ -405,7 +405,7 @@ async function logDailyDigest(db: Firestore, params: {
             year: 'numeric'
         });
 
-        await db.collection('reminderLogs').add({
+        const logEntry: Record<string, any> = {
             eventId: `daily-digest-${params.digestContent.date.toISOString().split('T')[0]}`,
             eventType: 'daily-digest',
             eventTitle: `Gün Sonu Bülteni - ${dateStr}`,
@@ -414,14 +414,15 @@ async function logDailyDigest(db: Firestore, params: {
             urgency: 'Medium',
             sentAt: Timestamp.now(),
             status: params.status,
-            errorMessage: params.errorMessage,
             emailProvider: 'resend',
-            messageId: params.messageId,
             digestStats: {
                 completedCount: params.digestContent.totalCompleted,
                 incompleteCount: params.digestContent.totalIncomplete,
             },
-        });
+        };
+        if (params.errorMessage) logEntry.errorMessage = params.errorMessage;
+        if (params.messageId) logEntry.messageId = params.messageId;
+        await db.collection('reminderLogs').add(logEntry);
     } catch (error) {
         console.error('Error logging daily digest:', error);
     }
@@ -584,7 +585,7 @@ async function processDailyDigest(
             year: 'numeric'
         });
 
-        batch.set(logRef, {
+        const logEntry: Record<string, any> = {
             eventId: `daily-digest-${logData.digestContent.date.toISOString().split('T')[0]}`,
             eventType: 'daily-digest',
             eventTitle: `Gün Sonu Bülteni - ${dateStr}`,
@@ -593,14 +594,15 @@ async function processDailyDigest(
             urgency: 'Medium',
             sentAt: Timestamp.now(),
             status: logData.status,
-            errorMessage: logData.errorMessage,
             emailProvider: 'resend',
-            messageId: logData.messageId,
             digestStats: {
                 completedCount: logData.digestContent.totalCompleted,
                 incompleteCount: logData.digestContent.totalIncomplete,
             },
-        });
+        };
+        if (logData.errorMessage) logEntry.errorMessage = logData.errorMessage;
+        if (logData.messageId) logEntry.messageId = logData.messageId;
+        batch.set(logRef, logEntry);
     }
 
     if (logsToWrite.length > 0) {

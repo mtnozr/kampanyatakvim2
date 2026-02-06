@@ -470,7 +470,7 @@ async function processPersonalBulletin(
         const batch = db.batch();
         for (const logData of logsToWrite) {
             const logRef = db.collection('reminderLogs').doc();
-            batch.set(logRef, {
+            const logEntry: Record<string, any> = {
                 eventId: logData.eventId,
                 eventType: 'personal-bulletin',
                 eventTitle: `Kişisel Günlük Bülten - ${turkeyDateStr}`,
@@ -479,14 +479,15 @@ async function processPersonalBulletin(
                 urgency: 'Medium',
                 sentAt: Timestamp.now(),
                 status: logData.status,
-                errorMessage: logData.errorMessage,
                 emailProvider: 'resend',
-                messageId: logData.messageId,
                 bulletinStats: {
                     overdueCount: logData.overdueCount,
                     todayCount: logData.todayCount,
                 },
-            });
+            };
+            if (logData.errorMessage) logEntry.errorMessage = logData.errorMessage;
+            if (logData.messageId) logEntry.messageId = logData.messageId;
+            batch.set(logRef, logEntry);
         }
         await batch.commit();
         console.log('✅ Batch write completed');

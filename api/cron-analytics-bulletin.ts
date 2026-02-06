@@ -343,7 +343,7 @@ async function logAnalyticsBulletin(db: Firestore, params: {
             year: 'numeric'
         });
 
-        await db.collection('reminderLogs').add({
+        const logEntry: Record<string, any> = {
             eventId: `analytics-bulletin-${params.bulletinContent.date.toISOString().split('T')[0]}-${params.userId}`,
             eventType: 'analytics-bulletin',
             eventTitle: `Analitik Günlük Bülten - ${dateStr}`,
@@ -352,13 +352,14 @@ async function logAnalyticsBulletin(db: Firestore, params: {
             urgency: 'Medium',
             sentAt: Timestamp.now(),
             status: params.status,
-            errorMessage: params.errorMessage,
             emailProvider: 'resend',
-            messageId: params.messageId,
             bulletinStats: {
                 analyticsCount: params.bulletinContent.analyticsTasks.length,
             },
-        });
+        };
+        if (params.errorMessage) logEntry.errorMessage = params.errorMessage;
+        if (params.messageId) logEntry.messageId = params.messageId;
+        await db.collection('reminderLogs').add(logEntry);
     } catch (error) {
         console.error('Error logging analytics bulletin:', error);
     }
