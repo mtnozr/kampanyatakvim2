@@ -30,7 +30,7 @@ Firebase Console'da `reminderSettings/default` dokümanına şu alanları ekleyi
 }
 ```
 
-**personalBulletinRecipients:** `users` collection'ındaki kullanıcı ID'leri
+**personalBulletinRecipients:** Öncelikle `users` collection'ındaki kullanıcı ID'leri. Eğer `users` içinde email yoksa sistem `departmentUsers` içinden email bilgisini tamamlamayı dener.
 
 > Not: Eski alan adları (`personalDailyBulletinEnabled`, `personalDailyBulletinTime`, `personalDailyBulletinRecipients`) ile kayıtlı ayarlar da desteklenir.
 

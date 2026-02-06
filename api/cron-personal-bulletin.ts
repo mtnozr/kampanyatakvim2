@@ -37,6 +37,13 @@ interface User {
     email: string;
 }
 
+interface DepartmentUser {
+    id: string;
+    name?: string;
+    username?: string;
+    email?: string;
+}
+
 // ===== FIREBASE INIT =====
 
 function initFirebase() {
@@ -279,7 +286,45 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             email: doc.data().email || ''
         }));
 
-        const recipients = allUsers.filter(u => recipientIds.includes(u.id) && u.email);
+        const userById = new Map(allUsers.map(user => [user.id, user]));
+        const recipientsById = new Map<string, User>();
+        const missingRecipientIds: string[] = [];
+
+        for (const recipientId of recipientIds) {
+            const matchedUser = userById.get(recipientId);
+            if (matchedUser?.email) {
+                recipientsById.set(matchedUser.id, matchedUser);
+            } else {
+                missingRecipientIds.push(recipientId);
+            }
+        }
+
+        if (missingRecipientIds.length > 0) {
+            log(`⚠️ Users collection içinde bulunamayan/eposta eksik alıcı: ${missingRecipientIds.length}`);
+
+            const deptUsers: DepartmentUser[] = [];
+            for (let i = 0; i < missingRecipientIds.length; i += 10) {
+                const batch = missingRecipientIds.slice(i, i + 10);
+                const snapshot = await db.collection('departmentUsers')
+                    .where(admin.firestore.FieldPath.documentId(), 'in', batch)
+                    .get();
+                deptUsers.push(...snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                } as DepartmentUser)));
+            }
+
+            deptUsers.forEach(deptUser => {
+                if (!deptUser.email) return;
+                recipientsById.set(deptUser.id, {
+                    id: deptUser.id,
+                    name: deptUser.name || deptUser.username || 'İsimsiz',
+                    email: deptUser.email
+                });
+            });
+        }
+
+        const recipients = [...recipientsById.values()];
         log(`Email'li alıcı: ${recipients.length}`);
 
         if (recipients.length === 0) {
