@@ -378,7 +378,7 @@ async function checkDigestAlreadySent(db: Firestore, dateStr: string): Promise<b
             .where('status', '==', 'success')
             .get();
 
-        return snapshot.size >= 10; // Geçici: günde 10 kez gönderime izin ver
+        return snapshot.size >= 1;
     } catch (error) {
         console.error('Error checking existing digest:', error);
         return false;
@@ -485,10 +485,13 @@ async function processDailyDigest(
     console.log('Target time:', `${targetHour}:${targetMinute} Turkey`);
     console.log('Current time:', `${currentHour}:${currentMinute} Turkey`);
 
-    // Only process if it's time
-    const isTime = currentHour > targetHour || (currentHour === targetHour && currentMinute >= targetMinute);
+    // Only process if it's time: ±5 dakika penceresi
+    const currentTotalMinutes = currentHour * 60 + currentMinute;
+    const targetTotalMinutes = targetHour * 60 + targetMinute;
+    const diff = Math.abs(currentTotalMinutes - targetTotalMinutes);
+    const isTime = diff <= 5;
 
-    console.log('Is time to send?', isTime);
+    console.log('Is time to send?', isTime, `(diff: ${diff} min)`);
     if (!isTime) {
         console.log('❌ REASON: Not time yet for daily digest');
         return result;

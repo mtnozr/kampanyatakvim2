@@ -270,7 +270,7 @@ async function checkAlreadySentToday(db: Firestore, todayStr: string, userId: st
             .where('eventId', '==', `personal-bulletin-${todayStr}-${userId}`)
             .where('status', '==', 'success')
             .get();
-        return snapshot.size >= 10; // Geçici: günde 10 kez gönderime izin ver
+        return snapshot.size >= 1;
     } catch (error) {
         console.error('Error checking existing bulletin:', error);
         return false;
@@ -348,9 +348,12 @@ async function processPersonalBulletin(
             return result;
         }
 
-        // Time check
-        const isTime = currentHour > targetHour || (currentHour === targetHour && currentMinute >= targetMinute);
-        console.log('Is time to send?', isTime);
+        // Time check: ±5 dakika penceresi (sadece ayarlanan saat civarında tetikle)
+        const currentTotalMinutes = currentHour * 60 + currentMinute;
+        const targetTotalMinutes = targetHour * 60 + targetMinute;
+        const diff = Math.abs(currentTotalMinutes - targetTotalMinutes);
+        const isTime = diff <= 5;
+        console.log('Is time to send?', isTime, `(diff: ${diff} min)`);
 
         if (!isTime) {
             console.log('❌ REASON: Not time yet for personal bulletin');
