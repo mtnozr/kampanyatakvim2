@@ -46,6 +46,7 @@ interface DailyCampaignDetails {
     assigneeName: string;
     status: string;
     urgencyLabel: string;
+    delayText: string;
 }
 
 interface DailyDigestContent {
@@ -136,6 +137,18 @@ function getUrgencyLabel(urgency: string): string {
     return labels[urgency] || urgency;
 }
 
+function calculateDelay(createdAt: Date, now: Date): string {
+    const diffMs = now.getTime() - createdAt.getTime();
+    if (diffMs < 0) return '-';
+    const totalHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const days = Math.floor(totalHours / 24);
+    const hours = totalHours % 24;
+    if (days > 0 && hours > 0) return `${days} gün ${hours} saat`;
+    if (days > 0) return `${days} gün`;
+    if (hours > 0) return `${hours} saat`;
+    return '< 1 saat';
+}
+
 // ===== DAILY DIGEST BUILDER =====
 
 function buildDailyDigest(
@@ -151,13 +164,15 @@ function buildDailyDigest(
     const completedCampaigns: DailyCampaignDetails[] = [];
     const incompleteCampaigns: DailyCampaignDetails[] = [];
 
+    const now = new Date();
     todaysCampaigns.forEach(campaign => {
         const details: DailyCampaignDetails = {
             id: campaign.id,
             title: campaign.title,
             assigneeName: getUserName(campaign.assigneeId, users),
             status: campaign.status || 'Planlandı',
-            urgencyLabel: getUrgencyLabel(campaign.urgency)
+            urgencyLabel: getUrgencyLabel(campaign.urgency),
+            delayText: calculateDelay(campaign.createdAt, now),
         };
 
         if (campaign.status === 'Tamamlandı') {
@@ -205,6 +220,7 @@ function buildDailyDigestHTML(params: {
                         <th style="text-align: left; font-size: 12px; color: #064E3B; font-weight: 600; padding: 12px 8px;">Kampanya</th>
                         <th style="text-align: center; font-size: 12px; color: #064E3B; font-weight: 600; padding: 12px 8px;">Aciliyet</th>
                         <th style="text-align: left; font-size: 12px; color: #064E3B; font-weight: 600; padding: 12px 8px;">Atanan</th>
+                        <th style="text-align: center; font-size: 12px; color: #064E3B; font-weight: 600; padding: 12px 8px;">Gecikme</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -213,6 +229,7 @@ function buildDailyDigestHTML(params: {
                             <td style="font-size: 13px; color: #065F46; padding: 8px;"><strong>${campaign.title}</strong></td>
                             <td style="font-size: 13px; color: #065F46; padding: 8px; text-align: center;">${campaign.urgencyLabel}</td>
                             <td style="font-size: 13px; color: #065F46; padding: 8px;">${campaign.assigneeName}</td>
+                            <td style="font-size: 13px; color: #065F46; padding: 8px; text-align: center;">${campaign.delayText}</td>
                         </tr>
                     `).join('')}
                 </tbody>
@@ -244,6 +261,7 @@ function buildDailyDigestHTML(params: {
                         <th style="text-align: left; font-size: 12px; color: #881337; font-weight: 600; padding: 12px 8px;">Kampanya</th>
                         <th style="text-align: center; font-size: 12px; color: #881337; font-weight: 600; padding: 12px 8px;">Durum</th>
                         <th style="text-align: left; font-size: 12px; color: #881337; font-weight: 600; padding: 12px 8px;">Atanan</th>
+                        <th style="text-align: center; font-size: 12px; color: #881337; font-weight: 600; padding: 12px 8px;">Gecikme</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -252,6 +270,7 @@ function buildDailyDigestHTML(params: {
                             <td style="font-size: 13px; color: #9F1239; padding: 8px;"><strong>${campaign.title}</strong></td>
                             <td style="font-size: 13px; color: #9F1239; padding: 8px; text-align: center;">${campaign.status}</td>
                             <td style="font-size: 13px; color: #9F1239; padding: 8px;">${campaign.assigneeName}</td>
+                            <td style="font-size: 13px; color: #9F1239; padding: 8px; text-align: center;">${campaign.delayText}</td>
                         </tr>
                     `).join('')}
                 </tbody>
