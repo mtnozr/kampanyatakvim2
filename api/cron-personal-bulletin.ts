@@ -1,21 +1,22 @@
 /**
- * Kişisel Günlük Bülten - Cron Job
+ * Vercel Cron Job for Personal Daily Bulletin
+ * Full implementation with all dependencies inline
  *
  * Her kullanıcıya kendi kampanyalarını gönderir:
  * - Geciken kampanyalar (bugünden önce, tamamlanmamış)
  * - Bugünkü kampanyalar
  *
- * Vercel cron tarafından otomatik tetiklenir (vercel.json).
- * Manuel tetikleme: ?key=CRON_SECRET_KEY&force=true
+ * Pattern: cron-daily-digest.ts ile aynı yapı kullanılır.
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import admin from 'firebase-admin';
+import type { Firestore } from 'firebase-admin/firestore';
 import { Timestamp } from 'firebase-admin/firestore';
 
-// ===== TYPES =====
+// ===== TYPE DEFINITIONS =====
 
-interface Settings {
+interface ReminderSettings {
     resendApiKey?: string;
     personalBulletinEnabled?: boolean;
     personalBulletinTime?: string;
@@ -37,98 +38,96 @@ interface User {
     email: string;
 }
 
-// ===== FIREBASE INIT =====
+interface ProcessResult {
+    sent: number;
+    failed: number;
+    skipped: number;
+    alreadySent: number;
+}
 
-function initFirebase() {
-    if (admin.apps.length) return admin;
+// ===== FIREBASE ADMIN INITIALIZATION =====
 
-    const serviceAccountStr = process.env.FIREBASE_SERVICE_ACCOUNT;
-    if (!serviceAccountStr) throw new Error('FIREBASE_SERVICE_ACCOUNT missing');
+function initFirebaseAdmin() {
+    if (!admin.apps.length) {
+        try {
+            const serviceAccountStr = process.env.FIREBASE_SERVICE_ACCOUNT;
 
-    const serviceAccount = JSON.parse(serviceAccountStr);
-    if (serviceAccount.private_key) {
-        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+            if (!serviceAccountStr) {
+                throw new Error('FIREBASE_SERVICE_ACCOUNT environment variable is missing.');
+            }
+
+            let serviceAccount;
+            try {
+                serviceAccount = JSON.parse(serviceAccountStr);
+            } catch (e) {
+                throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON.');
+            }
+
+            // Fix private_key newlines
+            if (serviceAccount.private_key) {
+                const rawKey = serviceAccount.private_key;
+                let key = rawKey.replace(/\\n/g, '\n');
+
+                const match = key.match(/-----BEGIN PRIVATE KEY-----([\s\S]*)-----END PRIVATE KEY-----/);
+                if (match && match[1]) {
+                    const body = match[1].replace(/\s/g, '');
+                    key = `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----\n`;
+                }
+
+                serviceAccount.private_key = key;
+            }
+
+            admin.initializeApp({
+                credential: admin.credential.cert(serviceAccount)
+            });
+        } catch (error: any) {
+            console.error('Firebase Admin Initialization Error:', error);
+            throw error;
+        }
     }
 
-    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
     return admin;
 }
 
-// ===== TURKEY TIMEZONE (UTC+3) =====
-// Pattern: Add 3 hours to UTC timestamp, then read with getUTC* methods.
-// This gives Turkey local time components consistently regardless of server timezone.
+// ===== UTILITY FUNCTIONS =====
 
-const TURKEY_OFFSET = 3 * 60 * 60 * 1000;
+// Turkey timezone offset (UTC+3)
+const TURKEY_OFFSET_MS = 3 * 60 * 60 * 1000;
 
-function getTurkeyNow(): Date {
-    return new Date(Date.now() + TURKEY_OFFSET);
-}
-
-function getTurkeyToday(): { year: number; month: number; day: number } {
-    const t = getTurkeyNow();
-    return { year: t.getUTCFullYear(), month: t.getUTCMonth(), day: t.getUTCDate() };
-}
-
-function isTimeReached(targetTime: string): boolean {
-    const t = getTurkeyNow();
-    const [targetH, targetM] = targetTime.split(':').map(Number);
-    const currentH = t.getUTCHours();
-    const currentM = t.getUTCMinutes();
-    return currentH > targetH || (currentH === targetH && currentM >= targetM);
-}
-
-function isWeekend(): boolean {
-    const day = getTurkeyNow().getUTCDay();
-    return day === 0 || day === 6;
+function getUrgencyLabel(urgency: string): string {
+    const labels: Record<string, string> = {
+        'Very High': 'Çok Yüksek',
+        'High': 'Yüksek',
+        'Medium': 'Orta',
+        'Low': 'Düşük',
+    };
+    return labels[urgency] || urgency;
 }
 
 function isSameTurkeyDay(date: Date, year: number, month: number, day: number): boolean {
-    const d = new Date(date.getTime() + TURKEY_OFFSET);
+    const d = new Date(date.getTime() + TURKEY_OFFSET_MS);
     return d.getUTCFullYear() === year && d.getUTCMonth() === month && d.getUTCDate() === day;
 }
 
 function isBeforeTurkeyDay(date: Date, year: number, month: number, day: number): boolean {
-    const d = new Date(date.getTime() + TURKEY_OFFSET);
+    const d = new Date(date.getTime() + TURKEY_OFFSET_MS);
     const campaignDate = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
     const todayDate = new Date(Date.UTC(year, month, day));
     return campaignDate < todayDate;
 }
 
-// ===== EMAIL =====
+// ===== EMAIL HTML BUILDER =====
 
-async function sendEmail(apiKey: string, to: string, subject: string, html: string): Promise<boolean> {
-    try {
-        const res = await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                from: 'Kampanya Takvimi <hatirlatma@kampanyatakvimi.net.tr>',
-                to,
-                subject,
-                html
-            })
-        });
-        return res.ok;
-    } catch {
-        return false;
-    }
-}
-
-function getUrgencyLabel(u: string): string {
-    const map: Record<string, string> = { 'Very High': 'Çok Yüksek', 'High': 'Yüksek', 'Medium': 'Orta', 'Low': 'Düşük' };
-    return map[u] || u;
-}
-
-function buildHTML(name: string, overdue: Campaign[], today: Campaign[], dateStr: string): string {
+function buildPersonalBulletinHTML(name: string, overdue: Campaign[], todayCampaigns: Campaign[], dateStr: string): string {
     const overdueSection = overdue.length > 0 ? `
         <div style="margin-bottom: 24px;">
-            <h3 style="color: #DC2626; margin-bottom: 12px;">⚠️ Geciken Kampanyalar (${overdue.length})</h3>
-            <table style="width: 100%; border-collapse: collapse; background: #FEF2F2; border-radius: 8px;">
+            <h3 style="margin: 0 0 12px 0; font-size: 18px; color: #DC2626; font-weight: 600;">⚠️ Geciken Kampanyalar (${overdue.length})</h3>
+            <table width="100%" cellpadding="8" cellspacing="0" style="background-color: #FEF2F2; border: 1px solid #DC2626; border-radius: 8px;">
                 <thead>
-                    <tr style="background: #FECACA;">
-                        <th style="padding: 10px; text-align: left; color: #991B1B;">Kampanya</th>
-                        <th style="padding: 10px; text-align: center; color: #991B1B;">Tarih</th>
-                        <th style="padding: 10px; text-align: center; color: #991B1B;">Aciliyet</th>
+                    <tr style="background-color: #FECACA;">
+                        <th style="text-align: left; font-size: 12px; color: #991B1B; font-weight: 600; padding: 10px;">Kampanya</th>
+                        <th style="text-align: center; font-size: 12px; color: #991B1B; font-weight: 600; padding: 10px;">Tarih</th>
+                        <th style="text-align: center; font-size: 12px; color: #991B1B; font-weight: 600; padding: 10px;">Aciliyet</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -142,21 +141,28 @@ function buildHTML(name: string, overdue: Campaign[], today: Campaign[], dateStr
                 </tbody>
             </table>
         </div>
-    ` : '';
-
-    const todaySection = today.length > 0 ? `
+    ` : `
         <div style="margin-bottom: 24px;">
-            <h3 style="color: #7C3AED; margin-bottom: 12px;">📅 Bugünkü Kampanyalar (${today.length})</h3>
-            <table style="width: 100%; border-collapse: collapse; background: #F5F3FF; border-radius: 8px;">
+            <h3 style="margin: 0 0 12px 0; font-size: 18px; color: #10B981; font-weight: 600;">✅ Geciken Kampanya Yok</h3>
+            <div style="background-color: #D1FAE5; border: 1px solid #10B981; border-radius: 8px; padding: 16px; text-align: center;">
+                <p style="margin: 0; font-size: 14px; color: #065F46;">Harika! Geciken kampanyanız bulunmuyor.</p>
+            </div>
+        </div>
+    `;
+
+    const todaySection = todayCampaigns.length > 0 ? `
+        <div style="margin-bottom: 24px;">
+            <h3 style="margin: 0 0 12px 0; font-size: 18px; color: #7C3AED; font-weight: 600;">📅 Bugünkü Kampanyalar (${todayCampaigns.length})</h3>
+            <table width="100%" cellpadding="8" cellspacing="0" style="background-color: #F5F3FF; border: 1px solid #7C3AED; border-radius: 8px;">
                 <thead>
-                    <tr style="background: #EDE9FE;">
-                        <th style="padding: 10px; text-align: left; color: #5B21B6;">Kampanya</th>
-                        <th style="padding: 10px; text-align: center; color: #5B21B6;">Aciliyet</th>
-                        <th style="padding: 10px; text-align: center; color: #5B21B6;">Durum</th>
+                    <tr style="background-color: #EDE9FE;">
+                        <th style="text-align: left; font-size: 12px; color: #5B21B6; font-weight: 600; padding: 10px;">Kampanya</th>
+                        <th style="text-align: center; font-size: 12px; color: #5B21B6; font-weight: 600; padding: 10px;">Aciliyet</th>
+                        <th style="text-align: center; font-size: 12px; color: #5B21B6; font-weight: 600; padding: 10px;">Durum</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${today.map(c => `
+                    ${todayCampaigns.map(c => `
                         <tr style="border-top: 1px solid #C4B5FD;">
                             <td style="padding: 10px; color: #5B21B6;"><strong>${c.title}</strong></td>
                             <td style="padding: 10px; text-align: center; color: #5B21B6;">${getUrgencyLabel(c.urgency)}</td>
@@ -166,147 +172,381 @@ function buildHTML(name: string, overdue: Campaign[], today: Campaign[], dateStr
                 </tbody>
             </table>
         </div>
-    ` : '';
-
-    const total = overdue.length + today.length;
-
-    return `
-    <!DOCTYPE html>
-    <html><head><meta charset="UTF-8"></head>
-    <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background: #F3F4F6;">
-        <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-            <div style="background: linear-gradient(135deg, #7C3AED, #5B21B6); color: white; padding: 24px; text-align: center;">
-                <h1 style="margin: 0; font-size: 24px;">📋 Kişisel Günlük Bülten</h1>
-                <p style="margin: 8px 0 0; opacity: 0.9;">${dateStr}</p>
-            </div>
-            <div style="padding: 24px;">
-                <p style="margin: 0 0 20px; color: #374151;">Merhaba <strong>${name}</strong>,</p>
-                <p style="margin: 0 0 20px; color: #6B7280;">Bugün için toplam <strong>${total} kampanyanız</strong> bulunmaktadır.</p>
-                ${overdueSection}
-                ${todaySection}
-                <div style="text-align: center; margin-top: 24px;">
-                    <a href="https://www.kampanyatakvimi.net.tr" style="display: inline-block; background: #7C3AED; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">Takvime Git →</a>
-                </div>
-            </div>
-            <div style="background: #F9FAFB; padding: 16px; text-align: center; color: #9CA3AF; font-size: 12px;">
-                Bu otomatik bir bildirimdir. Kampanya Takvimi © ${new Date().getFullYear()}
+    ` : `
+        <div style="margin-bottom: 24px;">
+            <h3 style="margin: 0 0 12px 0; font-size: 18px; color: #6B7280; font-weight: 600;">📅 Bugünkü Kampanyalar</h3>
+            <div style="background-color: #F3F4F6; border: 1px solid #D1D5DB; border-radius: 8px; padding: 16px; text-align: center;">
+                <p style="margin: 0; font-size: 14px; color: #4B5563;">Bugün için planlanmış kampanyanız bulunmuyor.</p>
             </div>
         </div>
-    </body>
-    </html>
+    `;
+
+    const total = overdue.length + todayCampaigns.length;
+
+    return `
+        <!DOCTYPE html>
+        <html lang="tr">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Kişisel Günlük Bülten</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #F8F9FE;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F8F9FE; padding: 40px 20px;">
+                <tr>
+                    <td align="center">
+                        <table width="650" cellpadding="0" cellspacing="0" style="background-color: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                            <tr>
+                                <td style="background: linear-gradient(135deg, #7C3AED, #5B21B6); color: white; padding: 24px; text-align: center;">
+                                    <h1 style="margin: 0; font-size: 24px;">📋 Kişisel Günlük Bülten</h1>
+                                    <p style="margin: 8px 0 0; opacity: 0.9;">${dateStr}</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 32px;">
+                                    <p style="margin: 0 0 20px; font-size: 16px; color: #374151;">Merhaba <strong>${name}</strong>,</p>
+                                    <p style="margin: 0 0 24px; font-size: 14px; color: #6B7280; line-height: 1.6;">Bugün için toplam <strong>${total} kampanyanız</strong> bulunmaktadır.</p>
+                                    ${overdueSection}
+                                    ${todaySection}
+                                    <div style="text-align: center; margin-top: 24px;">
+                                        <a href="https://www.kampanyatakvimi.net.tr" style="display: inline-block; background: linear-gradient(135deg, #7C3AED 0%, #4338CA 100%); color: #FFFFFF; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(124, 58, 237, 0.3);">Takvime Git →</a>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="background-color: #F9FAFB; padding: 16px; text-align: center; border-top: 1px solid #E5E7EB;">
+                                    <p style="margin: 0 0 8px 0; font-size: 12px; color: #6B7280;">Bu otomatik bir bildirimdir.</p>
+                                    <p style="margin: 0; font-size: 12px; color: #9CA3AF;">Kampanya Takvimi © ${new Date().getFullYear()}</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
     `;
 }
 
-// ===== DUPLICATE CHECK =====
+// ===== EMAIL SENDING =====
 
-async function isAlreadySentToday(db: admin.firestore.Firestore, userId: string, todayStr: string): Promise<boolean> {
-    const logId = `personal-bulletin-${todayStr}-${userId}`;
-    const snapshot = await db.collection('reminderLogs')
-        .where('eventId', '==', logId)
-        .where('status', '==', 'success')
-        .limit(1)
-        .get();
-    return !snapshot.empty;
+async function sendEmailInternal(apiKey: string, params: {
+    to: string;
+    subject: string;
+    html: string;
+}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    try {
+        const response = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                from: 'Kampanya Takvimi <hatirlatma@kampanyatakvimi.net.tr>',
+                to: params.to,
+                subject: params.subject,
+                html: params.html,
+            }),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            return { success: false, error: error.message || 'Email sending failed' };
+        }
+
+        const data = await response.json();
+        return { success: true, messageId: data.id };
+    } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
 }
 
-// ===== MAIN HANDLER =====
+// ===== DUPLICATE CHECK & LOCK =====
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-    const logs: string[] = [];
-    const log = (msg: string) => { console.log(msg); logs.push(msg); };
+async function checkAlreadySentToday(db: Firestore, todayStr: string, userId: string): Promise<boolean> {
+    try {
+        const snapshot = await db.collection('reminderLogs')
+            .where('eventId', '==', `personal-bulletin-${todayStr}-${userId}`)
+            .where('status', '==', 'success')
+            .limit(1)
+            .get();
+        return !snapshot.empty;
+    } catch (error) {
+        console.error('Error checking existing bulletin:', error);
+        return false;
+    }
+}
+
+async function acquirePersonalBulletinLock(db: Firestore, todayStr: string): Promise<boolean> {
+    const lockRef = db.collection('systemLocks').doc(`personal-bulletin-${todayStr}`);
 
     try {
-        // Auth - same pattern as other crons (daily-digest, weekly-digest)
-        const authHeader = req.headers.authorization;
-        const queryKey = Array.isArray(req.query.key) ? req.query.key[0] : req.query.key;
-        const expectedKey = process.env.CRON_SECRET_KEY;
+        return await db.runTransaction(async (transaction) => {
+            const lockDoc = await transaction.get(lockRef);
 
-        if (queryKey !== expectedKey && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-            log('❌ Yetkisiz erişim');
-            return res.status(401).json({ error: 'Unauthorized' });
+            if (lockDoc.exists) {
+                return false;
+            }
+
+            transaction.set(lockRef, {
+                createdAt: Timestamp.now(),
+                status: 'processing'
+            });
+
+            return true;
+        });
+    } catch (error) {
+        console.error('Error acquiring lock:', error);
+        return false;
+    }
+}
+
+// ===== MAIN PROCESSOR =====
+
+async function processPersonalBulletin(
+    db: Firestore,
+    allCampaigns: Campaign[],
+    recipients: User[],
+    settings: ReminderSettings,
+    isForced: boolean
+): Promise<ProcessResult> {
+    const result: ProcessResult = { sent: 0, failed: 0, skipped: 0, alreadySent: 0 };
+    const now = new Date();
+
+    console.log('=== PERSONAL BULLETIN PROCESS START ===');
+    console.log('personalBulletinEnabled:', settings.personalBulletinEnabled);
+    console.log('personalBulletinTime:', settings.personalBulletinTime);
+    console.log('recipients count:', recipients.length);
+
+    if (!settings.personalBulletinEnabled) {
+        console.log('❌ REASON: Personal bulletin is disabled');
+        return result;
+    }
+
+    if (!settings.personalBulletinTime) {
+        console.log('❌ REASON: No personal bulletin time configured');
+        return result;
+    }
+
+    // Parse configured time (assumed to be in Turkey time - UTC+3)
+    const [targetHour, targetMinute] = settings.personalBulletinTime.split(':').map(Number);
+
+    // Convert server time (UTC) to Turkey time (UTC+3) - same pattern as daily-digest
+    const turkeyTime = new Date(now.getTime() + TURKEY_OFFSET_MS);
+    const currentHour = turkeyTime.getHours();
+    const currentMinute = turkeyTime.getMinutes();
+    const currentDay = turkeyTime.getDay(); // 0=Sunday, 6=Saturday
+
+    console.log('Target time:', `${targetHour}:${targetMinute} Turkey`);
+    console.log('Current time:', `${currentHour}:${currentMinute} Turkey`);
+    console.log('Is forced:', isForced);
+
+    if (!isForced) {
+        // Weekend check
+        if (currentDay === 0 || currentDay === 6) {
+            console.log('❌ REASON: Weekend - skipping');
+            return result;
         }
 
-        // force=true query param bypasses time/weekend checks (for manual triggers)
-        const forceParam = Array.isArray(req.query.force) ? req.query.force[0] : req.query.force;
-        const isForced = forceParam === 'true';
+        // Time check
+        const isTime = currentHour > targetHour || (currentHour === targetHour && currentMinute >= targetMinute);
+        console.log('Is time to send?', isTime);
 
-        log('=== KİŞİSEL BÜLTEN BAŞLADI ===');
-        if (isForced) log('⚡ Manuel tetikleme (force=true) - saat/hafta sonu kontrolü atlanıyor');
+        if (!isTime) {
+            console.log('❌ REASON: Not time yet for personal bulletin');
+            return result;
+        }
+    }
 
-        const db = initFirebase().firestore();
+    // Duplicate check with lock (same pattern as daily-digest)
+    const todayStr = now.toISOString().split('T')[0];
 
-        // Settings
+    if (!isForced) {
+        const lockAcquired = await acquirePersonalBulletinLock(db, todayStr);
+        if (!lockAcquired) {
+            console.log('Could not acquire lock for personal bulletin (already processing or sent)');
+            return result;
+        }
+    }
+
+    console.log('Processing personal bulletin...');
+
+    if (!settings.resendApiKey) {
+        console.error('Resend API key is not configured');
+        return result;
+    }
+
+    // Get Turkey today for campaign filtering
+    const turkeyYear = turkeyTime.getUTCFullYear();
+    const turkeyMonth = turkeyTime.getUTCMonth();
+    const turkeyDate = turkeyTime.getUTCDate();
+    const turkeyDateStr = `${turkeyDate}.${turkeyMonth + 1}.${turkeyYear}`;
+
+    console.log(`Turkey date: ${turkeyDateStr}`);
+    console.log(`Total campaigns: ${allCampaigns.length}`);
+
+    // Collect logs for batch write
+    const logsToWrite: any[] = [];
+
+    // Send to each recipient
+    for (const user of recipients) {
+        // Per-user duplicate check
+        if (!isForced) {
+            const alreadySentToUser = await checkAlreadySentToday(db, todayStr, user.id);
+            if (alreadySentToUser) {
+                console.log(`  ⏭️ ${user.name}: Already sent today, skipping`);
+                result.alreadySent++;
+                continue;
+            }
+        }
+
+        // Filter campaigns for this user
+        const userCampaigns = allCampaigns.filter(c => c.assigneeId === user.id);
+
+        // Overdue: date < today AND not completed/cancelled
+        const overdue = userCampaigns.filter(c =>
+            isBeforeTurkeyDay(c.date, turkeyYear, turkeyMonth, turkeyDate) &&
+            c.status !== 'Tamamlandı' &&
+            c.status !== 'İptal Edildi'
+        );
+
+        // Today: date = today AND not cancelled
+        const todayCampaigns = userCampaigns.filter(c =>
+            isSameTurkeyDay(c.date, turkeyYear, turkeyMonth, turkeyDate) &&
+            c.status !== 'İptal Edildi'
+        );
+
+        console.log(`${user.name}: total=${userCampaigns.length}, overdue=${overdue.length}, today=${todayCampaigns.length}`);
+
+        if (overdue.length === 0 && todayCampaigns.length === 0) {
+            console.log(`  → No campaigns, skipping`);
+            result.skipped++;
+            continue;
+        }
+
+        const html = buildPersonalBulletinHTML(user.name, overdue, todayCampaigns, turkeyDateStr);
+        const total = overdue.length + todayCampaigns.length;
+        const subject = `📋 Günlük Bülten - ${turkeyDateStr} (${total} Kampanya${overdue.length > 0 ? ' ⚠️' : ''})`;
+
+        const emailResult = await sendEmailInternal(settings.resendApiKey, {
+            to: user.email,
+            subject,
+            html
+        });
+
+        if (emailResult.success) {
+            console.log(`  ✅ Sent to ${user.name} (${user.email})`);
+            result.sent++;
+
+            logsToWrite.push({
+                eventId: `personal-bulletin-${todayStr}-${user.id}`,
+                recipientEmail: user.email,
+                recipientName: user.name,
+                status: 'success',
+                messageId: emailResult.messageId,
+                overdueCount: overdue.length,
+                todayCount: todayCampaigns.length,
+            });
+        } else {
+            console.error(`  ❌ Failed to send to ${user.name}: ${emailResult.error}`);
+            result.failed++;
+
+            logsToWrite.push({
+                eventId: `personal-bulletin-${todayStr}-${user.id}`,
+                recipientEmail: user.email,
+                recipientName: user.name,
+                status: 'failed',
+                errorMessage: emailResult.error,
+                overdueCount: overdue.length,
+                todayCount: todayCampaigns.length,
+            });
+        }
+    }
+
+    // Batch write all logs at once (saves Firestore writes)
+    if (logsToWrite.length > 0) {
+        console.log(`Writing ${logsToWrite.length} logs in batch...`);
+        const batch = db.batch();
+        for (const logData of logsToWrite) {
+            const logRef = db.collection('reminderLogs').doc();
+            batch.set(logRef, {
+                eventId: logData.eventId,
+                eventType: 'personal-bulletin',
+                eventTitle: `Kişisel Günlük Bülten - ${turkeyDateStr}`,
+                recipientEmail: logData.recipientEmail,
+                recipientName: logData.recipientName,
+                urgency: 'Medium',
+                sentAt: Timestamp.now(),
+                status: logData.status,
+                errorMessage: logData.errorMessage,
+                emailProvider: 'resend',
+                messageId: logData.messageId,
+                bulletinStats: {
+                    overdueCount: logData.overdueCount,
+                    todayCount: logData.todayCount,
+                },
+            });
+        }
+        await batch.commit();
+        console.log('✅ Batch write completed');
+    }
+
+    return result;
+}
+
+// ===== HANDLER =====
+
+export default async function handler(
+    req: VercelRequest,
+    res: VercelResponse
+) {
+    // Verify Authorization - same pattern as daily-digest
+    const authHeader = req.headers.authorization;
+    const queryKey = Array.isArray(req.query.key) ? req.query.key[0] : req.query.key;
+    const expectedKey = process.env.CRON_SECRET_KEY;
+
+    if (queryKey !== expectedKey && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+        console.warn('Unauthorized cron request');
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // force=true bypasses time/weekend/lock checks (for manual triggers)
+    const forceParam = Array.isArray(req.query.force) ? req.query.force[0] : req.query.force;
+    const isForced = forceParam === 'true';
+
+    try {
+        console.log('Starting Personal Bulletin Cron Job...');
+        if (isForced) console.log('⚡ Forced mode - bypassing time/weekend/lock checks');
+
+        // Initialize Firebase Admin
+        const adminSDK = initFirebaseAdmin();
+        const db = adminSDK.firestore();
+
+        // Load Settings
         const settingsDoc = await db.collection('reminderSettings').doc('default').get();
+
         if (!settingsDoc.exists) {
-            log('❌ Ayarlar bulunamadı');
-            return res.status(200).json({ success: false, reason: 'no_settings', logs });
+            console.error('No settings found');
+            return res.status(500).json({ error: 'Settings not configured' });
         }
 
-        const settings = settingsDoc.data() as Settings;
+        const settings = settingsDoc.data() as ReminderSettings;
 
         if (!settings.personalBulletinEnabled) {
-            log('❌ Kişisel bülten devre dışı');
-            return res.status(200).json({ success: false, reason: 'disabled', logs });
+            console.log('Personal bulletin is disabled');
+            return res.status(200).json({ success: false, reason: 'disabled' });
         }
 
         if (!settings.personalBulletinTime) {
-            log('❌ Saat ayarlanmamış');
-            return res.status(200).json({ success: false, reason: 'no_time', logs });
+            console.log('No personal bulletin time configured');
+            return res.status(200).json({ success: false, reason: 'no_time_set' });
         }
 
-        if (!settings.resendApiKey) {
-            log('❌ API key yok');
-            return res.status(200).json({ success: false, reason: 'no_api_key', logs });
-        }
+        // Fetch Data
+        console.log('Fetching data...');
 
-        const recipientIds = settings.personalBulletinRecipients || [];
-        if (recipientIds.length === 0) {
-            log('❌ Alıcı seçilmemiş');
-            return res.status(200).json({ success: false, reason: 'no_recipients', logs });
-        }
-
-        // Time & weekend checks (skipped when force=true)
-        if (!isForced) {
-            if (isWeekend()) {
-                log('❌ Hafta sonu - atlanıyor');
-                return res.status(200).json({ success: false, reason: 'weekend', logs });
-            }
-
-            // Log current Turkey time for debugging
-            const turkeyNow = getTurkeyNow();
-            log(`⏰ Türkiye saati: ${turkeyNow.getUTCHours()}:${String(turkeyNow.getUTCMinutes()).padStart(2, '0')} | Hedef saat: ${settings.personalBulletinTime}`);
-
-            if (!isTimeReached(settings.personalBulletinTime)) {
-                log(`❌ Henüz saat olmadı (hedef: ${settings.personalBulletinTime})`);
-                return res.status(200).json({ success: false, reason: 'not_time', logs });
-            }
-        }
-
-        log(`✅ Kontroller geçti. Alıcı sayısı: ${recipientIds.length}`);
-
-        // Get Turkey today
-        const { year, month, day } = getTurkeyToday();
-        const turkeyDateStr = `${day}.${month + 1}.${year}`;
-        const todayStr = `${year}-${month + 1}-${day}`;
-        log(`Türkiye tarihi: ${turkeyDateStr}`);
-
-        // Fetch users (recipients)
-        const usersSnapshot = await db.collection('users').get();
-        const allUsers: User[] = usersSnapshot.docs.map(doc => ({
-            id: doc.id,
-            name: doc.data().name || 'İsimsiz',
-            email: doc.data().email || ''
-        }));
-
-        const recipients = allUsers.filter(u => recipientIds.includes(u.id) && u.email);
-        log(`Email'li alıcı: ${recipients.length}`);
-
-        if (recipients.length === 0) {
-            log('❌ Email adresi olan alıcı yok');
-            return res.status(200).json({ success: false, reason: 'no_valid_recipients', logs });
-        }
-
-        // Fetch ALL campaigns (we need overdue ones too)
+        // Fetch ALL campaigns (we need overdue ones too, not just today's)
         const campaignsSnapshot = await db.collection('events').get();
         const allCampaigns: Campaign[] = campaignsSnapshot.docs.map(doc => {
             const d = doc.data();
@@ -320,82 +560,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             };
         });
 
-        log(`Toplam kampanya: ${allCampaigns.length}`);
+        console.log(`Fetched ${allCampaigns.length} campaigns`);
 
-        // Send to each recipient
-        let sent = 0;
-        let skipped = 0;
-        let alreadySent = 0;
+        // Fetch recipients
+        const recipientIds = settings.personalBulletinRecipients || [];
 
-        for (const user of recipients) {
-            // Duplicate check - skip if already sent today (unless forced)
-            if (!isForced) {
-                const duplicate = await isAlreadySentToday(db, user.id, todayStr);
-                if (duplicate) {
-                    log(`  ⏭️ ${user.name}: Bugün zaten gönderilmiş, atlanıyor`);
-                    alreadySent++;
-                    continue;
-                }
-            }
-
-            // Filter campaigns for this user
-            const userCampaigns = allCampaigns.filter(c => c.assigneeId === user.id);
-
-            // Overdue: date < today AND not completed/cancelled
-            const overdue = userCampaigns.filter(c =>
-                isBeforeTurkeyDay(c.date, year, month, day) &&
-                c.status !== 'Tamamlandı' &&
-                c.status !== 'İptal Edildi'
-            );
-
-            // Today: date = today AND not cancelled
-            const todayCampaigns = userCampaigns.filter(c =>
-                isSameTurkeyDay(c.date, year, month, day) &&
-                c.status !== 'İptal Edildi'
-            );
-
-            log(`${user.name}: toplam=${userCampaigns.length}, geciken=${overdue.length}, bugün=${todayCampaigns.length}`);
-
-            if (overdue.length === 0 && todayCampaigns.length === 0) {
-                log(`  → Kampanya yok, atlanıyor`);
-                skipped++;
-                continue;
-            }
-
-            const html = buildHTML(user.name, overdue, todayCampaigns, turkeyDateStr);
-            const total = overdue.length + todayCampaigns.length;
-            const subject = `📋 Günlük Bülten - ${turkeyDateStr} (${total} Kampanya${overdue.length > 0 ? ' ⚠️' : ''})`;
-
-            const success = await sendEmail(settings.resendApiKey!, user.email, subject, html);
-
-            if (success) {
-                log(`  ✅ Gönderildi: ${user.email}`);
-                sent++;
-
-                // Log to Firestore
-                await db.collection('reminderLogs').add({
-                    eventId: `personal-bulletin-${todayStr}-${user.id}`,
-                    eventType: 'personal-bulletin',
-                    eventTitle: `Kişisel Günlük Bülten`,
-                    recipientEmail: user.email,
-                    recipientName: user.name,
-                    urgency: 'Medium',
-                    sentAt: Timestamp.now(),
-                    status: 'success',
-                    emailProvider: 'resend'
-                });
-            } else {
-                log(`  ❌ Gönderilemedi: ${user.email}`);
-            }
+        if (recipientIds.length === 0) {
+            console.log('No recipients configured');
+            return res.status(200).json({ success: false, reason: 'no_recipients' });
         }
 
-        log(`=== TAMAMLANDI: gönderilen=${sent}, atlanan=${skipped}, zaten_gönderilmiş=${alreadySent} ===`);
+        // Batch fetch users (max 10 per 'in' query)
+        let recipients: User[] = [];
+        for (let i = 0; i < recipientIds.length; i += 10) {
+            const batch = recipientIds.slice(i, i + 10);
+            const snapshot = await db.collection('users')
+                .where(admin.firestore.FieldPath.documentId(), 'in', batch)
+                .get();
+            recipients.push(...snapshot.docs.map(doc => ({
+                id: doc.id,
+                name: doc.data().name || 'İsimsiz',
+                email: doc.data().email || ''
+            })));
+        }
 
-        return res.status(200).json({ success: true, sent, skipped, alreadySent, logs });
+        // Filter out users without email
+        recipients = recipients.filter(u => u.email);
+        console.log(`Fetched ${recipients.length} recipients with email`);
+
+        if (recipients.length === 0) {
+            console.log('No recipients with email found');
+            return res.status(200).json({ success: false, reason: 'no_valid_recipients' });
+        }
+
+        // Process
+        console.log('Processing bulletin...');
+        const result = await processPersonalBulletin(db, allCampaigns, recipients, settings, isForced);
+
+        return res.status(200).json({
+            success: true,
+            result
+        });
 
     } catch (error) {
-        const msg = error instanceof Error ? error.message : 'Bilinmeyen hata';
-        log(`❌ HATA: ${msg}`);
-        return res.status(500).json({ success: false, error: msg, logs });
+        console.error('Cron job error:', error);
+        return res.status(500).json({
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        });
     }
 }
