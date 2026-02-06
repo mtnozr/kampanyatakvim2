@@ -318,10 +318,9 @@ async function checkBulletinAlreadySent(db: Firestore, dateStr: string, userId: 
         const snapshot = await logsRef
             .where('eventId', '==', `analytics-bulletin-${dateStr}-${userId}`)
             .where('status', '==', 'success')
-            .limit(1)
             .get();
 
-        return !snapshot.empty;
+        return snapshot.size >= 10; // Geçici: günde 10 kez gönderime izin ver
     } catch (error) {
         console.error('Error checking existing bulletin:', error);
         return false;

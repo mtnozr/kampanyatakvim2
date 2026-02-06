@@ -357,10 +357,9 @@ async function checkDigestAlreadySent(db: Firestore, dateStr: string): Promise<b
         const snapshot = await logsRef
             .where('eventId', '==', `daily-digest-${dateStr}`)
             .where('status', '==', 'success')
-            .limit(1)
             .get();
 
-        return !snapshot.empty;
+        return snapshot.size >= 10; // Geçici: günde 10 kez gönderime izin ver
     } catch (error) {
         console.error('Error checking existing digest:', error);
         return false;
@@ -483,12 +482,12 @@ async function processDailyDigest(
         return result;
     }
 
-    // Acquire lock to prevent concurrent sends
-    const lockAcquired = await acquireDailyDigestLock(db, todayStr);
-    if (!lockAcquired) {
-        console.log('Could not acquire lock for daily digest');
-        return result;
-    }
+    // ⚠️ TEMP: Lock devre dışı - günde 10 gönderim testi için
+    // const lockAcquired = await acquireDailyDigestLock(db, todayStr);
+    // if (!lockAcquired) {
+    //     console.log('Could not acquire lock for daily digest');
+    //     return result;
+    // }
 
     console.log('Processing daily digest...');
 

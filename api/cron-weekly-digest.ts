@@ -443,10 +443,9 @@ async function checkWeeklyDigestAlreadySent(db: Firestore, weekStr: string): Pro
         const snapshot = await logsRef
             .where('eventId', '==', `weekly-digest-${weekStr}`)
             .where('status', '==', 'success')
-            .limit(1)
             .get();
 
-        return !snapshot.empty;
+        return snapshot.size >= 10; // Geçici: günde 10 kez gönderime izin ver
     } catch (error) {
         console.error('Error checking existing weekly digest:', error);
         return false;

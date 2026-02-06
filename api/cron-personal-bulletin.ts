@@ -269,9 +269,8 @@ async function checkAlreadySentToday(db: Firestore, todayStr: string, userId: st
         const snapshot = await db.collection('reminderLogs')
             .where('eventId', '==', `personal-bulletin-${todayStr}-${userId}`)
             .where('status', '==', 'success')
-            .limit(1)
             .get();
-        return !snapshot.empty;
+        return snapshot.size >= 10; // Geçici: günde 10 kez gönderime izin ver
     } catch (error) {
         console.error('Error checking existing bulletin:', error);
         return false;
@@ -362,13 +361,14 @@ async function processPersonalBulletin(
     // Duplicate check with lock (same pattern as daily-digest)
     const todayStr = now.toISOString().split('T')[0];
 
-    if (!isForced) {
-        const lockAcquired = await acquirePersonalBulletinLock(db, todayStr);
-        if (!lockAcquired) {
-            console.log('Could not acquire lock for personal bulletin (already processing or sent)');
-            return result;
-        }
-    }
+    // ⚠️ TEMP: Lock devre dışı - günde 10 gönderim testi için
+    // if (!isForced) {
+    //     const lockAcquired = await acquirePersonalBulletinLock(db, todayStr);
+    //     if (!lockAcquired) {
+    //         console.log('Could not acquire lock for personal bulletin (already processing or sent)');
+    //         return result;
+    //     }
+    // }
 
     console.log('Processing personal bulletin...');
 
