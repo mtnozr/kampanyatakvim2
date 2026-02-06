@@ -18,7 +18,7 @@ import { sendTestSMS } from '../utils/smsService';
 import { saveReminderLog } from '../utils/reminderHelper';
 
 import { buildWeeklyDigest } from '../utils/weeklyDigestBuilder';
-import { buildWeeklyDigestHTML, sendWeeklyDigestEmail, buildDailyDigestHTML, sendDailyDigestEmail, buildAnalyticsBulletinHTML, sendAnalyticsBulletinEmail } from '../utils/emailService';
+import { buildWeeklyDigestHTML, sendWeeklyDigestEmail, buildDailyDigestHTML, sendDailyDigestEmail, buildAnalyticsBulletinHTML, sendAnalyticsBulletinEmail, buildPersonalBulletinHTML, sendPersonalBulletinEmail } from '../utils/emailService';
 import { buildDailyDigest } from '../utils/dailyDigestBuilder';
 import { buildAnalyticsBulletin } from '../utils/analyticsBulletinBuilder';
 
@@ -661,10 +661,47 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
 
       setPersonalBulletinRecipients(selectedRecipients);
 
-      // Build sample preview HTML
+      // Fetch real campaign data
+      const { campaigns } = await fetchPanelData();
       const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const turkeyDateStr = today.toLocaleDateString('tr-TR');
-      const previewHTML = buildPersonalBulletinPreviewHTML(selectedRecipients[0].name, turkeyDateStr);
+
+      // Filter campaigns for the first recipient (preview)
+      const firstUser = selectedRecipients[0];
+      const userCampaigns = campaigns.filter(c => c.assigneeId === firstUser.id);
+
+      // Overdue: date < today AND not completed/cancelled
+      const overdueCampaigns = userCampaigns.filter(c => {
+        const campaignDate = new Date(c.date.getFullYear(), c.date.getMonth(), c.date.getDate());
+        return campaignDate < todayStart &&
+          c.status !== 'Tamamlandı' &&
+          c.status !== 'İptal Edildi';
+      }).map(c => ({
+        title: c.title,
+        date: c.date,
+        urgency: c.urgency,
+        status: c.status,
+      }));
+
+      // Today: date = today AND not cancelled
+      const todayCampaigns = userCampaigns.filter(c => {
+        const campaignDate = new Date(c.date.getFullYear(), c.date.getMonth(), c.date.getDate());
+        return campaignDate.getTime() === todayStart.getTime() &&
+          c.status !== 'İptal Edildi';
+      }).map(c => ({
+        title: c.title,
+        date: c.date,
+        urgency: c.urgency,
+        status: c.status,
+      }));
+
+      const previewHTML = buildPersonalBulletinHTML({
+        recipientName: firstUser.name,
+        overdueCampaigns,
+        todayCampaigns,
+        dateStr: turkeyDateStr,
+      });
 
       setPersonalBulletinPreviewHTML(previewHTML);
       setPersonalBulletinPreviewOpen(true);
@@ -678,47 +715,6 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
     }
   }
 
-  function buildPersonalBulletinPreviewHTML(name: string, dateStr: string): string {
-    return `
-    <!DOCTYPE html>
-    <html><head><meta charset="UTF-8"></head>
-    <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background: #F3F4F6;">
-        <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-            <div style="background: linear-gradient(135deg, #7C3AED, #5B21B6); color: white; padding: 24px; text-align: center;">
-                <h1 style="margin: 0; font-size: 24px;">📋 Kişisel Günlük Bülten</h1>
-                <p style="margin: 8px 0 0; opacity: 0.9;">${dateStr}</p>
-            </div>
-            <div style="padding: 24px;">
-                <p style="margin: 0 0 20px; color: #374151;">Merhaba <strong>${name}</strong>,</p>
-                <p style="margin: 0 0 20px; color: #6B7280;">Bu bir önizlemedir. Gerçek bülten, kullanıcının atanmış kampanyalarını içerecektir.</p>
-
-                <div style="margin-bottom: 24px;">
-                    <h3 style="color: #DC2626; margin-bottom: 12px;">⚠️ Geciken Kampanyalar (Örnek)</h3>
-                    <div style="background: #FEF2F2; border-radius: 8px; padding: 16px;">
-                        <p style="color: #991B1B; margin: 0;">Burada geciken kampanyalar listelenecektir.</p>
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 24px;">
-                    <h3 style="color: #7C3AED; margin-bottom: 12px;">📅 Bugünkü Kampanyalar (Örnek)</h3>
-                    <div style="background: #F5F3FF; border-radius: 8px; padding: 16px;">
-                        <p style="color: #5B21B6; margin: 0;">Burada bugünkü kampanyalar listelenecektir.</p>
-                    </div>
-                </div>
-
-                <div style="text-align: center; margin-top: 24px;">
-                    <a href="https://www.kampanyatakvimi.net.tr" style="display: inline-block; background: #7C3AED; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">Takvime Git →</a>
-                </div>
-            </div>
-            <div style="background: #F9FAFB; padding: 16px; text-align: center; color: #9CA3AF; font-size: 12px;">
-                Bu otomatik bir bildirimdir. Kampanya Takvimi © ${new Date().getFullYear()}
-            </div>
-        </div>
-    </body>
-    </html>
-    `;
-  }
-
   async function handleSendPersonalBulletinManually() {
     if (!settings.resendApiKey) {
       alert('API Key eksik!');
@@ -726,23 +722,105 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
     }
 
     setIsSendingPersonalBulletin(true);
+    let sentCount = 0;
+    let skippedCount = 0;
+    let failedCount = 0;
 
     try {
-      // Call the cron endpoint to send the bulletin
-      const cronUrl = `/api/cron-personal-bulletin?key=${process.env.NEXT_PUBLIC_CRON_SECRET_KEY || ''}`;
+      setProcessMessage('📧 Kişisel bülten gönderimi başlatılıyor...');
 
-      setProcessMessage('📧 Kişisel bülten gönderimi başlatılıyor...\nCron endpoint çağrılıyor...');
+      const { campaigns } = await fetchPanelData();
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const turkeyDateStr = today.toLocaleDateString('tr-TR');
 
-      const response = await fetch(cronUrl);
-      const result = await response.json();
+      for (const recipient of personalBulletinRecipients) {
+        try {
+          // Filter campaigns for this user
+          const userCampaigns = campaigns.filter(c => c.assigneeId === recipient.id);
+
+          // Overdue: date < today AND not completed/cancelled
+          const overdueCampaigns = userCampaigns.filter(c => {
+            const campaignDate = new Date(c.date.getFullYear(), c.date.getMonth(), c.date.getDate());
+            return campaignDate < todayStart &&
+              c.status !== 'Tamamlandı' &&
+              c.status !== 'İptal Edildi';
+          }).map(c => ({
+            title: c.title,
+            date: c.date,
+            urgency: c.urgency,
+            status: c.status,
+          }));
+
+          // Today: date = today AND not cancelled
+          const todayCampaigns = userCampaigns.filter(c => {
+            const campaignDate = new Date(c.date.getFullYear(), c.date.getMonth(), c.date.getDate());
+            return campaignDate.getTime() === todayStart.getTime() &&
+              c.status !== 'İptal Edildi';
+          }).map(c => ({
+            title: c.title,
+            date: c.date,
+            urgency: c.urgency,
+            status: c.status,
+          }));
+
+          if (overdueCampaigns.length === 0 && todayCampaigns.length === 0) {
+            console.log(`${recipient.name}: Kampanya yok, atlanıyor`);
+            skippedCount++;
+            continue;
+          }
+
+          setProcessMessage(`📧 Gönderiliyor: ${recipient.name} (${sentCount + 1}/${personalBulletinRecipients.length})...`);
+
+          const result = await sendPersonalBulletinEmail(
+            settings.resendApiKey,
+            recipient.email,
+            recipient.name,
+            overdueCampaigns,
+            todayCampaigns,
+            turkeyDateStr
+          );
+
+          // Log to Firestore
+          try {
+            const logData: any = {
+              eventId: `personal-bulletin-${today.toISOString().split('T')[0]}-${recipient.id}`,
+              eventType: 'personal-bulletin',
+              eventTitle: `Kişisel Günlük Bülten`,
+              recipientEmail: recipient.email,
+              recipientName: recipient.name,
+              urgency: 'Medium',
+              sentAt: new Date(),
+              status: result.success ? 'success' : 'failed',
+              emailProvider: 'resend',
+            };
+
+            if (result.error) {
+              logData.errorMessage = result.error;
+            }
+            if (result.messageId) {
+              logData.messageId = result.messageId;
+            }
+
+            await saveReminderLog(logData);
+          } catch (logError) {
+            console.error('Error saving personal bulletin log:', logError);
+          }
+
+          if (result.success) {
+            sentCount++;
+          } else {
+            console.error(`Failed to send to ${recipient.name}:`, result.error);
+            failedCount++;
+          }
+        } catch (error) {
+          console.error(`Error sending to ${recipient.name}:`, error);
+          failedCount++;
+        }
+      }
 
       setPersonalBulletinPreviewOpen(false);
-
-      if (result.success) {
-        setProcessMessage(`✅ Kişisel bülten gönderimi tamamlandı!\nGönderilen: ${result.sent}, Atlanan: ${result.skipped}`);
-      } else {
-        setProcessMessage(`⚠️ Gönderim durumu: ${result.reason}\nLogs: ${result.logs?.slice(-3).join('\n') || 'Yok'}`);
-      }
+      setProcessMessage(`✅ Kişisel bülten gönderimi tamamlandı!\nGönderilen: ${sentCount}, Atlanan: ${skippedCount}, Başarısız: ${failedCount}`);
 
       setTimeout(() => {
         loadRecentLogs();

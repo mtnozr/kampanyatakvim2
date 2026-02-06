@@ -1092,6 +1092,176 @@ export function buildAnalyticsBulletinHTML(params: {
 /**
  * Send Analytics Daily Bulletin Email
  */
+// ===== PERSONAL DAILY BULLETIN =====
+
+interface PersonalBulletinCampaign {
+  title: string;
+  date: Date;
+  urgency: string;
+  status: string;
+}
+
+/**
+ * Build Personal Daily Bulletin HTML
+ */
+export function buildPersonalBulletinHTML(params: {
+  recipientName: string;
+  overdueCampaigns: PersonalBulletinCampaign[];
+  todayCampaigns: PersonalBulletinCampaign[];
+  dateStr: string;
+}): string {
+  const { recipientName, overdueCampaigns, todayCampaigns, dateStr } = params;
+
+  const overdueSection = overdueCampaigns.length > 0 ? `
+    <div style="margin-bottom: 24px;">
+      <h3 style="margin: 0 0 12px 0; font-size: 18px; color: #DC2626; font-weight: 600;">
+        ⚠️ Geciken Kampanyalar (${overdueCampaigns.length})
+      </h3>
+      <table width="100%" cellpadding="8" cellspacing="0" style="background-color: #FEF2F2; border: 1px solid #DC2626; border-radius: 8px;">
+        <thead>
+          <tr style="background-color: #FECACA;">
+            <th style="text-align: left; font-size: 12px; color: #991B1B; font-weight: 600; padding: 10px;">Kampanya</th>
+            <th style="text-align: center; font-size: 12px; color: #991B1B; font-weight: 600; padding: 10px;">Tarih</th>
+            <th style="text-align: center; font-size: 12px; color: #991B1B; font-weight: 600; padding: 10px;">Aciliyet</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${overdueCampaigns.map(c => `
+            <tr style="border-top: 1px solid #FCA5A5;">
+              <td style="padding: 10px; color: #991B1B;"><strong>${c.title}</strong></td>
+              <td style="padding: 10px; text-align: center; color: #991B1B;">${c.date.toLocaleDateString('tr-TR')}</td>
+              <td style="padding: 10px; text-align: center; color: #991B1B;">${getUrgencyLabel(c.urgency)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  ` : `
+    <div style="margin-bottom: 24px;">
+      <h3 style="margin: 0 0 12px 0; font-size: 18px; color: #10B981; font-weight: 600;">
+        ✅ Geciken Kampanya Yok
+      </h3>
+      <div style="background-color: #D1FAE5; border: 1px solid #10B981; border-radius: 8px; padding: 16px; text-align: center;">
+        <p style="margin: 0; font-size: 14px; color: #065F46;">Harika! Geciken kampanyanız bulunmuyor.</p>
+      </div>
+    </div>
+  `;
+
+  const todaySection = todayCampaigns.length > 0 ? `
+    <div style="margin-bottom: 24px;">
+      <h3 style="margin: 0 0 12px 0; font-size: 18px; color: #7C3AED; font-weight: 600;">
+        📅 Bugünkü Kampanyalar (${todayCampaigns.length})
+      </h3>
+      <table width="100%" cellpadding="8" cellspacing="0" style="background-color: #F5F3FF; border: 1px solid #7C3AED; border-radius: 8px;">
+        <thead>
+          <tr style="background-color: #EDE9FE;">
+            <th style="text-align: left; font-size: 12px; color: #5B21B6; font-weight: 600; padding: 10px;">Kampanya</th>
+            <th style="text-align: center; font-size: 12px; color: #5B21B6; font-weight: 600; padding: 10px;">Aciliyet</th>
+            <th style="text-align: center; font-size: 12px; color: #5B21B6; font-weight: 600; padding: 10px;">Durum</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${todayCampaigns.map(c => `
+            <tr style="border-top: 1px solid #C4B5FD;">
+              <td style="padding: 10px; color: #5B21B6;"><strong>${c.title}</strong></td>
+              <td style="padding: 10px; text-align: center; color: #5B21B6;">${getUrgencyLabel(c.urgency)}</td>
+              <td style="padding: 10px; text-align: center; color: #5B21B6;">${c.status || 'Planlandı'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  ` : `
+    <div style="margin-bottom: 24px;">
+      <h3 style="margin: 0 0 12px 0; font-size: 18px; color: #6B7280; font-weight: 600;">
+        📅 Bugünkü Kampanyalar
+      </h3>
+      <div style="background-color: #F3F4F6; border: 1px solid #D1D5DB; border-radius: 8px; padding: 16px; text-align: center;">
+        <p style="margin: 0; font-size: 14px; color: #4B5563;">Bugün için planlanmış kampanyanız bulunmuyor.</p>
+      </div>
+    </div>
+  `;
+
+  const total = overdueCampaigns.length + todayCampaigns.length;
+
+  return `
+    <!DOCTYPE html>
+    <html lang="tr">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Kişisel Günlük Bülten</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #F8F9FE;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F8F9FE; padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <table width="650" cellpadding="0" cellspacing="0" style="background-color: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+              <tr>
+                <td style="background: linear-gradient(135deg, #7C3AED, #5B21B6); color: white; padding: 24px; text-align: center;">
+                  <h1 style="margin: 0; font-size: 24px;">📋 Kişisel Günlük Bülten</h1>
+                  <p style="margin: 8px 0 0; opacity: 0.9;">${dateStr}</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 32px;">
+                  <p style="margin: 0 0 20px; font-size: 16px; color: #374151;">Merhaba <strong>${recipientName}</strong>,</p>
+                  <p style="margin: 0 0 24px; font-size: 14px; color: #6B7280; line-height: 1.6;">Bugün için toplam <strong>${total} kampanyanız</strong> bulunmaktadır.</p>
+                  ${overdueSection}
+                  ${todaySection}
+                  <div style="text-align: center; margin-top: 24px;">
+                    <a href="https://www.kampanyatakvimi.net.tr" style="display: inline-block; background: linear-gradient(135deg, #7C3AED 0%, #4338CA 100%); color: #FFFFFF; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(124, 58, 237, 0.3);">Takvime Git →</a>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td style="background-color: #F9FAFB; padding: 16px; text-align: center; border-top: 1px solid #E5E7EB;">
+                  <p style="margin: 0 0 8px 0; font-size: 12px; color: #6B7280;">Bu otomatik bir bildirimdir.</p>
+                  <p style="margin: 0; font-size: 12px; color: #9CA3AF;">Kampanya Takvimi © ${new Date().getFullYear()}</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * Send Personal Daily Bulletin Email
+ */
+export async function sendPersonalBulletinEmail(
+  apiKey: string,
+  recipientEmail: string,
+  recipientName: string,
+  overdueCampaigns: PersonalBulletinCampaign[],
+  todayCampaigns: PersonalBulletinCampaign[],
+  dateStr: string
+): Promise<EmailResponse> {
+  const html = buildPersonalBulletinHTML({
+    recipientName,
+    overdueCampaigns,
+    todayCampaigns,
+    dateStr,
+  });
+
+  const total = overdueCampaigns.length + todayCampaigns.length;
+  const subject = `📋 Günlük Bülten - ${dateStr} (${total} Kampanya${overdueCampaigns.length > 0 ? ' ⚠️' : ''})`;
+
+  return sendEmailWithResend(apiKey, {
+    to: recipientEmail,
+    toName: recipientName,
+    subject,
+    html,
+    eventId: `personal-bulletin-${new Date().toISOString().split('T')[0]}-${recipientEmail}`,
+    eventTitle: `Kişisel Günlük Bülten - ${dateStr}`,
+    eventType: 'campaign',
+    urgency: 'Medium',
+  });
+}
+
 export async function sendAnalyticsBulletinEmail(
   resendApiKey: string,
   recipientEmail: string,
