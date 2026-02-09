@@ -19,7 +19,7 @@ import {
 import { tr } from 'date-fns/locale';
 import { Bell, Smartphone, SmartphoneNfc, ChevronLeft, ChevronRight, Plus, Users, ClipboardList, Loader2, Search, Filter, X, LogIn, LogOut, Database, Download, Lock, Megaphone, PieChart, CheckSquare, StickyNote, Trash2, Flag } from 'lucide-react';
 import jsPDF from 'jspdf';
-import { CalendarEvent, UrgencyLevel, User, AppNotification, ToastMessage, ActivityLog, Department, DepartmentUser, Announcement, DifficultyLevel, WorkRequest, Report, AnalyticsUser, AnalyticsTask, CampaignStatus, ReminderSettings } from './types';
+import { CalendarEvent, UrgencyLevel, User, AppNotification, ToastMessage, ActivityLog, Department, DepartmentUser, Announcement, DifficultyLevel, WorkRequest, Report, AnalyticsUser, AnalyticsTask, CampaignStatus, ReminderSettings, SendType } from './types';
 import { INITIAL_EVENTS, DAYS_OF_WEEK, INITIAL_USERS, URGENCY_CONFIGS, TURKISH_HOLIDAYS, INITIAL_DEPARTMENTS, DIFFICULTY_CONFIGS } from './constants';
 import { sendSMSWithTwilio, buildSMSFromTemplate, formatPhoneNumber } from './utils/smsService';
 import { EventBadge } from './components/EventBadge';
@@ -365,6 +365,7 @@ function App() {
           ...data, // Spread other fields like createdAt, updatedAt
           id: doc.id,
           title: data.title,
+          sendType: data.sendType === 'Bilgilendirme' ? 'Bilgilendirme' : 'Kampanya',
           urgency,
           assigneeId: data.assigneeId,
           description: data.description,
@@ -1890,7 +1891,8 @@ function App() {
     difficulty?: DifficultyLevel,
     requiresReport?: boolean,
     reportDueDate?: Date,
-    channels?: { push?: boolean; sms?: boolean; popup?: boolean; email?: boolean; mimCCO?: boolean; mimCCI?: boolean; atm?: boolean; sube?: boolean; }
+    channels?: { push?: boolean; sms?: boolean; popup?: boolean; email?: boolean; mimCCO?: boolean; mimCCI?: boolean; atm?: boolean; sube?: boolean; },
+    sendType?: SendType
   ) => {
 
     const eventData = {
@@ -1898,6 +1900,7 @@ function App() {
       date: Timestamp.fromDate(date),
       originalDate: Timestamp.fromDate(date), // Store first assigned date for duration calculation
       urgency,
+      sendType: sendType || 'Kampanya',
       difficulty: difficulty || 'ORTA',
       assigneeId,
       description,
