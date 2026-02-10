@@ -372,9 +372,12 @@ function App() {
           departmentId: data.departmentId,
           status: data.status,
           date: data.date instanceof Timestamp ? data.date.toDate() : new Date(data.date),
+          originalDate: data.originalDate instanceof Timestamp ? data.originalDate.toDate() : (data.originalDate ? new Date(data.originalDate) : undefined),
           createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : undefined),
           updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : (data.updatedAt ? new Date(data.updatedAt) : undefined),
           note: data.note,
+          noteAuthorName: data.noteAuthorName,
+          noteAddedAt: data.noteAddedAt instanceof Timestamp ? data.noteAddedAt.toDate() : (data.noteAddedAt ? new Date(data.noteAddedAt) : undefined),
           history
         } as CalendarEvent;
       });
@@ -1874,8 +1877,11 @@ function App() {
 
     try {
       const eventRef = doc(db, "events", selectedEventIdForNote);
+      const noteAuthorName = loggedInDeptUser?.username?.trim() || 'Bilinmeyen Kullanıcı';
       await updateDoc(eventRef, {
-        note: noteContent,
+        note: noteContent.trim(),
+        noteAuthorName,
+        noteAddedAt: Timestamp.now(),
         updatedAt: Timestamp.now()
       });
 
@@ -1895,6 +1901,8 @@ function App() {
       const eventRef = doc(db, "events", eventId);
       await updateDoc(eventRef, {
         note: '',
+        noteAuthorName: '',
+        noteAddedAt: null,
         updatedAt: Timestamp.now()
       });
       addToast('Not silindi.', 'success');
@@ -2140,6 +2148,16 @@ function App() {
       // Convert Date to Timestamp if date is being updated
       if (updates.date && updates.date instanceof Date) {
         updateData.date = Timestamp.fromDate(updates.date);
+      }
+
+      if (updates.noteAddedAt && updates.noteAddedAt instanceof Date) {
+        updateData.noteAddedAt = Timestamp.fromDate(updates.noteAddedAt);
+      }
+
+      if (updates.note !== undefined && !updates.note.trim()) {
+        updateData.note = '';
+        updateData.noteAuthorName = '';
+        updateData.noteAddedAt = null;
       }
 
       // 1. Fetch current document to check status change

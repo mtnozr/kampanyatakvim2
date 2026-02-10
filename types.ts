@@ -43,6 +43,8 @@ export interface CalendarEvent {
   updatedAt?: Date;
   history?: EventHistoryItem[];
   note?: string; // Campaign delay note or sticky note
+  noteAuthorName?: string; // Full name of note creator
+  noteAddedAt?: Date; // When note was last added/updated
   requiresReport?: boolean; // Whether this campaign needs a report when completed
   channels?: {
     push?: boolean;

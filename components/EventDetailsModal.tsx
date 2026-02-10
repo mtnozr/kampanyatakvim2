@@ -587,6 +587,11 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-medium">
                     {event.note}
                   </p>
+                  {event.noteAuthorName && (
+                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      Ekleyen: <span className="font-semibold">{event.noteAuthorName}</span>
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -611,7 +616,8 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
 
                 {/* Duration Calculation */}
                 {(() => {
-                  if (!event.createdAt) return null;
+                  const startDate = event.originalDate || event.date;
+                  const now = new Date();
 
                   if (status === 'Tamamlandı') {
                     // Find completion date from history
@@ -621,7 +627,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                       return (
                         <p className="text-sm text-gray-700 dark:text-gray-300 flex justify-between border-t border-indigo-100 dark:border-indigo-800/30 pt-1 mt-1">
                           <span className="font-semibold text-gray-500 dark:text-gray-400">Tamamlanma Süresi:</span>
-                          <span className="font-bold text-green-600 dark:text-green-400">{formatDuration(event.createdAt, completionEntry.date)}</span>
+                          <span className="font-bold text-green-600 dark:text-green-400">{formatDuration(startDate, completionEntry.date)}</span>
                         </p>
                       );
                     }
@@ -629,7 +635,9 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                     return (
                       <p className="text-sm text-gray-700 dark:text-gray-300 flex justify-between border-t border-indigo-100 dark:border-indigo-800/30 pt-1 mt-1">
                         <span className="font-semibold text-gray-500 dark:text-gray-400">Geçen Süre:</span>
-                        <span className="font-bold text-indigo-600 dark:text-indigo-400">{formatDuration(event.createdAt, new Date())}</span>
+                        <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                          {now >= startDate ? formatDuration(startDate, now) : ''}
+                        </span>
                       </p>
                     );
                   }

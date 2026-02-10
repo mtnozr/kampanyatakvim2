@@ -55,6 +55,21 @@ export const AnalyticsTaskDetailsModal: React.FC<AnalyticsTaskDetailsModalProps>
 
     const assignee = users.find(u => u.id === task.assigneeId);
     const status = task.status || 'Planlandı';
+    const now = new Date();
+
+    const formatDuration = (start: Date, end: Date) => {
+        const diffMs = end.getTime() - start.getTime();
+        if (diffMs < 0) return '';
+
+        const diffMins = Math.floor(diffMs / (1000 * 60));
+        const diffHours = Math.floor(diffMins / 60);
+        const diffDays = Math.floor(diffHours / 24);
+        const hours = diffHours % 24;
+
+        if (diffDays > 0) return `${diffDays} gün, ${hours} saat`;
+        if (hours > 0) return `${hours} saat`;
+        return `${diffMins} dk`;
+    };
 
     const handleSave = async () => {
         if (!title.trim()) return;
@@ -246,6 +261,35 @@ export const AnalyticsTaskDetailsModal: React.FC<AnalyticsTaskDetailsModalProps>
                                 {format(task.date, 'd MMMM yyyy, EEEE', { locale: tr })}
                             </p>
                         )}
+                    </div>
+
+                    {/* Time Tracking */}
+                    <div>
+                        <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            <Clock size={16} className="text-blue-500" />
+                            Süre Bilgileri
+                        </label>
+                        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 border border-blue-100 dark:border-blue-800/40 space-y-1">
+                            <p className="text-sm text-gray-700 dark:text-gray-300 flex justify-between">
+                                <span className="font-semibold text-gray-500 dark:text-gray-400">Başlangıç:</span>
+                                <span>{format(task.date, 'd MMMM yyyy', { locale: tr })}</span>
+                            </p>
+                            {status === 'Tamamlandı' ? (
+                                <p className="text-sm text-gray-700 dark:text-gray-300 flex justify-between border-t border-blue-100 dark:border-blue-800/40 pt-1 mt-1">
+                                    <span className="font-semibold text-gray-500 dark:text-gray-400">Tamamlanma Süresi:</span>
+                                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                                        {task.updatedAt ? formatDuration(task.date, task.updatedAt) : ''}
+                                    </span>
+                                </p>
+                            ) : (
+                                <p className="text-sm text-gray-700 dark:text-gray-300 flex justify-between border-t border-blue-100 dark:border-blue-800/40 pt-1 mt-1">
+                                    <span className="font-semibold text-gray-500 dark:text-gray-400">Geçen Süre:</span>
+                                    <span className="font-bold text-blue-600 dark:text-blue-400">
+                                        {now >= task.date ? formatDuration(task.date, now) : ''}
+                                    </span>
+                                </p>
+                            )}
+                        </div>
                     </div>
 
                     {/* Urgency */}
