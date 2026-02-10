@@ -1101,6 +1101,12 @@ interface PersonalBulletinCampaign {
   status: string;
 }
 
+interface PersonalBulletinReport {
+  title: string;
+  campaignTitle?: string;
+  dueDate: Date;
+}
+
 /**
  * Build Personal Daily Bulletin HTML
  */
@@ -1108,9 +1114,10 @@ export function buildPersonalBulletinHTML(params: {
   recipientName: string;
   overdueCampaigns: PersonalBulletinCampaign[];
   todayCampaigns: PersonalBulletinCampaign[];
+  overdueReports: PersonalBulletinReport[];
   dateStr: string;
 }): string {
-  const { recipientName, overdueCampaigns, todayCampaigns, dateStr } = params;
+  const { recipientName, overdueCampaigns, todayCampaigns, overdueReports, dateStr } = params;
 
   const overdueSection = overdueCampaigns.length > 0 ? `
     <div style="margin-bottom: 24px;">
@@ -1182,6 +1189,41 @@ export function buildPersonalBulletinHTML(params: {
     </div>
   `;
 
+  const overdueReportsSection = overdueReports.length > 0 ? `
+    <div style="margin-bottom: 24px;">
+      <h3 style="margin: 0 0 12px 0; font-size: 18px; color: #B45309; font-weight: 600;">
+        📝 Geciken Raporlar (${overdueReports.length})
+      </h3>
+      <table width="100%" cellpadding="8" cellspacing="0" style="background-color: #FFFBEB; border: 1px solid #D97706; border-radius: 8px;">
+        <thead>
+          <tr style="background-color: #FEF3C7;">
+            <th style="text-align: left; font-size: 12px; color: #92400E; font-weight: 600; padding: 10px;">Rapor</th>
+            <th style="text-align: left; font-size: 12px; color: #92400E; font-weight: 600; padding: 10px;">Kampanya</th>
+            <th style="text-align: center; font-size: 12px; color: #92400E; font-weight: 600; padding: 10px;">Teslim Tarihi</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${overdueReports.map(r => `
+            <tr style="border-top: 1px solid #FCD34D;">
+              <td style="padding: 10px; color: #92400E;"><strong>${r.title}</strong></td>
+              <td style="padding: 10px; color: #92400E;">${r.campaignTitle || '-'}</td>
+              <td style="padding: 10px; text-align: center; color: #92400E;">${r.dueDate.toLocaleDateString('tr-TR')}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  ` : `
+    <div style="margin-bottom: 24px;">
+      <h3 style="margin: 0 0 12px 0; font-size: 18px; color: #10B981; font-weight: 600;">
+        📝 Geciken Rapor Yok
+      </h3>
+      <div style="background-color: #D1FAE5; border: 1px solid #10B981; border-radius: 8px; padding: 16px; text-align: center;">
+        <p style="margin: 0; font-size: 14px; color: #065F46;">Teslim tarihi geçen raporunuz bulunmuyor.</p>
+      </div>
+    </div>
+  `;
+
   const total = overdueCampaigns.length + todayCampaigns.length;
 
   return `
@@ -1209,6 +1251,7 @@ export function buildPersonalBulletinHTML(params: {
                   <p style="margin: 0 0 24px; font-size: 14px; color: #6B7280; line-height: 1.6;">Bugün için toplam <strong>${total} kampanyanız</strong> bulunmaktadır.</p>
                   ${overdueSection}
                   ${todaySection}
+                  ${overdueReportsSection}
                   <div style="text-align: center; margin-top: 24px;">
                     <a href="https://www.kampanyatakvimi.net.tr" style="display: inline-block; background: linear-gradient(135deg, #7C3AED 0%, #4338CA 100%); color: #FFFFFF; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(124, 58, 237, 0.3);">Takvime Git →</a>
                   </div>
@@ -1238,17 +1281,19 @@ export async function sendPersonalBulletinEmail(
   recipientName: string,
   overdueCampaigns: PersonalBulletinCampaign[],
   todayCampaigns: PersonalBulletinCampaign[],
+  overdueReports: PersonalBulletinReport[],
   dateStr: string
 ): Promise<EmailResponse> {
   const html = buildPersonalBulletinHTML({
     recipientName,
     overdueCampaigns,
     todayCampaigns,
+    overdueReports,
     dateStr,
   });
 
   const total = overdueCampaigns.length + todayCampaigns.length;
-  const subject = `📋 Günlük Bülten - ${dateStr} (${total} Kampanya${overdueCampaigns.length > 0 ? ' ⚠️' : ''})`;
+  const subject = `📋 Günlük Bülten - ${dateStr} (${total} Kampanya / ${overdueReports.length} Geciken Rapor${overdueCampaigns.length > 0 || overdueReports.length > 0 ? ' ⚠️' : ''})`;
 
   return sendEmailWithResend(apiKey, {
     to: recipientEmail,

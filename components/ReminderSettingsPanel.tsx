@@ -661,8 +661,8 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
 
       setPersonalBulletinRecipients(selectedRecipients);
 
-      // Fetch real campaign data
-      const { campaigns } = await fetchPanelData();
+      // Fetch real campaign/report data
+      const { campaigns, reports } = await fetchPanelData();
       const today = new Date();
       const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const turkeyDateStr = today.toLocaleDateString('tr-TR');
@@ -671,12 +671,11 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
       const firstUser = selectedRecipients[0];
       const userCampaigns = campaigns.filter(c => c.assigneeId === firstUser.id);
 
-      // Overdue: date < today AND not completed/cancelled
+      // Overdue campaigns: date < today AND only Planlandı
       const overdueCampaigns = userCampaigns.filter(c => {
         const campaignDate = new Date(c.date.getFullYear(), c.date.getMonth(), c.date.getDate());
         return campaignDate < todayStart &&
-          c.status !== 'Tamamlandı' &&
-          c.status !== 'İptal Edildi';
+          c.status === 'Planlandı';
       }).map(c => ({
         title: c.title,
         date: c.date,
@@ -684,22 +683,35 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
         status: c.status,
       }));
 
-      // Today: date = today AND not cancelled
+      // Today campaigns: date = today AND only Planlandı
       const todayCampaigns = userCampaigns.filter(c => {
         const campaignDate = new Date(c.date.getFullYear(), c.date.getMonth(), c.date.getDate());
         return campaignDate.getTime() === todayStart.getTime() &&
-          c.status !== 'İptal Edildi';
+          c.status === 'Planlandı';
       }).map(c => ({
         title: c.title,
         date: c.date,
         urgency: c.urgency,
         status: c.status,
+      }));
+
+      const overdueReports = reports.filter(r => {
+        const dueDate = new Date(r.dueDate.getFullYear(), r.dueDate.getMonth(), r.dueDate.getDate());
+        return r.assigneeId === firstUser.id &&
+          dueDate < todayStart &&
+          r.status !== 'done' &&
+          r.status !== 'cancelled';
+      }).map(r => ({
+        title: r.title,
+        campaignTitle: r.campaignTitle,
+        dueDate: r.dueDate,
       }));
 
       const previewHTML = buildPersonalBulletinHTML({
         recipientName: firstUser.name,
         overdueCampaigns,
         todayCampaigns,
+        overdueReports,
         dateStr: turkeyDateStr,
       });
 
@@ -729,7 +741,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
     try {
       setProcessMessage('📧 Kişisel bülten gönderimi başlatılıyor...');
 
-      const { campaigns } = await fetchPanelData();
+      const { campaigns, reports } = await fetchPanelData();
       const today = new Date();
       const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const turkeyDateStr = today.toLocaleDateString('tr-TR');
@@ -739,12 +751,11 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
           // Filter campaigns for this user
           const userCampaigns = campaigns.filter(c => c.assigneeId === recipient.id);
 
-          // Overdue: date < today AND not completed/cancelled
+          // Overdue campaigns: date < today AND only Planlandı
           const overdueCampaigns = userCampaigns.filter(c => {
             const campaignDate = new Date(c.date.getFullYear(), c.date.getMonth(), c.date.getDate());
             return campaignDate < todayStart &&
-              c.status !== 'Tamamlandı' &&
-              c.status !== 'İptal Edildi';
+              c.status === 'Planlandı';
           }).map(c => ({
             title: c.title,
             date: c.date,
@@ -752,11 +763,11 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
             status: c.status,
           }));
 
-          // Today: date = today AND not cancelled
+          // Today campaigns: date = today AND only Planlandı
           const todayCampaigns = userCampaigns.filter(c => {
             const campaignDate = new Date(c.date.getFullYear(), c.date.getMonth(), c.date.getDate());
             return campaignDate.getTime() === todayStart.getTime() &&
-              c.status !== 'İptal Edildi';
+              c.status === 'Planlandı';
           }).map(c => ({
             title: c.title,
             date: c.date,
@@ -764,8 +775,20 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
             status: c.status,
           }));
 
-          if (overdueCampaigns.length === 0 && todayCampaigns.length === 0) {
-            console.log(`${recipient.name}: Kampanya yok, atlanıyor`);
+          const overdueReports = reports.filter(r => {
+            const dueDate = new Date(r.dueDate.getFullYear(), r.dueDate.getMonth(), r.dueDate.getDate());
+            return r.assigneeId === recipient.id &&
+              dueDate < todayStart &&
+              r.status !== 'done' &&
+              r.status !== 'cancelled';
+          }).map(r => ({
+            title: r.title,
+            campaignTitle: r.campaignTitle,
+            dueDate: r.dueDate,
+          }));
+
+          if (overdueCampaigns.length === 0 && todayCampaigns.length === 0 && overdueReports.length === 0) {
+            console.log(`${recipient.name}: Kampanya/rapor yok, atlanıyor`);
             skippedCount++;
             continue;
           }
@@ -778,6 +801,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
             recipient.name,
             overdueCampaigns,
             todayCampaigns,
+            overdueReports,
             turkeyDateStr
           );
 
