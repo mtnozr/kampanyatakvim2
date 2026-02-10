@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { AppNotification } from '../types';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Mail, Bell } from 'lucide-react';
+import { Mail, Bell, Pin, CheckCircle2, AlertTriangle, CalendarClock, Clock3, type LucideIcon } from 'lucide-react';
 
 interface NotificationPopoverProps {
   notifications: AppNotification[];
@@ -10,6 +10,37 @@ interface NotificationPopoverProps {
   onClose: () => void;
   onMarkAllRead: () => void;
 }
+
+interface NotificationVisual {
+  icon: LucideIcon;
+  iconClassName: string;
+}
+
+const getNotificationVisual = (notification: AppNotification): NotificationVisual => {
+  const normalizedTitle = notification.title.toLocaleLowerCase('tr-TR');
+
+  if (normalizedTitle.includes('atama')) {
+    return { icon: Pin, iconClassName: 'bg-indigo-100 text-indigo-600' };
+  }
+
+  if (normalizedTitle.includes('tamamlandı')) {
+    return { icon: CheckCircle2, iconClassName: 'bg-emerald-100 text-emerald-600' };
+  }
+
+  if (normalizedTitle.includes('silindi') || normalizedTitle.includes('iptal')) {
+    return { icon: AlertTriangle, iconClassName: 'bg-rose-100 text-rose-600' };
+  }
+
+  if (normalizedTitle.includes('planlandı')) {
+    return { icon: CalendarClock, iconClassName: 'bg-amber-100 text-amber-700' };
+  }
+
+  if (notification.type === 'email') {
+    return { icon: Mail, iconClassName: 'bg-blue-100 text-blue-600' };
+  }
+
+  return { icon: Bell, iconClassName: 'bg-gray-100 text-gray-600' };
+};
 
 export const NotificationPopover: React.FC<NotificationPopoverProps> = ({ notifications, isOpen, onClose, onMarkAllRead }) => {
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -60,21 +91,30 @@ export const NotificationPopover: React.FC<NotificationPopoverProps> = ({ notifi
             <p className="text-sm">Henüz bildirim yok.</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-50">
+          <div className="p-2 space-y-2">
             {notifications.map((notif) => (
-              <div key={notif.id} className="p-4 hover:bg-gray-50 transition-colors flex gap-3 items-start">
-                <div className={`
-                  p-2 rounded-full shrink-0
-                  ${notif.type === 'email' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}
-                `}>
-                  {notif.type === 'email' ? <Mail size={16} /> : <Bell size={16} />}
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-800">{notif.title}</h4>
-                  <p className="text-xs text-gray-500 mt-0.5">{notif.message}</p>
-                  <span className="text-[10px] text-gray-400 mt-2 block">
-                    {format(notif.date, 'HH:mm', { locale: tr })}
-                  </span>
+              <div
+                key={notif.id}
+                className="rounded-xl border border-gray-100 bg-white p-3 hover:border-violet-200 hover:shadow-sm transition-all"
+              >
+                <div className="flex gap-3 items-start">
+                  {(() => {
+                    const visual = getNotificationVisual(notif);
+                    const Icon = visual.icon;
+                    return (
+                      <div className={`p-2 rounded-lg shrink-0 ${visual.iconClassName}`}>
+                        <Icon size={16} />
+                      </div>
+                    );
+                  })()}
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-sm font-semibold text-gray-800 leading-5">{notif.title}</h4>
+                    <p className="text-xs text-gray-600 mt-1 leading-5 break-words">{notif.message}</p>
+                    <div className="mt-2 flex justify-end items-center gap-1 text-[11px] text-gray-500">
+                      <Clock3 size={12} />
+                      <span>{format(notif.date, 'HH:mm', { locale: tr })}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
