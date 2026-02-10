@@ -74,10 +74,17 @@ export const MobileShell: React.FC<MobileShellProps> = ({
   const userMap = useMemo(() => userNameById(users), [users]);
   const analyticsMap = useMemo(() => analyticsNameById(analyticsUsers), [analyticsUsers]);
 
-  const sortedEvents = useMemo(
-    () => [...events].sort((a, b) => a.date.getTime() - b.date.getTime()),
-    [events]
-  );
+  const sortedEvents = useMemo(() => {
+    return [...events].sort((a, b) => {
+      const aStatus = a.status || 'Planlandı';
+      const bStatus = b.status || 'Planlandı';
+      const aRank = aStatus === 'Planlandı' ? 0 : 1;
+      const bRank = bStatus === 'Planlandı' ? 0 : 1;
+
+      if (aRank !== bRank) return aRank - bRank;
+      return a.date.getTime() - b.date.getTime();
+    });
+  }, [events]);
   const sortedReports = useMemo(
     () => [...reports].sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime()),
     [reports]

@@ -1041,6 +1041,15 @@ function App() {
     }, 100);
   };
 
+  // Mobile shell always navigates by month to keep header and list behavior consistent.
+  const nextMobileMonth = () => {
+    setCurrentDate((prev) => addMonths(prev, 1));
+  };
+
+  const prevMobileMonth = () => {
+    setCurrentDate((prev) => addMonths(prev, -1));
+  };
+
   // Auto-scroll to today when page loads
   useEffect(() => {
     // Only scroll after loading is complete
@@ -2978,34 +2987,40 @@ function App() {
   const canSeeSettingsTab = isSuperAdmin;
 
   const mobileCampaignEvents = useMemo(() => {
-    if (isDesigner || isKampanyaYapan) return filteredEvents;
+    const monthEvents = filteredEvents.filter(e => isSameMonth(e.date, currentDate));
+
+    if (isDesigner || isKampanyaYapan) return monthEvents;
     if (connectedPersonnelUser) {
-      return filteredEvents.filter(e => e.assigneeId === connectedPersonnelUser.id || e.departmentId === currentDepartmentId);
+      return monthEvents.filter(e => e.assigneeId === connectedPersonnelUser.id || e.departmentId === currentDepartmentId);
     }
     if (currentDepartmentId) {
-      return filteredEvents.filter(e => e.departmentId === currentDepartmentId);
+      return monthEvents.filter(e => e.departmentId === currentDepartmentId);
     }
     return [];
-  }, [filteredEvents, isDesigner, isKampanyaYapan, connectedPersonnelUser, currentDepartmentId]);
+  }, [filteredEvents, currentDate, isDesigner, isKampanyaYapan, connectedPersonnelUser, currentDepartmentId]);
 
   const mobileReports = useMemo(() => {
-    if (isDesigner) return filteredReports;
+    const monthReports = filteredReports.filter(r => isSameMonth(r.dueDate, currentDate));
+
+    if (isDesigner) return monthReports;
     if (isKampanyaYapan && connectedPersonnelUser) {
-      return filteredReports.filter(r => r.assigneeId === connectedPersonnelUser.id);
+      return monthReports.filter(r => r.assigneeId === connectedPersonnelUser.id);
     }
     if (connectedPersonnelUser) {
-      return filteredReports.filter(r => r.assigneeId === connectedPersonnelUser.id);
+      return monthReports.filter(r => r.assigneeId === connectedPersonnelUser.id);
     }
     return [];
-  }, [filteredReports, isDesigner, isKampanyaYapan, connectedPersonnelUser]);
+  }, [filteredReports, currentDate, isDesigner, isKampanyaYapan, connectedPersonnelUser]);
 
   const mobileAnalyticsTasks = useMemo(() => {
-    if (isDesigner) return analyticsTasks;
+    const monthTasks = analyticsTasks.filter(task => isSameMonth(task.date, currentDate));
+
+    if (isDesigner) return monthTasks;
     if (isAnalitik && connectedAnalyticsUser) {
-      return analyticsTasks.filter(task => task.assigneeId === connectedAnalyticsUser.id);
+      return monthTasks.filter(task => task.assigneeId === connectedAnalyticsUser.id);
     }
     return [];
-  }, [analyticsTasks, isDesigner, isAnalitik, connectedAnalyticsUser]);
+  }, [analyticsTasks, currentDate, isDesigner, isAnalitik, connectedAnalyticsUser]);
 
   const openMobileReport = (reportId: string) => {
     const report = reports.find(r => r.id === reportId);
@@ -3055,8 +3070,8 @@ function App() {
         <div className="relative z-10">
           <MobileShell
             currentDate={currentDate}
-            onPrevPeriod={prevPeriod}
-            onNextPeriod={nextPeriod}
+            onPrevPeriod={prevMobileMonth}
+            onNextPeriod={nextMobileMonth}
             onResetToToday={resetToToday}
             events={mobileCampaignEvents}
             reports={mobileReports}
