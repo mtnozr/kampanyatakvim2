@@ -1877,7 +1877,18 @@ function App() {
 
     try {
       const eventRef = doc(db, "events", selectedEventIdForNote);
-      const noteAuthorName = loggedInDeptUser?.username?.trim() || 'Bilinmeyen Kullanıcı';
+      const adminEmail = auth.currentUser?.email?.trim().toLowerCase();
+      const adminDisplayName = auth.currentUser?.displayName?.trim();
+      const matchedUser = adminEmail
+        ? users.find(u => u.email?.trim().toLowerCase() === adminEmail)
+        : null;
+      const adminEmailName = adminEmail ? adminEmail.split('@')[0] : '';
+      const noteAuthorName =
+        loggedInDeptUser?.username?.trim() ||
+        matchedUser?.name?.trim() ||
+        adminDisplayName ||
+        adminEmailName ||
+        (isDesigner ? 'Admin' : 'Bilinmeyen Kullanıcı');
       await updateDoc(eventRef, {
         note: noteContent.trim(),
         noteAuthorName,
