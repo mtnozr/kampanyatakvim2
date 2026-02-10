@@ -59,6 +59,7 @@ import { MobileTabKey } from './components/mobile/MobileBottomNav';
 import { setCookie, getCookie, deleteCookie } from './utils/cookies';
 import { calculateMonthlyChampion } from './utils/gamification';
 import { calculateReportDueDate } from './utils/businessDays';
+import { sendEmailWithResend } from './utils/emailService';
 
 // --- FIREBASE IMPORTS ---
 import { db, firebaseConfig } from './firebase';
@@ -95,6 +96,15 @@ const stripHtml = (html: string): string => {
   const tmp = document.createElement('div');
   tmp.innerHTML = html;
   return tmp.textContent || tmp.innerText || '';
+};
+
+const escapeHtml = (text: string): string => {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 };
 
 function App() {
@@ -205,6 +215,8 @@ function App() {
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
   const [selectedEventIdForNote, setSelectedEventIdForNote] = useState<string | null>(null);
   const [noteContent, setNoteContent] = useState('');
+  const campaignNoteEmailTimersRef = React.useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const analyticsNoteEmailTimersRef = React.useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   // Birthday State - reactive date tracking for automatic midnight updates
   const [todayDateStr, setTodayDateStr] = useState(() => format(new Date(), 'yyyy-MM-dd'));
@@ -1845,6 +1857,163 @@ function App() {
     }
   };
 
+  const NOTE_EMAIL_DELAY_MS = 5 * 60 * 1000;
+
+  const clearCampaignNoteTimer = (eventId: string) => {
+    const existing = campaignNoteEmailTimersRef.current.get(eventId);
+    if (existing) {
+      clearTimeout(existing);
+      campaignNoteEmailTimersRef.current.delete(eventId);
+    }
+  };
+
+  const clearAnalyticsNoteTimer = (taskId: string) => {
+    const existing = analyticsNoteEmailTimersRef.current.get(taskId);
+    if (existing) {
+      clearTimeout(existing);
+      analyticsNoteEmailTimersRef.current.delete(taskId);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      campaignNoteEmailTimersRef.current.forEach((timerId) => clearTimeout(timerId));
+      analyticsNoteEmailTimersRef.current.forEach((timerId) => clearTimeout(timerId));
+      campaignNoteEmailTimersRef.current.clear();
+      analyticsNoteEmailTimersRef.current.clear();
+    };
+  }, []);
+
+  const sendNoteNotificationEmail = async (params: {
+    recipientEmail: string;
+    recipientName: string;
+    note: string;
+    title: string;
+    eventId: string;
+    eventType: 'campaign' | 'analytics';
+  }) => {
+    const settingsDoc = await getDoc(doc(db, 'reminderSettings', 'default'));
+    if (!settingsDoc.exists()) return;
+
+    const settings = settingsDoc.data() as ReminderSettings;
+    const apiKey = settings.resendApiKey?.trim();
+    if (!apiKey) return;
+
+    const typeLabel = params.eventType === 'campaign' ? 'Kampanya' : 'Analitik Görev';
+    const subject = `[Kampanya Takvimi] ${typeLabel} Notu Eklendi: ${params.title}`;
+    const safeTitle = escapeHtml(params.title);
+    const safeNote = escapeHtml(params.note).replace(/\n/g, '<br/>');
+    const safeRecipient = escapeHtml(params.recipientName || 'Kullanıcı');
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; color: #1f2937; line-height: 1.6;">
+        <h2 style="margin: 0 0 12px 0;">${typeLabel} için Not Eklendi</h2>
+        <p style="margin: 0 0 8px 0;">Merhaba <strong>${safeRecipient}</strong>,</p>
+        <p style="margin: 0 0 8px 0;"><strong>${safeTitle}</strong> işi için yeni bir not eklendi:</p>
+        <div style="padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin: 12px 0;">
+          ${safeNote}
+        </div>
+        <p style="margin: 12px 0 0 0; color: #64748b; font-size: 12px;">Bu bildirim, not eklendikten 5 dakika sonra otomatik gönderilmiştir.</p>
+      </div>
+    `;
+
+    const result = await sendEmailWithResend(apiKey, {
+      to: params.recipientEmail,
+      toName: params.recipientName,
+      subject,
+      html,
+      eventId: params.eventId,
+      eventTitle: params.title,
+      eventType: params.eventType,
+      urgency: 'Medium'
+    });
+
+    if (result.success) {
+      await addDoc(collection(db, 'logs'), {
+        message: `${typeLabel} not bildirimi maili gönderildi: ${params.title} -> ${params.recipientEmail}`,
+        timestamp: Timestamp.now()
+      });
+    } else {
+      console.error(`${typeLabel} note email failed:`, result.error);
+    }
+  };
+
+  const scheduleCampaignNoteEmail = (eventId: string, noteText: string) => {
+    const expectedNote = noteText.trim();
+    if (!expectedNote) return;
+
+    clearCampaignNoteTimer(eventId);
+
+    const timerId = setTimeout(async () => {
+      campaignNoteEmailTimersRef.current.delete(eventId);
+      try {
+        const eventSnap = await getDoc(doc(db, 'events', eventId));
+        if (!eventSnap.exists()) return;
+
+        const eventData = eventSnap.data() as any;
+        const latestNote = (eventData.note || '').trim();
+        if (!latestNote || latestNote !== expectedNote) return;
+        if (!eventData.assigneeId) return;
+
+        const assigneeSnap = await getDoc(doc(db, 'users', eventData.assigneeId));
+        if (!assigneeSnap.exists()) return;
+        const assigneeData = assigneeSnap.data() as User;
+        if (!assigneeData.email) return;
+
+        await sendNoteNotificationEmail({
+          recipientEmail: assigneeData.email,
+          recipientName: assigneeData.name || 'Kullanıcı',
+          note: latestNote,
+          title: eventData.title || 'Kampanya',
+          eventId,
+          eventType: 'campaign'
+        });
+      } catch (error) {
+        console.error('Campaign note email scheduling error:', error);
+      }
+    }, NOTE_EMAIL_DELAY_MS);
+
+    campaignNoteEmailTimersRef.current.set(eventId, timerId);
+  };
+
+  const scheduleAnalyticsNoteEmail = (taskId: string, noteText: string) => {
+    const expectedNote = noteText.trim();
+    if (!expectedNote) return;
+
+    clearAnalyticsNoteTimer(taskId);
+
+    const timerId = setTimeout(async () => {
+      analyticsNoteEmailTimersRef.current.delete(taskId);
+      try {
+        const taskSnap = await getDoc(doc(db, 'analyticsTasks', taskId));
+        if (!taskSnap.exists()) return;
+
+        const taskData = taskSnap.data() as any;
+        const latestNote = (taskData.notes || '').trim();
+        if (!latestNote || latestNote !== expectedNote) return;
+        if (!taskData.assigneeId) return;
+
+        const assigneeSnap = await getDoc(doc(db, 'analyticsUsers', taskData.assigneeId));
+        if (!assigneeSnap.exists()) return;
+        const assigneeData = assigneeSnap.data() as AnalyticsUser;
+        if (!assigneeData.email) return;
+
+        await sendNoteNotificationEmail({
+          recipientEmail: assigneeData.email,
+          recipientName: assigneeData.name || 'Kullanıcı',
+          note: latestNote,
+          title: taskData.title || 'Analitik Görev',
+          eventId: taskId,
+          eventType: 'analytics'
+        });
+      } catch (error) {
+        console.error('Analytics note email scheduling error:', error);
+      }
+    }, NOTE_EMAIL_DELAY_MS);
+
+    analyticsNoteEmailTimersRef.current.set(taskId, timerId);
+  };
+
   const handleAddRequest = async (title: string, urgency: UrgencyLevel, date: Date, description?: string, requesterEmail?: string) => {
     if (!loggedInDeptUser?.isBusinessUnit) return;
     try {
@@ -1888,6 +2057,9 @@ function App() {
 
   const handleAddNote = async () => {
     if (!selectedEventIdForNote || !noteContent.trim()) return;
+    const trimmedNote = noteContent.trim();
+    const existingEvent = events.find(e => e.id === selectedEventIdForNote);
+    const previousNote = (existingEvent?.note || '').trim();
 
     try {
       const eventRef = doc(db, "events", selectedEventIdForNote);
@@ -1904,11 +2076,15 @@ function App() {
         adminEmailName ||
         (isDesigner ? 'Admin' : 'Bilinmeyen Kullanıcı');
       await updateDoc(eventRef, {
-        note: noteContent.trim(),
+        note: trimmedNote,
         noteAuthorName,
         noteAddedAt: Timestamp.now(),
         updatedAt: Timestamp.now()
       });
+
+      if (trimmedNote !== previousNote) {
+        scheduleCampaignNoteEmail(selectedEventIdForNote, trimmedNote);
+      }
 
       addToast('Not eklendi.', 'success');
       setIsNoteModalOpen(false);
@@ -1936,6 +2112,7 @@ function App() {
         noteAddedAt: null,
         updatedAt: Timestamp.now()
       });
+      clearCampaignNoteTimer(eventId);
       addToast('Not silindi.', 'success');
     } catch (e) {
       addToast('Silme işlemi başarısız.', 'info');
@@ -2141,6 +2318,7 @@ function App() {
       const eventData = eventSnap.exists() ? eventSnap.data() : null;
 
       await deleteDoc(doc(db, "events", id));
+      clearCampaignNoteTimer(id);
 
       // Delete related reports
       try {
@@ -2408,6 +2586,15 @@ function App() {
 
       await setDoc(doc(db, "events", eventId), updateData, { merge: true });
 
+      if (updates.note !== undefined) {
+        const normalizedNote = updates.note.trim();
+        if (normalizedNote) {
+          scheduleCampaignNoteEmail(eventId, normalizedNote);
+        } else {
+          clearCampaignNoteTimer(eventId);
+        }
+      }
+
       if (shouldSyncReport && syncLinkedReport) {
         await syncLinkedReport();
       }
@@ -2526,6 +2713,7 @@ function App() {
     try {
       events.forEach(async (ev) => {
         await deleteDoc(doc(db, "events", ev.id));
+        clearCampaignNoteTimer(ev.id);
       });
       addToast('Tüm kampanyalar siliniyor...', 'info');
     } catch (e) {
@@ -2808,6 +2996,10 @@ function App() {
         createdAt: Timestamp.now()
       });
 
+      if (notes?.trim()) {
+        scheduleAnalyticsNoteEmail(taskDoc.id, notes.trim());
+      }
+
       addToast('Analitik iş eklendi.', 'success');
 
       // Log the action
@@ -2835,6 +3027,7 @@ function App() {
   const handleDeleteAnalyticsTask = async (taskId: string) => {
     try {
       await deleteDoc(doc(db, "analyticsTasks", taskId));
+      clearAnalyticsNoteTimer(taskId);
       setSelectedAnalyticsTask(null);
       addToast('Analitik iş silindi.', 'success');
 
@@ -2850,6 +3043,11 @@ function App() {
 
   // Handle updating analytics task
   const handleUpdateAnalyticsTask = async (taskId: string, updates: Partial<AnalyticsTask>) => {
+    const currentTask = analyticsTasks.find(t => t.id === taskId);
+    const hasNotesUpdate = updates.notes !== undefined;
+    const nextNote = (updates.notes || '').trim();
+    const currentNote = (currentTask?.notes || '').trim();
+
     try {
       const updateData: any = { updatedAt: Timestamp.now() };
       if (updates.title !== undefined) updateData.title = updates.title;
@@ -2866,6 +3064,14 @@ function App() {
         const updatedTask = analyticsTasks.find(t => t.id === taskId);
         if (updatedTask) {
           setSelectedAnalyticsTask({ ...updatedTask, ...updates });
+        }
+      }
+
+      if (hasNotesUpdate) {
+        if (nextNote && nextNote !== currentNote) {
+          scheduleAnalyticsNoteEmail(taskId, nextNote);
+        } else if (!nextNote) {
+          clearAnalyticsNoteTimer(taskId);
         }
       }
     } catch (e) {
