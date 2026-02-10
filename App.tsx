@@ -53,6 +53,9 @@ import { BirthdayReminder } from './components/BirthdayReminder';
 import ReminderSettingsPanel from './components/ReminderSettingsPanel';
 import { useTheme } from './hooks/useTheme';
 import { useBrowserNotifications } from './hooks/useBrowserNotifications';
+import { useDeviceMode } from './hooks/useDeviceMode';
+import { MobileShell } from './components/mobile/MobileShell';
+import { MobileTabKey } from './components/mobile/MobileBottomNav';
 import { setCookie, getCookie, deleteCookie } from './utils/cookies';
 import { calculateMonthlyChampion } from './utils/gamification';
 import { calculateReportDueDate } from './utils/businessDays';
@@ -96,13 +99,13 @@ const stripHtml = (html: string): string => {
 
 function App() {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const { isPhoneOnly } = useDeviceMode();
   const [viewMode, setViewMode] = useState<'month' | 'week'>(() => {
     const saved = localStorage.getItem('calendarViewMode');
     if (saved) return saved === 'week' ? 'week' : 'month';
 
-    // Mobile detection - default to week view for mobile
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    return isMobile ? 'week' : 'month';
+    const isPhoneUA = /Android|iPhone|iPod|Windows Phone|IEMobile|Opera Mini|BlackBerry|webOS/i.test(navigator.userAgent);
+    return isPhoneUA ? 'week' : 'month';
   });
   const { theme, toggleTheme, setTheme } = useTheme();
   const {
@@ -167,6 +170,7 @@ function App() {
 
   // Calendar Tab State (KAMPANYA, RAPOR, ANALİTİK, or AYARLAR)
   const [activeTab, setActiveTab] = useState<'kampanya' | 'rapor' | 'analitik' | 'ayarlar'>('kampanya');
+  const [mobileTab, setMobileTab] = useState<MobileTabKey>('kampanya');
 
   // Analytics State
   const [analyticsUsers, setAnalyticsUsers] = useState<AnalyticsUser[]>([]);
@@ -2973,6 +2977,60 @@ function App() {
   // Super Admin = Firebase Auth admin kullanıcısı (departmentUser değil)
   const canSeeSettingsTab = isSuperAdmin;
 
+  const mobileCampaignEvents = useMemo(() => {
+    if (isDesigner || isKampanyaYapan) return filteredEvents;
+    if (connectedPersonnelUser) {
+      return filteredEvents.filter(e => e.assigneeId === connectedPersonnelUser.id || e.departmentId === currentDepartmentId);
+    }
+    if (currentDepartmentId) {
+      return filteredEvents.filter(e => e.departmentId === currentDepartmentId);
+    }
+    return [];
+  }, [filteredEvents, isDesigner, isKampanyaYapan, connectedPersonnelUser, currentDepartmentId]);
+
+  const mobileReports = useMemo(() => {
+    if (isDesigner) return filteredReports;
+    if (isKampanyaYapan && connectedPersonnelUser) {
+      return filteredReports.filter(r => r.assigneeId === connectedPersonnelUser.id);
+    }
+    if (connectedPersonnelUser) {
+      return filteredReports.filter(r => r.assigneeId === connectedPersonnelUser.id);
+    }
+    return [];
+  }, [filteredReports, isDesigner, isKampanyaYapan, connectedPersonnelUser]);
+
+  const mobileAnalyticsTasks = useMemo(() => {
+    if (isDesigner) return analyticsTasks;
+    if (isAnalitik && connectedAnalyticsUser) {
+      return analyticsTasks.filter(task => task.assigneeId === connectedAnalyticsUser.id);
+    }
+    return [];
+  }, [analyticsTasks, isDesigner, isAnalitik, connectedAnalyticsUser]);
+
+  const openMobileReport = (reportId: string) => {
+    const report = reports.find(r => r.id === reportId);
+    if (report) setSelectedReport(report);
+  };
+
+  const openMobileAnalyticsTask = (taskId: string) => {
+    const task = analyticsTasks.find(t => t.id === taskId);
+    if (task) setSelectedAnalyticsTask(task);
+  };
+
+  useEffect(() => {
+    if (mobileTab === 'kampanya' && !canSeeKampanyaTab) {
+      setMobileTab(canSeeReportTab ? 'rapor' : canSeeAnalyticsTab ? 'analitik' : 'islerim');
+      return;
+    }
+    if (mobileTab === 'rapor' && !canSeeReportTab) {
+      setMobileTab(canSeeKampanyaTab ? 'kampanya' : canSeeAnalyticsTab ? 'analitik' : 'islerim');
+      return;
+    }
+    if (mobileTab === 'analitik' && !canSeeAnalyticsTab) {
+      setMobileTab(canSeeKampanyaTab ? 'kampanya' : canSeeReportTab ? 'rapor' : 'islerim');
+    }
+  }, [mobileTab, canSeeKampanyaTab, canSeeReportTab, canSeeAnalyticsTab]);
+
   // Auto-switch to analytics tab for Analitik-only users
   useEffect(() => {
     if (isOnlyAnalitik && activeTab !== 'analitik') {
@@ -2986,6 +3044,136 @@ function App() {
       <div className="min-h-screen flex items-center justify-center bg-[#F8F9FE] flex-col gap-4">
         <Loader2 size={40} className="text-violet-600 animate-spin" />
         <p className="text-gray-500 font-medium animate-pulse">Veritabanına bağlanılıyor...</p>
+      </div>
+    );
+  }
+
+  if (isPhoneOnly) {
+    return (
+      <div className="min-h-screen text-gray-800 dark:text-gray-100 transition-colors duration-300 relative">
+        <BackgroundTheme activeTheme={backgroundTheme} customImage={customThemeImage} />
+        <div className="relative z-10">
+          <MobileShell
+            currentDate={currentDate}
+            onPrevPeriod={prevPeriod}
+            onNextPeriod={nextPeriod}
+            onResetToToday={resetToToday}
+            events={mobileCampaignEvents}
+            reports={mobileReports}
+            analyticsTasks={mobileAnalyticsTasks}
+            users={users}
+            analyticsUsers={analyticsUsers}
+            activeTab={mobileTab}
+            onChangeTab={setMobileTab}
+            canSeeKampanyaTab={canSeeKampanyaTab}
+            canSeeReportTab={canSeeReportTab}
+            canSeeAnalyticsTab={canSeeAnalyticsTab}
+            canAddCampaign={isDesigner}
+            canAddAnalytics={isDesigner}
+            onOpenEvent={(eventId) => setViewEventId(eventId)}
+            onOpenReport={openMobileReport}
+            onOpenAnalyticsTask={openMobileAnalyticsTask}
+            onOpenAddCampaign={() => openAddModal()}
+            onOpenAddAnalytics={() => {
+              setSelectedAnalyticsDate(new Date());
+              setIsAddAnalyticsModalOpen(true);
+            }}
+            onOpenMyTasks={() => setIsMyTasksOpen(true)}
+            onOpenLogin={() => setIsDeptLoginOpen(true)}
+            isLoggedIn={!!loggedInDeptUser || isDesigner}
+          />
+        </div>
+
+        <AddEventModal
+          isOpen={isAddModalOpen}
+          onClose={() => {
+            setIsAddModalOpen(false);
+            setConvertingRequest(null);
+          }}
+          onAdd={handleAddEvent}
+          initialDate={selectedDate}
+          initialData={convertingRequest ? {
+            title: convertingRequest.title,
+            urgency: convertingRequest.urgency,
+            description: convertingRequest.description,
+            departmentId: convertingRequest.departmentId
+          } : undefined}
+          users={users}
+          departments={departments}
+          events={events}
+          isKampanyaYapan={isKampanyaYapan}
+        />
+
+        <AddAnalyticsTaskModal
+          isOpen={isAddAnalyticsModalOpen}
+          onClose={() => {
+            setIsAddAnalyticsModalOpen(false);
+            setSelectedAnalyticsDate(undefined);
+          }}
+          onAdd={handleAddAnalyticsTask}
+          initialDate={selectedAnalyticsDate}
+          users={analyticsUsers}
+          tasks={analyticsTasks}
+        />
+
+        <EventDetailsModal
+          event={viewEvent}
+          onClose={() => setViewEventId(null)}
+          assignee={users.find(u => u.id === viewEvent?.assigneeId)}
+          departments={departments}
+          users={users}
+          isDesigner={isDesigner}
+          isKampanyaYapan={isKampanyaYapan}
+          onEdit={handleEditEvent}
+          onDelete={handleDeleteEvent}
+          monthlyBadges={monthlyBadges}
+        />
+
+        <ReportDetailsModal
+          isOpen={!!selectedReport}
+          report={selectedReport}
+          users={users}
+          onClose={() => setSelectedReport(null)}
+          onUpdate={handleUpdateReport}
+          onDelete={handleDeleteReport}
+          onMarkDone={handleMarkReportDone}
+          onUpdateStatus={handleUpdateReportStatus}
+          canEdit={isDesigner || isKampanyaYapan}
+        />
+
+        <AnalyticsTaskDetailsModal
+          isOpen={!!selectedAnalyticsTask}
+          task={selectedAnalyticsTask}
+          users={analyticsUsers}
+          onClose={() => setSelectedAnalyticsTask(null)}
+          onUpdate={handleUpdateAnalyticsTask}
+          onDelete={handleDeleteAnalyticsTask}
+          onUpdateStatus={handleUpdateAnalyticsTaskStatus}
+          canEdit={isDesigner}
+          canChangeStatus={isDesigner || isAnalitik}
+        />
+
+        <DepartmentLoginModal
+          isOpen={isDeptLoginOpen}
+          onClose={() => setIsDeptLoginOpen(false)}
+          departmentUsers={departmentUsers}
+          departments={departments}
+          onLogin={handleDepartmentLogin}
+        />
+
+        <MyTasksModal
+          isOpen={isMyTasksOpen}
+          onClose={() => setIsMyTasksOpen(false)}
+          tasks={events.filter(e => {
+            if (!loggedInDeptUser) return false;
+            if (e.assigneeId === loggedInDeptUser.id) return true;
+            if (connectedPersonnelUser && e.assigneeId === connectedPersonnelUser.id) return true;
+            return false;
+          })}
+          onUpdateStatus={(id, status) => handleEditEvent(id, { status })}
+        />
+
+        <ToastContainer toasts={toasts} removeToast={removeToast} />
       </div>
     );
   }
