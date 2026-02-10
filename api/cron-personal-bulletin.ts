@@ -131,6 +131,28 @@ function isOverdueReport(report: Report, year: number, month: number, day: numbe
     return isBeforeTurkeyDay(report.dueDate, year, month, day);
 }
 
+function getReportDedupeKey(report: Pick<Report, 'title' | 'campaignTitle' | 'dueDate'>): string {
+    const normalizedTitle = (report.title || '').trim().toLocaleLowerCase('tr-TR');
+    const normalizedCampaign = (report.campaignTitle || '').trim().toLocaleLowerCase('tr-TR');
+    const dueDate = report.dueDate;
+    const dueDateKey = `${dueDate.getFullYear()}-${dueDate.getMonth() + 1}-${dueDate.getDate()}`;
+    return `${normalizedTitle}|${normalizedCampaign}|${dueDateKey}`;
+}
+
+function dedupeOverdueReports(reports: Report[]): Report[] {
+    const seen = new Set<string>();
+    const unique: Report[] = [];
+
+    for (const report of reports) {
+        const key = getReportDedupeKey(report);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        unique.push(report);
+    }
+
+    return unique;
+}
+
 // ===== EMAIL HTML BUILDER =====
 
 function buildPersonalBulletinHTML(
@@ -474,10 +496,11 @@ async function processPersonalBulletin(
         );
 
         // Overdue reports for this user: dueDate < today AND report status not done/cancelled
-        const overdueReports = allReports.filter(r =>
+        const overdueReportsRaw = allReports.filter(r =>
             r.assigneeId === user.id &&
             isOverdueReport(r, turkeyYear, turkeyMonth, turkeyDate)
         );
+        const overdueReports = dedupeOverdueReports(overdueReportsRaw);
 
         console.log(`${user.name}: total=${userCampaigns.length}, overdue=${overdue.length}, today=${todayCampaigns.length}, overdueReports=${overdueReports.length}`);
 

@@ -1107,6 +1107,23 @@ interface PersonalBulletinReport {
   dueDate: Date;
 }
 
+function dedupeOverdueReports(reports: PersonalBulletinReport[]): PersonalBulletinReport[] {
+  const seen = new Set<string>();
+  const unique: PersonalBulletinReport[] = [];
+
+  for (const report of reports) {
+    const normalizedTitle = (report.title || '').trim().toLocaleLowerCase('tr-TR');
+    const normalizedCampaign = (report.campaignTitle || '').trim().toLocaleLowerCase('tr-TR');
+    const dueDateKey = `${report.dueDate.getFullYear()}-${report.dueDate.getMonth() + 1}-${report.dueDate.getDate()}`;
+    const key = `${normalizedTitle}|${normalizedCampaign}|${dueDateKey}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(report);
+  }
+
+  return unique;
+}
+
 /**
  * Build Personal Daily Bulletin HTML
  */
@@ -1118,6 +1135,7 @@ export function buildPersonalBulletinHTML(params: {
   dateStr: string;
 }): string {
   const { recipientName, overdueCampaigns, todayCampaigns, overdueReports, dateStr } = params;
+  const uniqueOverdueReports = dedupeOverdueReports(overdueReports);
 
   const overdueSection = overdueCampaigns.length > 0 ? `
     <div style="margin-bottom: 24px;">
@@ -1189,10 +1207,10 @@ export function buildPersonalBulletinHTML(params: {
     </div>
   `;
 
-  const overdueReportsSection = overdueReports.length > 0 ? `
+  const overdueReportsSection = uniqueOverdueReports.length > 0 ? `
     <div style="margin-bottom: 24px;">
       <h3 style="margin: 0 0 12px 0; font-size: 18px; color: #B45309; font-weight: 600;">
-        📝 Geciken Raporlar (${overdueReports.length})
+        📝 Geciken Raporlar (${uniqueOverdueReports.length})
       </h3>
       <table width="100%" cellpadding="8" cellspacing="0" style="background-color: #FFFBEB; border: 1px solid #D97706; border-radius: 8px;">
         <thead>
@@ -1203,7 +1221,7 @@ export function buildPersonalBulletinHTML(params: {
           </tr>
         </thead>
         <tbody>
-          ${overdueReports.map(r => `
+          ${uniqueOverdueReports.map(r => `
             <tr style="border-top: 1px solid #FCD34D;">
               <td style="padding: 10px; color: #92400E;"><strong>${r.title}</strong></td>
               <td style="padding: 10px; color: #92400E;">${r.campaignTitle || '-'}</td>
@@ -1284,16 +1302,17 @@ export async function sendPersonalBulletinEmail(
   overdueReports: PersonalBulletinReport[],
   dateStr: string
 ): Promise<EmailResponse> {
+  const uniqueOverdueReports = dedupeOverdueReports(overdueReports);
   const html = buildPersonalBulletinHTML({
     recipientName,
     overdueCampaigns,
     todayCampaigns,
-    overdueReports,
+    overdueReports: uniqueOverdueReports,
     dateStr,
   });
 
   const total = overdueCampaigns.length + todayCampaigns.length;
-  const subject = `📋 Günlük Bülten - ${dateStr} (${total} Kampanya / ${overdueReports.length} Geciken Rapor${overdueCampaigns.length > 0 || overdueReports.length > 0 ? ' ⚠️' : ''})`;
+  const subject = `📋 Günlük Bülten - ${dateStr} (${total} Kampanya / ${uniqueOverdueReports.length} Geciken Rapor${overdueCampaigns.length > 0 || uniqueOverdueReports.length > 0 ? ' ⚠️' : ''})`;
 
   return sendEmailWithResend(apiKey, {
     to: recipientEmail,

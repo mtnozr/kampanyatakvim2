@@ -93,6 +93,23 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
   const [testSMSMessage, setTestSMSMessage] = useState('');
   const [processMessage, setProcessMessage] = useState('');
 
+  const dedupeOverdueReports = <T extends { title?: string; campaignTitle?: string; dueDate: Date }>(items: T[]): T[] => {
+    const seen = new Set<string>();
+    const unique: T[] = [];
+
+    for (const item of items) {
+      const normalizedTitle = (item.title || '').trim().toLocaleLowerCase('tr-TR');
+      const normalizedCampaign = (item.campaignTitle || '').trim().toLocaleLowerCase('tr-TR');
+      const dueDateKey = `${item.dueDate.getFullYear()}-${item.dueDate.getMonth() + 1}-${item.dueDate.getDate()}`;
+      const key = `${normalizedTitle}|${normalizedCampaign}|${dueDateKey}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      unique.push(item);
+    }
+
+    return unique;
+  };
+
   useEffect(() => {
     loadSettings();
     loadRecentLogs();
@@ -695,7 +712,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
         status: c.status,
       }));
 
-      const overdueReports = reports.filter(r => {
+      const overdueReports = dedupeOverdueReports(reports.filter(r => {
         const dueDate = new Date(r.dueDate.getFullYear(), r.dueDate.getMonth(), r.dueDate.getDate());
         return r.assigneeId === firstUser.id &&
           dueDate < todayStart &&
@@ -705,7 +722,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
         title: r.title,
         campaignTitle: r.campaignTitle,
         dueDate: r.dueDate,
-      }));
+      })));
 
       const previewHTML = buildPersonalBulletinHTML({
         recipientName: firstUser.name,
@@ -775,7 +792,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
             status: c.status,
           }));
 
-          const overdueReports = reports.filter(r => {
+          const overdueReports = dedupeOverdueReports(reports.filter(r => {
             const dueDate = new Date(r.dueDate.getFullYear(), r.dueDate.getMonth(), r.dueDate.getDate());
             return r.assigneeId === recipient.id &&
               dueDate < todayStart &&
@@ -785,7 +802,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
             title: r.title,
             campaignTitle: r.campaignTitle,
             dueDate: r.dueDate,
-          }));
+          })));
 
           if (overdueCampaigns.length === 0 && todayCampaigns.length === 0 && overdueReports.length === 0) {
             console.log(`${recipient.name}: Kampanya/rapor yok, atlanıyor`);
