@@ -474,6 +474,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   // --- Department User Management Handler ---
   const handleAddDeptUser = (e: React.FormEvent) => {
     e.preventDefault();
+    const cleanPassword = newDeptPassword.trim();
+
     if (!newDeptUsername.trim()) {
       setError('Ad Soyad gereklidir.');
       return;
@@ -483,8 +485,12 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       return;
     }
     // Password validation only for new users or if password is provided
-    if (!editingUserId && !newDeptPassword.trim()) {
+    if (!editingUserId && !cleanPassword) {
       setError('Şifre gereklidir.');
+      return;
+    }
+    if (cleanPassword && cleanPassword.length < 6) {
+      setError('Şifre en az 6 karakter olmalıdır.');
       return;
     }
     if (!newDeptUserDeptId) {
@@ -507,10 +513,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
           birthday: newDeptUserBirthday.trim() || deleteField(),
           hasDefaultPassword: newDeptUserHasDefaultPassword
         };
-        if (newDeptPassword.trim()) {
-          updates.password = newDeptPassword.trim();
+        if (cleanPassword) {
+          updates.password = cleanPassword;
           // If password is changed, update hasDefaultPassword based on new password
-          updates.hasDefaultPassword = newDeptPassword.trim() === '123456';
+          updates.hasDefaultPassword = cleanPassword === '123456';
         }
         onUpdateDepartmentUser(editingUserId, updates);
         handleCancelEdit(); // Reset form
@@ -525,7 +531,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         return;
       }
 
-      onAddDepartmentUser(newDeptUsername, newDeptPassword, newDeptUserDeptId, newDeptUserIsDesigner, newDeptUserIsKampanyaYapan, newDeptUserIsBusinessUnit, newDeptUserIsAnalitik, finalEmail);
+      onAddDepartmentUser(newDeptUsername, cleanPassword, newDeptUserDeptId, newDeptUserIsDesigner, newDeptUserIsKampanyaYapan, newDeptUserIsBusinessUnit, newDeptUserIsAnalitik, finalEmail);
       // Reset form
       setNewDeptUsername('');
       setNewDeptPassword('');
@@ -1147,7 +1153,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             Şifre {editingUserId && <span className="font-normal text-gray-400">(Değişmeyecekse boş bırakın)</span>}
                           </label>
                           <input
-                            type="text"
+                            type="password"
                             value={newDeptPassword}
                             onChange={(e) => setNewDeptPassword(e.target.value)}
                             placeholder={editingUserId ? "Değiştirmek için yeni şifre girin" : "sifre123"}

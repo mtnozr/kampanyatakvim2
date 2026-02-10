@@ -1686,9 +1686,10 @@ function App() {
     try {
       const userToUpdate = departmentUsers.find(u => u.id === id);
       if (!userToUpdate) throw new Error("Kullanıcı bulunamadı");
+      const cleanPassword = updates.password?.trim();
 
       // 1. Update Auth if needed (email or password)
-      if (updates.email || updates.password) {
+      if (updates.email || cleanPassword) {
         if (!userToUpdate.uid) {
           throw new Error("Bu kullanıcının UID değeri eksik, Auth güncellemesi yapılamaz.");
         }
@@ -1696,7 +1697,7 @@ function App() {
           action: 'updateUser',
           uid: userToUpdate.uid,
           email: updates.email,
-          password: updates.password
+          password: cleanPassword
         });
         addToast('Kullanıcı Auth bilgileri güncellendi.', 'success');
       }

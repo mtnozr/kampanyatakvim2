@@ -34,14 +34,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { action, uid, email, password } = req.body;
 
     if (action === 'createUser') {
-      if (!email || !password) {
+      const normalizedPassword = typeof password === 'string' ? password.trim() : '';
+      if (!email || !normalizedPassword) {
         return res.status(400).json({ error: 'Email and password required for creation' });
+      }
+      if (normalizedPassword.length < 6) {
+        return res.status(400).json({ error: 'Şifre en az 6 karakter olmalıdır.' });
       }
 
       try {
         const userRecord = await admin.auth().createUser({
           email: email,
-          password: password,
+          password: normalizedPassword,
         });
 
         // Return project ID and service account email for verification
@@ -95,7 +99,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const updates: any = {};
       if (email) updates.email = email;
-      if (password) updates.password = password;
+      if (typeof password === 'string') {
+        const normalizedPassword = password.trim();
+        if (normalizedPassword) {
+          if (normalizedPassword.length < 6) {
+            return res.status(400).json({ error: 'Şifre en az 6 karakter olmalıdır.' });
+          }
+          updates.password = normalizedPassword;
+        }
+      }
 
       if (Object.keys(updates).length === 0) {
         return res.status(200).json({ message: 'No updates provided' });
