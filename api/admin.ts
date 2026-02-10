@@ -1,6 +1,42 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import admin from 'firebase-admin';
-import { initFirebaseAdmin } from './lib/firebaseAdmin';
+
+async function getAdmin() {
+  const adminModule = await import('firebase-admin');
+  const admin = adminModule.default;
+
+  if (!admin.apps.length) {
+    const serviceAccountRaw = process.env.FIREBASE_SERVICE_ACCOUNT;
+    if (!serviceAccountRaw) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT environment variable is missing.');
+    }
+
+    // Allow accidental "FIREBASE_SERVICE_ACCOUNT={...}" format gracefully.
+    const normalizedRaw = serviceAccountRaw.trim().replace(/^FIREBASE_SERVICE_ACCOUNT=/, '');
+
+    let serviceAccount: any;
+    try {
+      serviceAccount = JSON.parse(normalizedRaw);
+    } catch {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON.');
+    }
+
+    if (serviceAccount.private_key) {
+      let key = String(serviceAccount.private_key).replace(/\\n/g, '\n');
+      const match = key.match(/-----BEGIN PRIVATE KEY-----([\s\S]*)-----END PRIVATE KEY-----/);
+      if (match && match[1]) {
+        const body = match[1].replace(/\s/g, '');
+        key = `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----\n`;
+      }
+      serviceAccount.private_key = key;
+    }
+
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+  }
+
+  return admin;
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Enable CORS
@@ -19,7 +55,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Initialize Firebase Admin inside handler to catch errors gracefully
   try {
-    initFirebaseAdmin();
+    await getAdmin();
   } catch (error: any) {
     return res.status(500).json({
       error: `Firebase Admin Init Failed: ${error.message}`
@@ -31,6 +67,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    const admin = await getAdmin();
     const { action, uid, email, password } = req.body;
 
     if (action === 'createUser') {
