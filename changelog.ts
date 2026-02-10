@@ -6,6 +6,17 @@ export interface Version {
 
 export const changelog: Version[] = [
   {
+    version: 'v1.3.1',
+    date: '10.02.2026',
+    notes: [
+      'feat: Kampanya ekleme penceresine "Gönderim Türü" alanı eklendi (Kampanya / Bilgilendirme) ve kayıt altına alınmaya başlandı.',
+      'fix: Kampanya Gün Sonu Bülteni için cumartesi/pazar gönderimleri engellendi.',
+      'chore: Sekme başlığı "Kampanya-Analitik Takvim" olarak güncellendi.',
+      'chore: Üst başlık metni "Kampanya/Analitik Yönetim Takvimi" olarak güncellendi.',
+      'chore: Sürüm notu otomasyonundan OpenAI API bağımlılığı kaldırıldı; daha basit commit tabanlı yapıya geçildi.'
+    ]
+  },
+  {
     version: 'v1.3.0',
     date: '17.12.2025',
     notes: [

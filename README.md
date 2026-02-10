@@ -18,3 +18,17 @@ View your app in AI Studio: https://ai.studio/apps/drive/1sFXCfTOXMNI4bQmJiG9oxT
 
 3. Run the app:
    `npm run dev`
+
+## Auto Changelog
+
+Admin panelindeki **Sürüm Notları** artık `changelog.ts` üzerinden otomatik güncellenebilir.
+
+- Workflow: `.github/workflows/auto-changelog.yml`
+- Script: `scripts/update-changelog.mjs`
+
+Manuel backfill (geçmiş commitlerden sürüm notu üretmek için):
+- `npm run changelog:backfill`
+
+Not:
+- API bağımlılığı yoktur.
+- Commit mesajları sürüm notlarına olduğu gibi eklenir; Türkçe görmek için commit mesajlarını Türkçe yazmanız önerilir.

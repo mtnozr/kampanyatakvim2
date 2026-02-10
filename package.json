@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "changelog:update": "node scripts/update-changelog.mjs",
+    "changelog:backfill": "node scripts/update-changelog.mjs --from-git --limit 30 --offset 0"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",

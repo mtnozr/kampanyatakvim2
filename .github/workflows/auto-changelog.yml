@@ -1,0 +1,70 @@
+name: Auto Changelog
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      backfill:
+        description: "Geçmiş commitlerden sürüm notu üret (true/false)"
+        required: false
+        default: "false"
+      limit:
+        description: "Backfill commit limiti"
+        required: false
+        default: "30"
+      offset:
+        description: "Backfill başlangıç offset"
+        required: false
+        default: "0"
+
+permissions:
+  contents: write
+
+jobs:
+  update-changelog:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 200
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Prepare commits payload
+        if: github.event_name == 'push'
+        run: |
+          mkdir -p .github/tmp
+          echo '${{ toJson(github.event.commits) }}' > .github/tmp/commits.json
+
+      - name: Update changelog from push commits
+        if: github.event_name == 'push'
+        run: node scripts/update-changelog.mjs --messages-file .github/tmp/commits.json
+
+      - name: Backfill changelog (manual)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.backfill == 'true'
+        run: |
+          node scripts/update-changelog.mjs \
+            --from-git \
+            --limit "${{ github.event.inputs.limit }}" \
+            --offset "${{ github.event.inputs.offset }}"
+
+      - name: Commit and push if changed
+        run: |
+          if git diff --quiet -- changelog.ts; then
+            echo "No changelog changes."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add changelog.ts
+          git commit -m "chore(changelog): sürüm notlarını otomatik güncelle [skip changelog]"
+          git push
