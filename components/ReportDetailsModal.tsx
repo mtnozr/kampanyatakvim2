@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, FileText, Calendar, User as UserIcon, Trash2, Save, CheckCircle2, AlertTriangle, Clock, Tag, XCircle, RotateCcw, Mail, Phone, Edit2 } from 'lucide-react';
+import { X, FileText, Calendar, User as UserIcon, Trash2, Save, CheckCircle2, AlertTriangle, Clock, Tag, XCircle, RotateCcw, Mail, Phone, Edit2, StickyNote } from 'lucide-react';
 import { Report, User, ReportStatus } from '../types';
 import { format, isBefore } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -30,8 +30,11 @@ export const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({
     const [title, setTitle] = useState('');
     const [assigneeId, setAssigneeId] = useState<string>('');
     const [dueDate, setDueDate] = useState<Date>(new Date());
+    const [note, setNote] = useState('');
     const [isEditing, setIsEditing] = useState(false);
+    const [isNoteOnlyEditing, setIsNoteOnlyEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [isSavingNote, setIsSavingNote] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -42,7 +45,9 @@ export const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({
             setTitle(report.title);
             setAssigneeId(report.assigneeId || '');
             setDueDate(report.dueDate);
+            setNote(report.note || '');
             setIsEditing(false);
+            setIsNoteOnlyEditing(false);
             setShowDeleteConfirm(false);
         }
     }, [isOpen, report]);
@@ -60,13 +65,27 @@ export const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({
             await onUpdate(report.id, {
                 title: title.trim(),
                 assigneeId: assigneeId || undefined,
-                dueDate
+                dueDate,
+                note: note.trim() || undefined
             });
             setIsEditing(false);
         } catch (e) {
             console.error('Save failed:', e);
         }
         setIsSaving(false);
+    };
+
+    const handleSaveNoteOnly = async () => {
+        setIsSavingNote(true);
+        try {
+            await onUpdate(report.id, {
+                note: note.trim() || undefined
+            });
+            setIsNoteOnlyEditing(false);
+        } catch (e) {
+            console.error('Note save failed:', e);
+        }
+        setIsSavingNote(false);
     };
 
     const handleDelete = async () => {
@@ -291,6 +310,50 @@ export const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({
                         )}
                     </div>
 
+                    {/* Notes */}
+                    {(report.note || isEditing || isNoteOnlyEditing) && (
+                        <div>
+                            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                <StickyNote size={16} className="text-emerald-500" />
+                                Not
+                            </label>
+                            {isEditing || isNoteOnlyEditing ? (
+                                <textarea
+                                    value={note}
+                                    onChange={(e) => setNote(e.target.value)}
+                                    rows={3}
+                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500 outline-none transition-all text-gray-800 dark:text-white resize-none"
+                                    placeholder="Rapor ile ilgili not..."
+                                />
+                            ) : (
+                                <p className="text-gray-600 dark:text-gray-400 text-sm whitespace-pre-wrap">
+                                    {report.note}
+                                </p>
+                            )}
+
+                            {isNoteOnlyEditing && !isEditing && (
+                                <div className="flex gap-2 mt-3">
+                                    <button
+                                        onClick={() => {
+                                            setNote(report.note || '');
+                                            setIsNoteOnlyEditing(false);
+                                        }}
+                                        className="flex-1 px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+                                    >
+                                        İptal
+                                    </button>
+                                    <button
+                                        onClick={handleSaveNoteOnly}
+                                        disabled={isSavingNote}
+                                        className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                                    >
+                                        {isSavingNote ? 'Kaydediliyor...' : 'Notu Kaydet'}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* Completed Info */}
                     {report.status === 'done' && report.completedAt && (
                         <div className="p-3 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg">
@@ -369,11 +432,21 @@ export const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({
                                             </>
                                         )}
                                         <button
-                                            onClick={() => setIsEditing(true)}
+                                            onClick={() => {
+                                                setIsNoteOnlyEditing(false);
+                                                setIsEditing(true);
+                                            }}
                                             className="flex-1 h-11 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
                                             title="Düzenle"
                                         >
                                             <Edit2 size={16} /> Düzenle
+                                        </button>
+                                        <button
+                                            onClick={() => setIsNoteOnlyEditing(true)}
+                                            className="flex-1 h-11 bg-amber-500 text-white rounded-lg hover:bg-amber-600 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
+                                            title="Not Ekle / Düzenle"
+                                        >
+                                            <StickyNote size={16} /> Not
                                         </button>
                                     </div>
 
@@ -444,6 +517,13 @@ export const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({
                                     İptal Edildi
                                 </button>
                             </div>
+                            <button
+                                onClick={() => setIsNoteOnlyEditing(true)}
+                                className="w-full px-4 py-3 bg-amber-100 text-amber-700 rounded-xl font-medium hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-300 transition-colors flex items-center justify-center gap-2"
+                            >
+                                <StickyNote size={18} />
+                                Not Ekle / Düzenle
+                            </button>
                             <button
                                 onClick={() => setShowDeleteConfirm(true)}
                                 className="w-full px-4 py-3 bg-red-100 text-red-600 rounded-xl font-medium hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 transition-colors flex items-center justify-center gap-2"

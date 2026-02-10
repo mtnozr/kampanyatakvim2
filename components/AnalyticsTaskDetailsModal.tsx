@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Briefcase, Calendar, User as UserIcon, Trash2, Save, CheckCircle2, Clock, XCircle, Mail, FileText, PauseCircle } from 'lucide-react';
+import { X, Briefcase, Calendar, User as UserIcon, Trash2, Save, CheckCircle2, Clock, XCircle, Mail, FileText, PauseCircle, StickyNote } from 'lucide-react';
 import { AnalyticsTask, AnalyticsUser, UrgencyLevel, CampaignStatus } from '../types';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -34,7 +34,9 @@ export const AnalyticsTaskDetailsModal: React.FC<AnalyticsTaskDetailsModalProps>
     const [assigneeId, setAssigneeId] = useState<string>('');
     const [dueDate, setDueDate] = useState<Date>(new Date());
     const [isEditing, setIsEditing] = useState(false);
+    const [isNotesOnlyEditing, setIsNotesOnlyEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [isSavingNote, setIsSavingNote] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -47,6 +49,7 @@ export const AnalyticsTaskDetailsModal: React.FC<AnalyticsTaskDetailsModalProps>
             setAssigneeId(task.assigneeId || '');
             setDueDate(task.date);
             setIsEditing(false);
+            setIsNotesOnlyEditing(false);
             setShowDeleteConfirm(false);
         }
     }, [isOpen, task]);
@@ -109,6 +112,19 @@ export const AnalyticsTaskDetailsModal: React.FC<AnalyticsTaskDetailsModalProps>
             console.error('Status change failed:', e);
         }
         setIsUpdatingStatus(false);
+    };
+
+    const handleSaveNotesOnly = async () => {
+        setIsSavingNote(true);
+        try {
+            await onUpdate(task.id, {
+                notes: notes.trim() || undefined
+            });
+            setIsNotesOnlyEditing(false);
+        } catch (e) {
+            console.error('Notes save failed:', e);
+        }
+        setIsSavingNote(false);
     };
 
     const handleRequestInfo = () => {
@@ -337,13 +353,13 @@ export const AnalyticsTaskDetailsModal: React.FC<AnalyticsTaskDetailsModalProps>
                     )}
 
                     {/* Notes */}
-                    {(task.notes || isEditing) && (
+                    {(task.notes || isEditing || isNotesOnlyEditing) && (
                         <div>
                             <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                                 <FileText size={16} className="text-blue-500" />
                                 Notlar
                             </label>
-                            {isEditing ? (
+                            {isEditing || isNotesOnlyEditing ? (
                                 <textarea
                                     value={notes}
                                     onChange={(e) => setNotes(e.target.value)}
@@ -352,6 +368,27 @@ export const AnalyticsTaskDetailsModal: React.FC<AnalyticsTaskDetailsModalProps>
                                 />
                             ) : (
                                 <p className="text-gray-600 dark:text-gray-400 text-sm whitespace-pre-wrap">{task.notes}</p>
+                            )}
+
+                            {isNotesOnlyEditing && !isEditing && (
+                                <div className="flex gap-2 mt-3">
+                                    <button
+                                        onClick={() => {
+                                            setNotes(task.notes || '');
+                                            setIsNotesOnlyEditing(false);
+                                        }}
+                                        className="flex-1 px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+                                    >
+                                        İptal
+                                    </button>
+                                    <button
+                                        onClick={handleSaveNotesOnly}
+                                        disabled={isSavingNote}
+                                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                                    >
+                                        {isSavingNote ? 'Kaydediliyor...' : 'Notu Kaydet'}
+                                    </button>
+                                </div>
                             )}
                         </div>
                     )}
@@ -420,6 +457,15 @@ export const AnalyticsTaskDetailsModal: React.FC<AnalyticsTaskDetailsModalProps>
                                     İptal
                                 </button>
                             </div>
+                            {!canEdit && (
+                                <button
+                                    onClick={() => setIsNotesOnlyEditing(true)}
+                                    className="w-full mt-3 px-4 py-3 bg-amber-100 text-amber-700 rounded-xl font-medium hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-300 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <StickyNote size={18} />
+                                    Not Ekle / Düzenle
+                                </button>
+                            )}
                         </div>
                     )}
 
@@ -447,10 +493,20 @@ export const AnalyticsTaskDetailsModal: React.FC<AnalyticsTaskDetailsModalProps>
                                 <>
                                     <div className="flex gap-3">
                                         <button
-                                            onClick={() => setIsEditing(true)}
+                                            onClick={() => {
+                                                setIsNotesOnlyEditing(false);
+                                                setIsEditing(true);
+                                            }}
                                             className="flex-1 px-4 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
                                         >
                                             Düzenle
+                                        </button>
+                                        <button
+                                            onClick={() => setIsNotesOnlyEditing(true)}
+                                            className="flex-1 px-4 py-3 bg-amber-100 text-amber-700 rounded-xl font-medium hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-300 transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            <StickyNote size={18} />
+                                            Not
                                         </button>
                                         <button
                                             onClick={() => setShowDeleteConfirm(true)}

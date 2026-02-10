@@ -15,6 +15,7 @@ interface EventDetailsModalProps {
   onClose: () => void;
   onEdit?: (eventId: string, updates: Partial<CalendarEvent>) => void;
   onDelete?: (eventId: string) => void;
+  onOpenNote?: (eventId: string, currentNote?: string) => void;
   monthlyBadges?: { trophy: string[], rocket: string[], power: string[] };
 }
 
@@ -28,6 +29,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   onClose,
   onEdit,
   onDelete,
+  onOpenNote,
   monthlyBadges = { trophy: [], rocket: [], power: [] }
 }) => {
   const [isEditMode, setIsEditMode] = useState(false);
@@ -653,8 +655,8 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
             </div>
           </div>
 
-          {/* Sticky Note Section - Read Only */}
-          {event.note && (
+          {/* Sticky Note Section */}
+          {(event.note || ((isDesigner || isKampanyaYapan) && onOpenNote)) && (
             <div className="flex items-start gap-3">
               <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded-lg shrink-0">
                 <StickyNote size={20} />
@@ -662,25 +664,42 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               <div className="w-full">
                 <div className="flex justify-between items-center mb-1">
                   <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Not</p>
-                  {/* Delete Note Button (Only for Designers or Kampanya Yapan) */}
-                  {(isDesigner || isKampanyaYapan) && onEdit && (
-                    <button
-                      onClick={() => {
-                        if (window.confirm('Bu notu silmek istediğinize emin misiniz?')) {
-                          onEdit(event.id, { note: '' });
-                        }
-                      }}
-                      className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700"
-                      title="Notu Sil"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
+                  <div className="flex items-center gap-1">
+                    {(isDesigner || isKampanyaYapan) && onOpenNote && (
+                      <button
+                        onClick={() => onOpenNote(event.id, event.note)}
+                        className="text-[11px] px-2 py-1 rounded-md bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:hover:bg-yellow-900/50 transition-colors"
+                        title="Not Ekle / Düzenle"
+                      >
+                        Not Ekle / Düzenle
+                      </button>
+                    )}
+                    {/* Delete Note Button (Only for Designers or Kampanya Yapan) */}
+                    {(isDesigner || isKampanyaYapan) && onEdit && !!event.note && (
+                      <button
+                        onClick={() => {
+                          if (window.confirm('Bu notu silmek istediğinize emin misiniz?')) {
+                            onEdit(event.id, { note: '' });
+                          }
+                        }}
+                        className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700"
+                        title="Notu Sil"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="mt-1 bg-yellow-50 dark:bg-yellow-900/10 p-3 rounded-lg border border-yellow-200 dark:border-yellow-700/30 relative">
-                  <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-medium">
-                    {event.note}
-                  </p>
+                  {event.note ? (
+                    <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-medium">
+                      {event.note}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                      Henüz not eklenmemiş.
+                    </p>
+                  )}
                   {event.noteAuthorName && (
                     <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                       Ekleyen: <span className="font-semibold">{event.noteAuthorName}</span>

@@ -162,6 +162,7 @@ export interface Report {
   assigneeId?: string;              // Assigned person
   dueDate: Date;                    // Report due date
   status: ReportStatus;             // Report status
+  note?: string;                    // Optional report note
   completedAt?: Date;               // Completion date
   completedBy?: string;             // Completer person ID
   createdAt: Date;

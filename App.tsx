@@ -1920,6 +1920,12 @@ function App() {
     }
   };
 
+  const openEventNoteModal = (eventId: string, currentNote?: string) => {
+    setSelectedEventIdForNote(eventId);
+    setNoteContent(currentNote || '');
+    setIsNoteModalOpen(true);
+  };
+
   const handleDeleteNote = async (eventId: string) => {
     if (!confirm('Notu silmek istediğinize emin misiniz?')) return;
     try {
@@ -2660,6 +2666,7 @@ function App() {
       if (updates.title !== undefined) updateData.title = updates.title;
       if (updates.assigneeId !== undefined) updateData.assigneeId = updates.assigneeId || null;
       if (updates.dueDate !== undefined) updateData.dueDate = Timestamp.fromDate(updates.dueDate);
+      if (updates.note !== undefined) updateData.note = updates.note || null;
 
       await updateDoc(doc(db, "reports", reportId), updateData);
 
@@ -3141,6 +3148,7 @@ function App() {
           isKampanyaYapan={isKampanyaYapan}
           onEdit={handleEditEvent}
           onDelete={handleDeleteEvent}
+          onOpenNote={openEventNoteModal}
           monthlyBadges={monthlyBadges}
         />
 
@@ -3822,9 +3830,7 @@ function App() {
                                 e.preventDefault();
                                 e.stopPropagation();
                                 if (loggedInDeptUser || isDesigner || isKampanyaYapan) {
-                                  setSelectedEventIdForNote(event.id);
-                                  setNoteContent(event.note || '');
-                                  setIsNoteModalOpen(true);
+                                  openEventNoteModal(event.id, event.note);
                                 }
                               }}
                               onDragStart={(e) => {
@@ -4065,6 +4071,7 @@ function App() {
           isKampanyaYapan={isKampanyaYapan}
           onEdit={handleEditEvent}
           onDelete={handleDeleteEvent}
+          onOpenNote={openEventNoteModal}
           monthlyBadges={monthlyBadges}
         />
 
