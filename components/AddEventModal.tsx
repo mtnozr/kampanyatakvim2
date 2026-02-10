@@ -482,115 +482,134 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
             <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
               📡 Kanallar
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              {/* Push */}
-              <label className="flex items-center gap-2 cursor-pointer group">
+            <div className="grid grid-cols-3 gap-2">
+              <label
+                className={`cursor-pointer rounded-xl border px-2 py-3 flex flex-col items-center justify-center gap-1 text-center transition-all select-none ${channelPush
+                  ? 'bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-500 text-blue-800 dark:text-blue-200 ring-1 ring-blue-300 dark:ring-blue-700 shadow-sm'
+                  : 'bg-white dark:bg-slate-700 border-blue-100 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-slate-600'
+                  }`}
+              >
                 <input
                   type="checkbox"
                   checked={channelPush}
                   onChange={(e) => setChannelPush(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
+                  className="sr-only"
                 />
-                <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                  Push
-                </span>
+                <span className="text-lg leading-none">📲</span>
+                <span className="text-xs font-medium">Push</span>
               </label>
 
-              {/* SMS */}
-              <label className="flex items-center gap-2 cursor-pointer group">
+              <label
+                className={`cursor-pointer rounded-xl border px-2 py-3 flex flex-col items-center justify-center gap-1 text-center transition-all select-none ${channelSMS
+                  ? 'bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-500 text-blue-800 dark:text-blue-200 ring-1 ring-blue-300 dark:ring-blue-700 shadow-sm'
+                  : 'bg-white dark:bg-slate-700 border-blue-100 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-slate-600'
+                  }`}
+              >
                 <input
                   type="checkbox"
                   checked={channelSMS}
                   onChange={(e) => setChannelSMS(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
+                  className="sr-only"
                 />
-                <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                  SMS
-                </span>
+                <span className="text-lg leading-none">💬</span>
+                <span className="text-xs font-medium">SMS</span>
               </label>
 
-              {/* Pop-Up */}
-              <label className="flex items-center gap-2 cursor-pointer group">
+              <label
+                className={`cursor-pointer rounded-xl border px-2 py-3 flex flex-col items-center justify-center gap-1 text-center transition-all select-none ${channelPopup
+                  ? 'bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-500 text-blue-800 dark:text-blue-200 ring-1 ring-blue-300 dark:ring-blue-700 shadow-sm'
+                  : 'bg-white dark:bg-slate-700 border-blue-100 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-slate-600'
+                  }`}
+              >
                 <input
                   type="checkbox"
                   checked={channelPopup}
                   onChange={(e) => setChannelPopup(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
+                  className="sr-only"
                 />
-                <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                  Pop-Up
-                </span>
+                <span className="text-lg leading-none">🖥</span>
+                <span className="text-xs font-medium">Pop-Up</span>
               </label>
 
-              {/* E-mail */}
-              <label className="flex items-center gap-2 cursor-pointer group">
+              <label
+                className={`cursor-pointer rounded-xl border px-2 py-3 flex flex-col items-center justify-center gap-1 text-center transition-all select-none ${channelEmail
+                  ? 'bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-500 text-blue-800 dark:text-blue-200 ring-1 ring-blue-300 dark:ring-blue-700 shadow-sm'
+                  : 'bg-white dark:bg-slate-700 border-blue-100 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-slate-600'
+                  }`}
+              >
                 <input
                   type="checkbox"
                   checked={channelEmail}
                   onChange={(e) => setChannelEmail(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
+                  className="sr-only"
                 />
-                <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                  E-mail
-                </span>
+                <span className="text-lg leading-none">✉️</span>
+                <span className="text-xs font-medium">E-mail</span>
               </label>
 
-              {/* ATM */}
-              <label className="flex items-center gap-2 cursor-pointer group">
+              <label
+                className={`cursor-pointer rounded-xl border px-2 py-3 flex flex-col items-center justify-center gap-1 text-center transition-all select-none ${channelATM
+                  ? 'bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-500 text-blue-800 dark:text-blue-200 ring-1 ring-blue-300 dark:ring-blue-700 shadow-sm'
+                  : 'bg-white dark:bg-slate-700 border-blue-100 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-slate-600'
+                  }`}
+              >
                 <input
                   type="checkbox"
                   checked={channelATM}
                   onChange={(e) => setChannelATM(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
+                  className="sr-only"
                 />
-                <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                  ATM
-                </span>
+                <span className="text-lg leading-none">🏧</span>
+                <span className="text-xs font-medium">ATM</span>
               </label>
 
-              {/* Şube */}
-              <label className="flex items-center gap-2 cursor-pointer group">
+              <label
+                className={`cursor-pointer rounded-xl border px-2 py-3 flex flex-col items-center justify-center gap-1 text-center transition-all select-none ${channelSube
+                  ? 'bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-500 text-blue-800 dark:text-blue-200 ring-1 ring-blue-300 dark:ring-blue-700 shadow-sm'
+                  : 'bg-white dark:bg-slate-700 border-blue-100 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-slate-600'
+                  }`}
+              >
                 <input
                   type="checkbox"
                   checked={channelSube}
                   onChange={(e) => setChannelSube(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
+                  className="sr-only"
                 />
-                <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                  Şube
-                </span>
+                <span className="text-lg leading-none">🏢</span>
+                <span className="text-xs font-medium">Şube</span>
               </label>
-            </div>
 
-            {/* MİM (with nested checkboxes) */}
-            <div className="border-t border-blue-200 dark:border-blue-800 pt-3 mt-3">
-              <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                MİM
-              </div>
-              <div className="pl-4 space-y-2">
-                <label className="flex items-center gap-2 cursor-pointer group">
-                  <input
-                    type="checkbox"
-                    checked={channelMimCCO}
-                    onChange={(e) => setChannelMimCCO(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
-                  />
-                  <span className="text-sm text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                    CCO (Inbound)
-                  </span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer group">
-                  <input
-                    type="checkbox"
-                    checked={channelMimCCI}
-                    onChange={(e) => setChannelMimCCI(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
-                  />
-                  <span className="text-sm text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                    CCI (Outbound)
-                  </span>
-                </label>
-              </div>
+              <label
+                className={`cursor-pointer rounded-xl border px-2 py-3 flex flex-col items-center justify-center gap-1 text-center transition-all select-none ${channelMimCCO
+                  ? 'bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-500 text-blue-800 dark:text-blue-200 ring-1 ring-blue-300 dark:ring-blue-700 shadow-sm'
+                  : 'bg-white dark:bg-slate-700 border-blue-100 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-slate-600'
+                  }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={channelMimCCO}
+                  onChange={(e) => setChannelMimCCO(e.target.checked)}
+                  className="sr-only"
+                />
+                <span className="text-lg leading-none">📞</span>
+                <span className="text-xs font-medium">CCO In</span>
+              </label>
+
+              <label
+                className={`cursor-pointer rounded-xl border px-2 py-3 flex flex-col items-center justify-center gap-1 text-center transition-all select-none ${channelMimCCI
+                  ? 'bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-500 text-blue-800 dark:text-blue-200 ring-1 ring-blue-300 dark:ring-blue-700 shadow-sm'
+                  : 'bg-white dark:bg-slate-700 border-blue-100 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-slate-600'
+                  }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={channelMimCCI}
+                  onChange={(e) => setChannelMimCCI(e.target.checked)}
+                  className="sr-only"
+                />
+                <span className="text-lg leading-none">📞</span>
+                <span className="text-xs font-medium">CCI Out</span>
+              </label>
             </div>
           </div>
 
