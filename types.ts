@@ -2,6 +2,7 @@ export type UrgencyLevel = 'Very High' | 'High' | 'Medium' | 'Low';
 export type DifficultyLevel = 'BASİT' | 'BASİT ÜSTÜ' | 'ORTA' | 'ZOR' | 'ÇOK ZOR';
 export type ReportStatus = 'pending' | 'done' | 'cancelled';
 export type SendType = 'Kampanya' | 'Bilgilendirme';
+export type CampaignType = 'Yeni Kampanya' | 'Kampanya Hatırlatması';
 
 export interface User {
   id: string;
@@ -33,6 +34,7 @@ export interface CalendarEvent {
   originalDate?: Date; // First assigned date (for duration calculation, doesn't change on reschedule)
   title: string;
   sendType?: SendType; // Gönderim Türü
+  campaignType?: CampaignType; // Kampanya tipi
   description?: string;
   urgency: UrgencyLevel; // Changed from platform
   difficulty?: DifficultyLevel; // New property for campaign difficulty

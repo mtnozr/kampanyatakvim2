@@ -19,7 +19,7 @@ import {
 import { tr } from 'date-fns/locale';
 import { Bell, Smartphone, SmartphoneNfc, ChevronLeft, ChevronRight, Plus, Users, ClipboardList, Loader2, Search, Filter, X, LogIn, LogOut, Database, Download, Lock, Megaphone, PieChart, CheckSquare, StickyNote, Trash2, Flag } from 'lucide-react';
 import jsPDF from 'jspdf';
-import { CalendarEvent, UrgencyLevel, User, AppNotification, ToastMessage, ActivityLog, Department, DepartmentUser, Announcement, DifficultyLevel, WorkRequest, Report, AnalyticsUser, AnalyticsTask, CampaignStatus, ReminderSettings, SendType } from './types';
+import { CalendarEvent, UrgencyLevel, User, AppNotification, ToastMessage, ActivityLog, Department, DepartmentUser, Announcement, DifficultyLevel, WorkRequest, Report, AnalyticsUser, AnalyticsTask, CampaignStatus, ReminderSettings, SendType, CampaignType } from './types';
 import { INITIAL_EVENTS, DAYS_OF_WEEK, INITIAL_USERS, URGENCY_CONFIGS, TURKISH_HOLIDAYS, INITIAL_DEPARTMENTS, DIFFICULTY_CONFIGS } from './constants';
 import { sendSMSWithTwilio, buildSMSFromTemplate, formatPhoneNumber } from './utils/smsService';
 import { EventBadge } from './components/EventBadge';
@@ -366,6 +366,7 @@ function App() {
           id: doc.id,
           title: data.title,
           sendType: data.sendType === 'Bilgilendirme' ? 'Bilgilendirme' : 'Kampanya',
+          campaignType: data.campaignType === 'Kampanya Hatırlatması' ? 'Kampanya Hatırlatması' : 'Yeni Kampanya',
           urgency,
           assigneeId: data.assigneeId,
           description: data.description,
@@ -1933,8 +1934,11 @@ function App() {
     requiresReport?: boolean,
     reportDueDate?: Date,
     channels?: { push?: boolean; sms?: boolean; popup?: boolean; email?: boolean; mimCCO?: boolean; mimCCI?: boolean; atm?: boolean; sube?: boolean; },
-    sendType?: SendType
+    sendType?: SendType,
+    campaignType?: CampaignType
   ) => {
+    const effectiveCampaignType: CampaignType = campaignType || 'Yeni Kampanya';
+    const effectiveRequiresReport = effectiveCampaignType === 'Kampanya Hatırlatması' ? false : (requiresReport !== false);
 
     const eventData = {
       title,
@@ -1942,12 +1946,13 @@ function App() {
       originalDate: Timestamp.fromDate(date), // Store first assigned date for duration calculation
       urgency,
       sendType: sendType || 'Kampanya',
+      campaignType: effectiveCampaignType,
       difficulty: difficulty || 'ORTA',
       assigneeId,
       description,
       departmentId,
       status: 'Planlandı',
-      requiresReport: requiresReport !== false, // Default true if undefined
+      requiresReport: effectiveRequiresReport,
       channels: channels || {},
       createdAt: Timestamp.now(),
       history: [{
@@ -2008,7 +2013,7 @@ function App() {
         });
 
         // Create report if required and due date provided
-        if (requiresReport && reportDueDate) {
+        if (effectiveRequiresReport && reportDueDate) {
           try {
             await addDoc(collection(db, "reports"), {
               title: `${title} - Rapor`,
@@ -2203,7 +2208,7 @@ function App() {
             notifType = 'success';
 
             // Auto-create report for completed campaign (only if requiresReport is true)
-            if (currentEvent.requiresReport !== false) {
+            if (currentEvent.requiresReport !== false && currentEvent.campaignType !== 'Kampanya Hatırlatması') {
               try {
                 // Check if a report already exists for this campaign
                 const existingReportsQuery = query(
@@ -2341,6 +2346,12 @@ function App() {
 
     try {
       if (ctrlKey) {
+        const shouldCopy = confirm('Bu kampanyayı yeni tarihe kopyalamak istiyor musunuz?');
+        if (!shouldCopy) return;
+
+        const copyAsNewCampaign = confirm('Yeni Kampanya olarak kopyalamak için "Tamam", Kampanya Hatırlatması olarak kopyalamak için "İptal" seçin.');
+        const selectedCampaignType: CampaignType = copyAsNewCampaign ? 'Yeni Kampanya' : 'Kampanya Hatırlatması';
+
         // COPY: Create a new campaign with the same data but new date
         addToast('Kampanya kopyalanıyor...', 'info');
 
@@ -2363,9 +2374,15 @@ function App() {
           Object.entries(eventData).filter(([_, value]) => value !== undefined)
         );
 
+        const effectiveRequiresReport = selectedCampaignType === 'Kampanya Hatırlatması'
+          ? false
+          : (event.requiresReport !== false);
+
         await addDoc(collection(db, "events"), {
           ...cleanEventData,
           date: Timestamp.fromDate(newDate),
+          campaignType: selectedCampaignType,
+          requiresReport: effectiveRequiresReport,
           status: 'Planlandı', // Reset status for copied campaign
           createdAt: Timestamp.now(),
           history: [{

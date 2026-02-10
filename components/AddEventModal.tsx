@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, UserPlus, AlertCircle, AlignLeft, AlertTriangle, Building, Gauge } from 'lucide-react';
-import { UrgencyLevel, User, Department, DifficultyLevel, CalendarEvent, SendType } from '../types';
+import { UrgencyLevel, User, Department, DifficultyLevel, CalendarEvent, SendType, CampaignType } from '../types';
 import { URGENCY_CONFIGS, TURKISH_HOLIDAYS, DIFFICULTY_CONFIGS } from '../constants';
 import { RichTextEditor } from './RichTextEditor';
 import { addDays, format } from 'date-fns';
@@ -9,7 +9,7 @@ import { calculateReportDueDate } from '../utils/businessDays';
 interface AddEventModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (title: string, urgency: UrgencyLevel, date: Date, assigneeId?: string, description?: string, departmentId?: string, difficulty?: DifficultyLevel, requiresReport?: boolean, reportDueDate?: Date, channels?: { push?: boolean; sms?: boolean; popup?: boolean; email?: boolean; mimCCO?: boolean; mimCCI?: boolean; atm?: boolean; sube?: boolean; }, sendType?: SendType) => void;
+  onAdd: (title: string, urgency: UrgencyLevel, date: Date, assigneeId?: string, description?: string, departmentId?: string, difficulty?: DifficultyLevel, requiresReport?: boolean, reportDueDate?: Date, channels?: { push?: boolean; sms?: boolean; popup?: boolean; email?: boolean; mimCCO?: boolean; mimCCI?: boolean; atm?: boolean; sube?: boolean; }, sendType?: SendType, campaignType?: CampaignType) => void;
   initialDate?: Date;
   initialData?: {
     title?: string;
@@ -17,6 +17,7 @@ interface AddEventModalProps {
     description?: string;
     departmentId?: string;
     sendType?: SendType;
+    campaignType?: CampaignType;
   };
   users: User[];
   departments: Department[];
@@ -44,6 +45,7 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
   const [assigneeId, setAssigneeId] = useState<string>('');
   const [departmentId, setDepartmentId] = useState<string>('');
   const [sendType, setSendType] = useState<SendType>('Kampanya');
+  const [campaignType, setCampaignType] = useState<CampaignType>('Yeni Kampanya');
   const [description, setDescription] = useState('');
   const [holidayWarning, setHolidayWarning] = useState<string | null>(null);
   const [requiresReport, setRequiresReport] = useState(true);
@@ -88,6 +90,7 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
         setDescription(initialData.description || '');
         setDepartmentId(initialData.departmentId || '');
         setSendType(initialData.sendType || 'Kampanya');
+        setCampaignType(initialData.campaignType || 'Yeni Kampanya');
       } else if (!initialDate) {
         // Only reset if opening fresh (no date provided implies fully fresh, though typically date is always provided)
         // Actually, if simply opening with a date, we usually reset fields.
@@ -103,6 +106,7 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
       setAssigneeId('');
       setDepartmentId('');
       setSendType('Kampanya');
+      setCampaignType('Yeni Kampanya');
       setDescription('');
       setHolidayWarning(null);
       setRequiresReport(true);
@@ -117,6 +121,17 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
       setChannelSube(false);
     }
   }, [isOpen, initialDate, initialData]);
+
+  useEffect(() => {
+    if (campaignType === 'Kampanya Hatırlatması') {
+      setRequiresReport(false);
+      setReportDueDateStr('');
+    } else if (!reportDueDateStr && dateStr) {
+      const selectedDate = new Date(dateStr);
+      const defaultReportDue = calculateReportDueDate(selectedDate);
+      setReportDueDateStr(format(defaultReportDue, 'yyyy-MM-dd'));
+    }
+  }, [campaignType, dateStr, reportDueDateStr]);
 
   const checkHoliday = (date: string) => {
     const d = new Date(date);
@@ -145,7 +160,8 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
     }
 
     const selectedDate = new Date(dateStr);
-    const reportDue = requiresReport && reportDueDateStr ? new Date(reportDueDateStr) : undefined;
+    const effectiveRequiresReport = campaignType === 'Kampanya Hatırlatması' ? false : requiresReport;
+    const reportDue = effectiveRequiresReport && reportDueDateStr ? new Date(reportDueDateStr) : undefined;
     const channels = {
       push: channelPush,
       sms: channelSMS,
@@ -156,7 +172,7 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
       atm: channelATM,
       sube: channelSube
     };
-    onAdd(title, urgency, selectedDate, assigneeId, description, departmentId, difficulty, requiresReport, reportDue, channels, sendType);
+    onAdd(title, urgency, selectedDate, assigneeId, description, departmentId, difficulty, effectiveRequiresReport, reportDue, channels, sendType, campaignType);
     onClose();
     setTitle('');
     setUrgency('Medium');
@@ -164,6 +180,7 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
     setAssigneeId('');
     setDepartmentId('');
     setSendType('Kampanya');
+    setCampaignType('Yeni Kampanya');
     setDescription('');
     setHolidayWarning(null);
     setRequiresReport(true);
@@ -285,6 +302,38 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Kampanya Tipi <span className="text-red-500">*</span>
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {(['Yeni Kampanya', 'Kampanya Hatırlatması'] as CampaignType[]).map((type) => {
+                const isSelected = campaignType === type;
+                return (
+                  <label
+                    key={type}
+                    className={`
+                      flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all
+                      ${isSelected
+                        ? 'bg-violet-50 dark:bg-violet-900/20 border-violet-300 dark:border-violet-600 ring-1 ring-violet-500'
+                        : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600'}
+                    `}
+                  >
+                    <input
+                      type="radio"
+                      name="campaignType"
+                      value={type}
+                      checked={isSelected}
+                      onChange={() => setCampaignType(type)}
+                      className="w-4 h-4 text-violet-600 border-gray-300 focus:ring-violet-500 dark:bg-slate-600 dark:border-slate-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{type}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Gönderim Türü <span className="text-red-500">*</span>
             </label>
             <div className="grid grid-cols-2 gap-2">
@@ -398,13 +447,19 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
                 id="requiresReport"
                 checked={requiresReport}
                 onChange={(e) => setRequiresReport(e.target.checked)}
+                disabled={campaignType === 'Kampanya Hatırlatması'}
                 className="w-5 h-5 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 dark:bg-slate-600 dark:border-slate-500"
               />
               <label htmlFor="requiresReport" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none">
                 📊 Tamamlandığında rapor oluşturulsun
               </label>
             </div>
-            {requiresReport && (
+            {campaignType === 'Kampanya Hatırlatması' && (
+              <p className="text-xs text-amber-700 dark:text-amber-300">
+                Kampanya Hatırlatması için rapor otomatik oluşturulmaz.
+              </p>
+            )}
+            {requiresReport && campaignType !== 'Kampanya Hatırlatması' && (
               <div>
                 <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                   Rapor Teslim Tarihi
