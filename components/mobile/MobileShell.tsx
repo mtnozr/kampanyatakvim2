@@ -45,6 +45,36 @@ const analyticsNameById = (users: AnalyticsUser[]) => {
   return map;
 };
 
+const getCampaignStatusBadgeClass = (status?: string) => {
+  switch (status) {
+    case 'Tamamlandı':
+      return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
+    case 'Planlandı':
+      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
+    case 'Bekleme':
+      return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300';
+    case 'İptal Edildi':
+      return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300';
+    default:
+      return 'bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-gray-300';
+  }
+};
+
+const getCampaignCardAccentClass = (status?: string) => {
+  switch (status) {
+    case 'Tamamlandı':
+      return 'border-l-4 border-l-emerald-500';
+    case 'Planlandı':
+      return 'border-l-4 border-l-yellow-500';
+    case 'Bekleme':
+      return 'border-l-4 border-l-amber-500';
+    case 'İptal Edildi':
+      return 'border-l-4 border-l-red-500';
+    default:
+      return 'border-l-4 border-l-gray-300 dark:border-l-slate-600';
+  }
+};
+
 export const MobileShell: React.FC<MobileShellProps> = ({
   currentDate,
   onPrevPeriod,
@@ -132,11 +162,11 @@ export const MobileShell: React.FC<MobileShellProps> = ({
                 <button
                   key={event.id}
                   onClick={() => onOpenEvent(event.id)}
-                  className="w-full text-left p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                  className={`w-full text-left p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${getCampaignCardAccentClass(event.status || 'Planlandı')}`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-semibold text-sm">{event.title}</p>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-slate-700">
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${getCampaignStatusBadgeClass(event.status || 'Planlandı')}`}>
                       {event.status || 'Planlandı'}
                     </span>
                   </div>

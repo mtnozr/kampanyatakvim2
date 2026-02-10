@@ -130,6 +130,11 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   const canManageReportSetting = isDesigner || isKampanyaYapan;
   const currentCampaignType = isEditMode ? editCampaignType : (event.campaignType || 'Yeni Kampanya');
   const isReminderType = currentCampaignType === 'Kampanya Hatırlatması';
+  const isMobileTouch = typeof window !== 'undefined' && (
+    window.innerWidth <= 768 ||
+    (window.matchMedia ? window.matchMedia('(pointer: coarse)').matches : false)
+  );
+  const designerFooterGridCols = assignee?.phone ? 'sm:grid-cols-6' : 'sm:grid-cols-5';
 
   const handleRequiresReportChange = (checked: boolean) => {
     if (isReminderType) return;
@@ -229,10 +234,10 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
           <div className="flex-1">
             {/* Status Toggle UI for Authorized Users */}
             {(isDesigner || isKampanyaYapan) && (
-              <div className="flex bg-white/50 dark:bg-slate-700/50 p-1 rounded-lg border border-gray-200/50 dark:border-slate-600/50 mb-3 w-fit backdrop-blur-sm">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 bg-white/50 dark:bg-slate-700/50 p-1.5 rounded-lg border border-gray-200/50 dark:border-slate-600/50 mb-3 w-full backdrop-blur-sm">
                 <button
                   onClick={() => handleStatusChange('Planlandı')}
-                  className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all ${status === 'Planlandı'
+                  className={`px-2.5 py-2 rounded-md text-[11px] sm:text-[10px] font-bold flex items-center justify-center gap-1.5 min-h-[40px] sm:min-h-[32px] transition-all active:scale-[0.98] ${status === 'Planlandı'
                     ? 'bg-yellow-100 text-yellow-700 shadow-sm dark:bg-yellow-900/30 dark:text-yellow-300'
                     : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600'
                     }`}
@@ -242,7 +247,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 </button>
                 <button
                   onClick={() => handleStatusChange('Bekleme')}
-                  className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all ${status === 'Bekleme'
+                  className={`px-2.5 py-2 rounded-md text-[11px] sm:text-[10px] font-bold flex items-center justify-center gap-1.5 min-h-[40px] sm:min-h-[32px] transition-all active:scale-[0.98] ${status === 'Bekleme'
                     ? 'bg-amber-100 text-amber-700 shadow-sm dark:bg-amber-900/30 dark:text-amber-300'
                     : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600'
                     }`}
@@ -252,7 +257,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 </button>
                 <button
                   onClick={() => handleStatusChange('Tamamlandı')}
-                  className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all ${status === 'Tamamlandı'
+                  className={`px-2.5 py-2 rounded-md text-[11px] sm:text-[10px] font-bold flex items-center justify-center gap-1.5 min-h-[40px] sm:min-h-[32px] transition-all active:scale-[0.98] ${status === 'Tamamlandı'
                     ? 'bg-green-500 text-white shadow-sm dark:bg-green-600 dark:text-white'
                     : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600'
                     }`}
@@ -262,7 +267,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 </button>
                 <button
                   onClick={() => handleStatusChange('İptal Edildi')}
-                  className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all ${status === 'İptal Edildi'
+                  className={`px-2.5 py-2 rounded-md text-[11px] sm:text-[10px] font-bold flex items-center justify-center gap-1.5 min-h-[40px] sm:min-h-[32px] transition-all active:scale-[0.98] ${status === 'İptal Edildi'
                     ? 'bg-red-100 text-red-700 shadow-sm dark:bg-red-900/30 dark:text-red-300'
                     : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600'
                     }`}
@@ -299,7 +304,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white bg-white/50 dark:bg-slate-700/50 hover:bg-white dark:hover:bg-slate-600 rounded-full p-1 transition-colors ml-2"
+            className={`text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white bg-white/50 dark:bg-slate-700/50 hover:bg-white dark:hover:bg-slate-600 rounded-full transition-colors ml-2 ${isMobileTouch ? 'p-2.5' : 'p-1'}`}
           >
             <X size={20} />
           </button>
@@ -741,10 +746,10 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
         {/* Footer Actions */}
         <div className="px-6 py-4 bg-gray-50 dark:bg-slate-700/30 border-t border-gray-100 dark:border-slate-700 shrink-0">
           {isDesigner && !isEditMode ? (
-            <div className="flex gap-2">
+            <div className={`grid grid-cols-2 ${designerFooterGridCols} gap-2`}>
               <button
                 onClick={handleRequestInfo}
-                className="flex-1 h-11 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
+                className="h-12 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm sm:text-xs flex items-center justify-center gap-1.5 transition-colors"
                 title="Bilgi İste"
               >
                 <Mail size={16} /> Bilgi İste
@@ -752,7 +757,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               {assignee?.phone && (
                 <button
                   onClick={handleCallAssignee}
-                  className="flex-1 h-11 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
+                  className="h-12 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm sm:text-xs flex items-center justify-center gap-1.5 transition-colors"
                   title="Jabber ile Ara"
                 >
                   <Phone size={16} /> Ara
@@ -760,19 +765,19 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               )}
               <button
                 onClick={() => setIsEditMode(true)}
-                className="flex-1 h-11 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
+                className="h-12 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium text-sm sm:text-xs flex items-center justify-center gap-1.5 transition-colors"
               >
                 <Edit2 size={16} /> Düzenle
               </button>
               <button
                 onClick={handleDelete}
-                className="flex-1 h-11 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
+                className="h-12 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm sm:text-xs flex items-center justify-center gap-1.5 transition-colors"
               >
                 <Trash2 size={16} /> Sil
               </button>
               <button
                 onClick={onClose}
-                className="px-3 h-11 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white font-medium text-xs transition-colors"
+                className="col-span-2 sm:col-span-1 h-12 px-3 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-600 font-medium text-sm sm:text-xs transition-colors"
               >
                 Kapat
               </button>
@@ -781,13 +786,13 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
             <div className="flex gap-3">
               <button
                 onClick={handleSave}
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm flex items-center justify-center gap-2 transition-colors"
+                className="flex-1 h-12 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm flex items-center justify-center gap-2 transition-colors"
               >
                 <Save size={16} /> Kaydet
               </button>
               <button
                 onClick={handleCancel}
-                className="px-4 py-2 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600 font-medium text-sm flex items-center justify-center gap-2 transition-colors"
+                className="h-12 px-4 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600 font-medium text-sm flex items-center justify-center gap-2 transition-colors"
               >
                 <XCircle size={16} /> İptal
               </button>
@@ -796,7 +801,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
             <div className="text-center">
               <button
                 onClick={onClose}
-                className="text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-colors"
+                className="w-full h-12 rounded-lg border border-gray-300 dark:border-slate-600 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors"
               >
                 Kapat
               </button>
