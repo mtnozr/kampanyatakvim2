@@ -1859,6 +1859,26 @@ function App() {
 
   const NOTE_EMAIL_DELAY_MS = 5 * 60 * 1000;
 
+  const getCurrentNoteAuthorName = () => {
+    const userEmail = auth.currentUser?.email?.trim().toLowerCase();
+    const matchedPersonnelUser = userEmail
+      ? users.find(u => u.email?.trim().toLowerCase() === userEmail)
+      : null;
+    const matchedAnalyticsUser = userEmail
+      ? analyticsUsers.find(u => u.email?.trim().toLowerCase() === userEmail)
+      : null;
+    const emailPrefix = userEmail ? userEmail.split('@')[0] : '';
+
+    return (
+      loggedInDeptUser?.username?.trim() ||
+      matchedPersonnelUser?.name?.trim() ||
+      matchedAnalyticsUser?.name?.trim() ||
+      auth.currentUser?.displayName?.trim() ||
+      emailPrefix ||
+      (isDesigner ? 'Admin' : 'Bilinmeyen Kullanıcı')
+    );
+  };
+
   const clearCampaignNoteTimer = (eventId: string) => {
     const existing = campaignNoteEmailTimersRef.current.get(eventId);
     if (existing) {
@@ -1888,6 +1908,8 @@ function App() {
     recipientEmail: string;
     recipientName: string;
     note: string;
+    noteAuthorName?: string;
+    noteAddedAt?: Date;
     title: string;
     eventId: string;
     eventType: 'campaign' | 'analytics';
@@ -1904,12 +1926,19 @@ function App() {
     const safeTitle = escapeHtml(params.title);
     const safeNote = escapeHtml(params.note).replace(/\n/g, '<br/>');
     const safeRecipient = escapeHtml(params.recipientName || 'Kullanıcı');
+    const safeNoteAuthor = escapeHtml(params.noteAuthorName || 'Bilinmeyen');
+    const noteAddedAtText = params.noteAddedAt
+      ? format(params.noteAddedAt, 'd MMMM yyyy HH:mm', { locale: tr })
+      : 'Bilinmiyor';
+    const safeNoteAddedAt = escapeHtml(noteAddedAtText);
 
     const html = `
       <div style="font-family: Arial, sans-serif; color: #1f2937; line-height: 1.6;">
         <h2 style="margin: 0 0 12px 0;">${typeLabel} için Not Eklendi</h2>
         <p style="margin: 0 0 8px 0;">Merhaba <strong>${safeRecipient}</strong>,</p>
         <p style="margin: 0 0 8px 0;"><strong>${safeTitle}</strong> işi için yeni bir not eklendi:</p>
+        <p style="margin: 0 0 4px 0;"><strong>Notu Ekleyen:</strong> ${safeNoteAuthor}</p>
+        <p style="margin: 0 0 8px 0;"><strong>Eklenme Zamanı:</strong> ${safeNoteAddedAt}</p>
         <div style="padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin: 12px 0;">
           ${safeNote}
         </div>
@@ -1954,6 +1983,9 @@ function App() {
         const latestNote = (eventData.note || '').trim();
         if (!latestNote || latestNote !== expectedNote) return;
         if (!eventData.assigneeId) return;
+        const noteAddedAt = eventData.noteAddedAt instanceof Timestamp
+          ? eventData.noteAddedAt.toDate()
+          : (eventData.noteAddedAt ? new Date(eventData.noteAddedAt) : undefined);
 
         const assigneeSnap = await getDoc(doc(db, 'users', eventData.assigneeId));
         if (!assigneeSnap.exists()) return;
@@ -1964,6 +1996,8 @@ function App() {
           recipientEmail: assigneeData.email,
           recipientName: assigneeData.name || 'Kullanıcı',
           note: latestNote,
+          noteAuthorName: eventData.noteAuthorName || 'Bilinmeyen',
+          noteAddedAt,
           title: eventData.title || 'Kampanya',
           eventId,
           eventType: 'campaign'
@@ -1992,6 +2026,9 @@ function App() {
         const latestNote = (taskData.notes || '').trim();
         if (!latestNote || latestNote !== expectedNote) return;
         if (!taskData.assigneeId) return;
+        const noteAddedAt = taskData.noteAddedAt instanceof Timestamp
+          ? taskData.noteAddedAt.toDate()
+          : (taskData.noteAddedAt ? new Date(taskData.noteAddedAt) : undefined);
 
         const assigneeSnap = await getDoc(doc(db, 'analyticsUsers', taskData.assigneeId));
         if (!assigneeSnap.exists()) return;
@@ -2002,6 +2039,8 @@ function App() {
           recipientEmail: assigneeData.email,
           recipientName: assigneeData.name || 'Kullanıcı',
           note: latestNote,
+          noteAuthorName: taskData.noteAuthorName || 'Bilinmeyen',
+          noteAddedAt,
           title: taskData.title || 'Analitik Görev',
           eventId: taskId,
           eventType: 'analytics'
@@ -2063,18 +2102,7 @@ function App() {
 
     try {
       const eventRef = doc(db, "events", selectedEventIdForNote);
-      const adminEmail = auth.currentUser?.email?.trim().toLowerCase();
-      const adminDisplayName = auth.currentUser?.displayName?.trim();
-      const matchedUser = adminEmail
-        ? users.find(u => u.email?.trim().toLowerCase() === adminEmail)
-        : null;
-      const adminEmailName = adminEmail ? adminEmail.split('@')[0] : '';
-      const noteAuthorName =
-        loggedInDeptUser?.username?.trim() ||
-        matchedUser?.name?.trim() ||
-        adminDisplayName ||
-        adminEmailName ||
-        (isDesigner ? 'Admin' : 'Bilinmeyen Kullanıcı');
+      const noteAuthorName = getCurrentNoteAuthorName();
       await updateDoc(eventRef, {
         note: trimmedNote,
         noteAuthorName,
@@ -2984,6 +3012,7 @@ function App() {
 
   // Handle adding analytics task
   const handleAddAnalyticsTask = async (title: string, urgency: UrgencyLevel, date: Date, assigneeId?: string, notes?: string, difficulty?: 'Kolay' | 'Orta' | 'Zor') => {
+    const trimmedNotes = notes?.trim() || '';
     try {
       const taskDoc = await addDoc(collection(db, "analyticsTasks"), {
         title,
@@ -2991,13 +3020,15 @@ function App() {
         difficulty: difficulty || 'Orta',
         date: Timestamp.fromDate(date),
         assigneeId: assigneeId || null,
-        notes: notes || null,
+        notes: trimmedNotes || null,
+        noteAuthorName: trimmedNotes ? getCurrentNoteAuthorName() : null,
+        noteAddedAt: trimmedNotes ? Timestamp.now() : null,
         status: 'Planlandı',
         createdAt: Timestamp.now()
       });
 
-      if (notes?.trim()) {
-        scheduleAnalyticsNoteEmail(taskDoc.id, notes.trim());
+      if (trimmedNotes) {
+        scheduleAnalyticsNoteEmail(taskDoc.id, trimmedNotes);
       }
 
       addToast('Analitik iş eklendi.', 'success');
@@ -3053,7 +3084,18 @@ function App() {
       if (updates.title !== undefined) updateData.title = updates.title;
       if (updates.urgency !== undefined) updateData.urgency = updates.urgency;
       if (updates.assigneeId !== undefined) updateData.assigneeId = updates.assigneeId || null;
-      if (updates.notes !== undefined) updateData.notes = updates.notes || null;
+      if (updates.notes !== undefined) {
+        updateData.notes = nextNote || null;
+        if (nextNote !== currentNote) {
+          if (nextNote) {
+            updateData.noteAuthorName = getCurrentNoteAuthorName();
+            updateData.noteAddedAt = Timestamp.now();
+          } else {
+            updateData.noteAuthorName = '';
+            updateData.noteAddedAt = null;
+          }
+        }
+      }
       if (updates.date !== undefined) updateData.date = Timestamp.fromDate(updates.date);
 
       await updateDoc(doc(db, "analyticsTasks", taskId), updateData);

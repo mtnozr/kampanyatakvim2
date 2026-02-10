@@ -188,6 +188,8 @@ export interface AnalyticsTask {
   urgency: UrgencyLevel;   // Aciliyet
   difficulty?: 'Kolay' | 'Orta' | 'Zor';  // Zorluk Seviyesi (only visible to admins)
   notes?: string;          // Notlar
+  noteAuthorName?: string; // Son notu ekleyen kişi
+  noteAddedAt?: Date;      // Son notun eklenme zamanı
   assigneeId?: string;     // Assigned AnalyticsUser.id
   status?: CampaignStatus; // Planlandı, Tamamlandı, İptal Edildi
   createdAt?: Date;
