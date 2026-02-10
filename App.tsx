@@ -2349,8 +2349,8 @@ function App() {
         const shouldCopy = confirm('Bu kampanyayı yeni tarihe kopyalamak istiyor musunuz?');
         if (!shouldCopy) return;
 
-        const copyAsNewCampaign = confirm('Yeni Kampanya olarak kopyalamak için "Tamam", Kampanya Hatırlatması olarak kopyalamak için "İptal" seçin.');
-        const selectedCampaignType: CampaignType = copyAsNewCampaign ? 'Yeni Kampanya' : 'Kampanya Hatırlatması';
+        const copyAsReminder = confirm('Kampanya Hatırlatması olarak kopyalamak için "Tamam", Yeni Kampanya olarak kopyalamak için "İptal" seçin.');
+        const selectedCampaignType: CampaignType = copyAsReminder ? 'Kampanya Hatırlatması' : 'Yeni Kampanya';
 
         // COPY: Create a new campaign with the same data but new date
         addToast('Kampanya kopyalanıyor...', 'info');

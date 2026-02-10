@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, User as UserIcon, AlertCircle, AlignLeft, Building, Edit2, Save, XCircle, Trash2, CheckCircle2, XCircle as CancelIcon, Clock, Gauge, StickyNote, Mail, Phone, PauseCircle } from 'lucide-react';
-import { CalendarEvent, User, Department, UrgencyLevel, CampaignStatus, DifficultyLevel } from '../types';
+import { X, Calendar, User as UserIcon, AlertCircle, AlignLeft, Building, Edit2, Save, XCircle, Trash2, CheckCircle2, XCircle as CancelIcon, Clock, Gauge, StickyNote, Mail, Phone, PauseCircle, Flag } from 'lucide-react';
+import { CalendarEvent, User, Department, UrgencyLevel, CampaignStatus, DifficultyLevel, CampaignType } from '../types';
 import { URGENCY_CONFIGS, STATUS_STYLES, DIFFICULTY_CONFIGS } from '../constants';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -35,6 +35,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   const [editDate, setEditDate] = useState('');
   const [editUrgency, setEditUrgency] = useState<UrgencyLevel>('Medium');
   const [editDifficulty, setEditDifficulty] = useState<DifficultyLevel>('ORTA');
+  const [editCampaignType, setEditCampaignType] = useState<CampaignType>('Yeni Kampanya');
   const [editDescription, setEditDescription] = useState('');
   const [editAssigneeId, setEditAssigneeId] = useState('');
   const [editDepartmentId, setEditDepartmentId] = useState('');
@@ -54,6 +55,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
       setEditDate(format(event.date, 'yyyy-MM-dd'));
       setEditUrgency(event.urgency);
       setEditDifficulty(event.difficulty || 'ORTA');
+      setEditCampaignType(event.campaignType || 'Yeni Kampanya');
       setEditDescription(event.description || '');
       setEditAssigneeId(event.assigneeId || '');
       setEditDepartmentId(event.departmentId || '');
@@ -89,6 +91,8 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
       date: new Date(editDate),
       urgency: editUrgency,
       difficulty: editDifficulty,
+      campaignType: editCampaignType,
+      ...(editCampaignType === 'Kampanya Hatırlatması' ? { requiresReport: false } : {}),
       description: editDescription,
       assigneeId: editAssigneeId || undefined,
       departmentId: editDepartmentId || undefined,
@@ -104,6 +108,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     setEditDate(format(event.date, 'yyyy-MM-dd'));
     setEditUrgency(event.urgency);
     setEditDifficulty(event.difficulty || 'ORTA');
+    setEditCampaignType(event.campaignType || 'Yeni Kampanya');
     setEditDescription(event.description || '');
     setEditAssigneeId(event.assigneeId || '');
     setEditDepartmentId(event.departmentId || '');
@@ -389,6 +394,48 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 ) : (
                   <p className="text-sm text-gray-500 dark:text-gray-400 italic mt-1">Atama yapılmadı.</p>
                 )
+              )}
+            </div>
+          </div>
+
+          {/* Campaign Type Section */}
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-fuchsia-50 dark:bg-fuchsia-900/20 text-fuchsia-600 dark:text-fuchsia-400 rounded-lg shrink-0">
+              <Flag size={20} />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Kampanya Tipi</p>
+              {isEditMode ? (
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  {(['Yeni Kampanya', 'Kampanya Hatırlatması'] as CampaignType[]).map((type) => {
+                    const isSelected = editCampaignType === type;
+                    return (
+                      <label
+                        key={type}
+                        className={`
+                          flex items-center gap-2 px-2 py-1.5 rounded-lg border cursor-pointer transition-all
+                          ${isSelected
+                            ? 'bg-violet-50 dark:bg-violet-900/20 border-violet-300 dark:border-violet-600 ring-1 ring-violet-500'
+                            : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600'}
+                        `}
+                      >
+                        <input
+                          type="radio"
+                          name="editCampaignType"
+                          value={type}
+                          checked={isSelected}
+                          onChange={() => setEditCampaignType(type)}
+                          className="w-4 h-4 text-violet-600 border-gray-300 focus:ring-violet-500 dark:bg-slate-600 dark:border-slate-500"
+                        />
+                        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{type}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
+                  {event.campaignType || 'Yeni Kampanya'}
+                </p>
               )}
             </div>
           </div>
