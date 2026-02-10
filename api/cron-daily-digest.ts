@@ -479,11 +479,19 @@ async function processDailyDigest(
 
     // Convert server time (UTC) to Turkey time (UTC+3)
     const turkeyTime = new Date(now.getTime() + (3 * 60 * 60 * 1000));
+    const currentDay = turkeyTime.getDay(); // 0=Sunday, 6=Saturday
     const currentHour = turkeyTime.getHours();
     const currentMinute = turkeyTime.getMinutes();
 
     console.log('Target time:', `${targetHour}:${targetMinute} Turkey`);
     console.log('Current time:', `${currentHour}:${currentMinute} Turkey`);
+    console.log('Day of week:', currentDay, '(0=Sun, 6=Sat)');
+
+    // Skip on weekends (Turkey time)
+    if (currentDay === 0 || currentDay === 6) {
+        console.log('❌ REASON: Weekend - skipping daily digest');
+        return result;
+    }
 
     // Only process if it's time: ±5 dakika penceresi
     const currentTotalMinutes = currentHour * 60 + currentMinute;
