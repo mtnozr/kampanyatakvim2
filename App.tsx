@@ -1933,16 +1933,71 @@ function App() {
     const safeNoteAddedAt = escapeHtml(noteAddedAtText);
 
     const html = `
-      <div style="font-family: Arial, sans-serif; color: #1f2937; line-height: 1.6;">
-        <h2 style="margin: 0 0 12px 0;">${typeLabel} için Not Eklendi</h2>
-        <p style="margin: 0 0 8px 0;">Merhaba <strong>${safeRecipient}</strong>,</p>
-        <p style="margin: 0 0 8px 0;"><strong>${safeTitle}</strong> işi için yeni bir not eklendi:</p>
-        <p style="margin: 0 0 4px 0;"><strong>Notu Ekleyen:</strong> ${safeNoteAuthor}</p>
-        <p style="margin: 0 0 8px 0;"><strong>Eklenme Zamanı:</strong> ${safeNoteAddedAt}</p>
-        <div style="padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin: 12px 0;">
-          ${safeNote}
+      <div style="margin:0; padding:24px; background:#f1f5f9; font-family:'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; color:#334155;">
+        <div style="max-width:680px; margin:0 auto; background:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 12px 30px rgba(15,23,42,0.15);">
+          <div style="padding:40px 28px; text-align:center; background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#a855f7 100%);">
+            <div style="margin:0 auto 16px; width:64px; height:64px; border-radius:14px; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; color:#fff; font-size:30px;">💬</div>
+            <h1 style="margin:0 0 8px 0; font-size:28px; line-height:1.2; color:#ffffff; font-weight:700;">Yeni Not Eklendi</h1>
+            <p style="margin:0; color:rgba(255,255,255,0.82); font-size:13px; letter-spacing:0.4px; font-weight:600;">Kampanya Takvimi</p>
+          </div>
+
+          <div style="padding:28px;">
+            <p style="margin:0 0 16px 0; font-size:16px; color:#334155;">Merhaba <strong>${safeRecipient}</strong>,</p>
+            <p style="margin:0 0 20px 0; font-size:15px; color:#475569; line-height:1.65;">
+              Görevli olduğunuz <strong>${typeLabel.toLocaleLowerCase('tr-TR')}</strong> işine yeni bir not eklendi.
+            </p>
+
+            <div style="border:1px solid #e2e8f0; border-radius:12px; background:linear-gradient(135deg,#f8fafc 0%, #f1f5f9 100%); padding:18px; margin-bottom:20px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td style="padding-bottom:12px; border-bottom:1px solid #e2e8f0;">
+                    <p style="margin:0 0 4px 0; font-size:11px; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:0.7px;">Görev</p>
+                    <p style="margin:0; font-size:18px; color:#0f172a; font-weight:700;">${safeTitle}</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding-top:14px;">
+                    <p style="margin:0 0 8px 0; font-size:11px; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:0.7px;">Eklenen Not</p>
+                    <div style="background:#ffffff; border-left:4px solid #8b5cf6; border-radius:8px; padding:12px 12px 12px 14px;">
+                      <p style="margin:0; font-size:14px; color:#334155; line-height:1.7;">${safeNote}</p>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:18px;">
+              <tr>
+                <td width="50%" style="padding-right:6px; vertical-align:top;">
+                  <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px;">
+                    <p style="margin:0 0 4px 0; font-size:11px; color:#64748b; font-weight:700;">EKLEYEN</p>
+                    <p style="margin:0; font-size:14px; color:#0f172a; font-weight:600;">${safeNoteAuthor}</p>
+                  </div>
+                </td>
+                <td width="50%" style="padding-left:6px; vertical-align:top;">
+                  <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px;">
+                    <p style="margin:0 0 4px 0; font-size:11px; color:#64748b; font-weight:700;">TARİH & SAAT</p>
+                    <p style="margin:0; font-size:14px; color:#0f172a; font-weight:600;">${safeNoteAddedAt}</p>
+                  </div>
+                </td>
+              </tr>
+            </table>
+
+            <div style="text-align:center; margin:24px 0 8px 0;">
+              <a href="https://kampanya-takvimi.vercel.app" style="display:inline-block; padding:12px 24px; border-radius:10px; font-size:14px; font-weight:700; text-decoration:none; color:#ffffff; background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%);">
+                Görevi İncele
+              </a>
+            </div>
+
+            <p style="margin:14px 0 0 0; text-align:center; color:#64748b; font-size:12px; line-height:1.6;">
+              Bu bildirim, not eklendikten 5 dakika sonra otomatik gönderilmiştir.
+            </p>
+          </div>
+
+          <div style="padding:18px 24px; text-align:center; background:#f8fafc; border-top:1px solid #e2e8f0;">
+            <p style="margin:0; font-size:12px; color:#94a3b8;">© ${new Date().getFullYear()} Kampanya Takvimi</p>
+          </div>
         </div>
-        <p style="margin: 12px 0 0 0; color: #64748b; font-size: 12px;">Bu bildirim, not eklendikten 5 dakika sonra otomatik gönderilmiştir.</p>
       </div>
     `;
 
