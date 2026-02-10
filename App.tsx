@@ -173,10 +173,11 @@ function App() {
   // Search & Filter State
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterAssignee, setFilterAssignee] = useState<string>('');
-  const [filterUrgency, setFilterUrgency] = useState<string>('');
-  const [filterStatus, setFilterStatus] = useState<string>('');
-  const [filterDepartment, setFilterDepartment] = useState<string>('');
+  const [filterAssignees, setFilterAssignees] = useState<string[]>([]);
+  const [filterUrgencies, setFilterUrgencies] = useState<UrgencyLevel[]>([]);
+  const [filterStatuses, setFilterStatuses] = useState<CampaignStatus[]>([]);
+  const [filterDepartments, setFilterDepartments] = useState<string[]>([]);
+  const [isFilterPanelExpanded, setIsFilterPanelExpanded] = useState(false);
 
   // Calendar Tab State (KAMPANYA, RAPOR, ANALİTİK, or AYARLAR)
   const [activeTab, setActiveTab] = useState<'kampanya' | 'rapor' | 'analitik' | 'ayarlar'>('kampanya');
@@ -910,43 +911,69 @@ function App() {
   // --- Filter Logic ---
   const filteredEvents = useMemo(() => {
     return events.filter(event => {
-      // 1. Search & UI Filters ONLY (Access control is handled at render time)
-      const query = searchQuery.toLowerCase();
-      const matchesSearch =
-        event.title.toLowerCase().includes(query) ||
-        event.id.toLowerCase().includes(query);
+      const queryText = searchQuery.trim().toLocaleLowerCase('tr-TR');
+      const assigneeName = event.assigneeId
+        ? (users.find(u => u.id === event.assigneeId)?.name || '')
+        : '';
+      const departmentName = event.departmentId
+        ? (departments.find(d => d.id === event.departmentId)?.name || '')
+        : '';
+      const channelTokens: string[] = [];
+      if (event.channels?.push) channelTokens.push('push');
+      if (event.channels?.sms) channelTokens.push('sms');
+      if (event.channels?.popup) channelTokens.push('pop-up', 'popup');
+      if (event.channels?.email) channelTokens.push('e-mail', 'email');
+      if (event.channels?.atm) channelTokens.push('atm');
+      if (event.channels?.sube) channelTokens.push('şube', 'sube');
+      if (event.channels?.mimCCO) channelTokens.push('cco', 'cco in');
+      if (event.channels?.mimCCI) channelTokens.push('cci', 'cci out');
 
-      const matchesAssignee = filterAssignee ? event.assigneeId === filterAssignee : true;
-      const matchesUrgency = filterUrgency ? event.urgency === filterUrgency : true;
-      const matchesStatus = filterStatus ? (event.status || 'Planlandı') === filterStatus : true;
-      const matchesDepartment = filterDepartment ? event.departmentId === filterDepartment : true;
+      const searchableText = [
+        event.title,
+        event.id,
+        assigneeName,
+        departmentName,
+        event.sendType || '',
+        event.campaignType || '',
+        channelTokens.join(' ')
+      ].join(' ').toLocaleLowerCase('tr-TR');
 
-      // If a department user searches, they shouldn't find blurred events by content content,
-      // but we still need them in the list to render them as "blurred".
-      // So if search is active, we might need to filter strict. 
-      // BUT for now, let's allow basic filtering and handle "blur" logic in rendering loop.
+      const matchesSearch = !queryText || searchableText.includes(queryText);
+      const matchesAssignee = filterAssignees.length > 0 ? filterAssignees.includes(event.assigneeId || '') : true;
+      const matchesUrgency = filterUrgencies.length > 0 ? filterUrgencies.includes(event.urgency) : true;
+      const matchesStatus = filterStatuses.length > 0 ? filterStatuses.includes((event.status || 'Planlandı') as CampaignStatus) : true;
+      const matchesDepartment = filterDepartments.length > 0 ? filterDepartments.includes(event.departmentId || '') : true;
 
       return matchesSearch && matchesAssignee && matchesUrgency && matchesStatus && matchesDepartment;
     });
-  }, [events, searchQuery, filterAssignee, filterUrgency, filterStatus, filterDepartment]);
+  }, [events, users, departments, searchQuery, filterAssignees, filterUrgencies, filterStatuses, filterDepartments]);
 
   // Filter reports similar to events
   const filteredReports = useMemo(() => {
     return reports.filter(report => {
-      const query = searchQuery.toLowerCase();
-      const matchesSearch =
-        report.title.toLowerCase().includes(query) ||
-        (report.campaignTitle && report.campaignTitle.toLowerCase().includes(query)) ||
-        report.id.toLowerCase().includes(query);
+      const queryText = searchQuery.trim().toLocaleLowerCase('tr-TR');
+      const reportAssigneeName = report.assigneeId
+        ? (users.find(u => u.id === report.assigneeId)?.name || '')
+        : '';
+      const reportStatusLabel: CampaignStatus =
+        report.status === 'done' ? 'Tamamlandı' :
+          report.status === 'cancelled' ? 'İptal Edildi' :
+            'Planlandı';
 
-      const matchesAssignee = filterAssignee ? report.assigneeId === filterAssignee : true;
-      const matchesStatus = filterStatus ?
-        (filterStatus === 'Tamamlandı' ? report.status === 'done' :
-          filterStatus === 'Planlandı' ? report.status === 'pending' : true) : true;
+      const searchableText = [
+        report.title,
+        report.campaignTitle || '',
+        report.id,
+        reportAssigneeName
+      ].join(' ').toLocaleLowerCase('tr-TR');
+
+      const matchesSearch = !queryText || searchableText.includes(queryText);
+      const matchesAssignee = filterAssignees.length > 0 ? filterAssignees.includes(report.assigneeId || '') : true;
+      const matchesStatus = filterStatuses.length > 0 ? filterStatuses.includes(reportStatusLabel) : true;
 
       return matchesSearch && matchesAssignee && matchesStatus;
     });
-  }, [reports, searchQuery, filterAssignee, filterStatus]);
+  }, [reports, users, searchQuery, filterAssignees, filterStatuses]);
 
   const filteredAnnouncements = useMemo(() => {
     return announcements.filter(ann => {
@@ -2882,14 +2909,64 @@ function App() {
     return filteredEvents.filter(event => isSameDay(event.date, date));
   };
 
-  const clearFilters = () => {
-    setSearchQuery('');
-    setFilterAssignee('');
-    setFilterUrgency('');
-    setFilterStatus('');
+  const toggleMultiSelectValue = <T extends string>(
+    value: T,
+    setValues: React.Dispatch<React.SetStateAction<T[]>>
+  ) => {
+    setValues((prev) => prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]);
   };
 
-  const hasActiveFilters = searchQuery || filterAssignee || filterUrgency || filterStatus;
+  const removeMultiSelectValue = <T extends string>(
+    value: T,
+    setValues: React.Dispatch<React.SetStateAction<T[]>>
+  ) => {
+    setValues((prev) => prev.filter(v => v !== value));
+  };
+
+  const filterStatusOptions: CampaignStatus[] = ['Planlandı', 'Bekleme', 'Tamamlandı', 'İptal Edildi'];
+
+  const selectedFilterPills = useMemo(() => {
+    const pills: Array<{ id: string; label: string; onRemove: () => void }> = [];
+
+    filterAssignees.forEach((assigneeId) => {
+      const user = users.find(u => u.id === assigneeId);
+      if (user) {
+        pills.push({
+          id: `assignee-${assigneeId}`,
+          label: user.name,
+          onRemove: () => removeMultiSelectValue(assigneeId, setFilterAssignees)
+        });
+      }
+    });
+
+    filterStatuses.forEach((status) => {
+      pills.push({
+        id: `status-${status}`,
+        label: status === 'İptal Edildi' ? 'İptal' : status,
+        onRemove: () => removeMultiSelectValue(status, setFilterStatuses)
+      });
+    });
+
+    filterUrgencies.forEach((urgency) => {
+      pills.push({
+        id: `urgency-${urgency}`,
+        label: URGENCY_CONFIGS[urgency].label,
+        onRemove: () => removeMultiSelectValue(urgency, setFilterUrgencies)
+      });
+    });
+
+    return pills;
+  }, [filterAssignees, filterStatuses, filterUrgencies, users]);
+
+  const clearFilters = () => {
+    setFilterAssignees([]);
+    setFilterUrgencies([]);
+    setFilterStatuses([]);
+    setFilterDepartments([]);
+  };
+
+  const activeFilterCount = filterAssignees.length + filterUrgencies.length + filterStatuses.length + filterDepartments.length;
+  const hasActiveFilters = searchQuery.trim().length > 0 || activeFilterCount > 0;
 
   const handleDashboardRefresh = async () => {
     setRefreshKey(prev => prev + 1);
@@ -3757,7 +3834,13 @@ function App() {
             <div className="h-6 w-px bg-gray-300 dark:bg-slate-600 mx-2 hidden md:block"></div>
 
             <button
-              onClick={() => setIsSearchOpen(!isSearchOpen)}
+              onClick={() => {
+                setIsSearchOpen((prev) => {
+                  const next = !prev;
+                  if (!next) setIsFilterPanelExpanded(false);
+                  return next;
+                });
+              }}
               className={`p-1.5 transition-colors rounded-lg shadow-sm border ${isSearchOpen || hasActiveFilters
                 ? 'text-violet-600 bg-violet-50 border-violet-100 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-700/50'
                 : 'bg-white border-gray-100 text-gray-500 hover:text-violet-600 dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-slate-700'
@@ -3961,76 +4044,139 @@ function App() {
 
         {/* Search Bar Panel */}
         {isSearchOpen && (
-          <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-lg border border-violet-100 dark:border-slate-700 grid grid-cols-1 md:grid-cols-4 gap-4 animate-in fade-in slide-in-from-top-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
-              <input
-                type="text"
-                placeholder="Başlık veya Ref ID ile ara..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-200 focus:border-violet-500 outline-none transition-all text-sm"
-              />
-            </div>
-
-            <div className="relative">
-              <Filter className="absolute left-3 top-2.5 text-gray-400" size={18} />
-              <select
-                value={filterAssignee}
-                onChange={(e) => setFilterAssignee(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-200 focus:border-violet-500 outline-none transition-all text-sm appearance-none"
-              >
-                <option value="">Tüm Personel</option>
-                {[...users].sort((a, b) => a.name.localeCompare(b.name, 'tr')).map(u => (
-                  <option key={u.id} value={u.id}>
-                    {u.name} {monthlyBadges.trophy.includes(u.id) ? '🏆' : ''}{monthlyBadges.rocket.includes(u.id) ? '🚀' : ''}{monthlyBadges.power.includes(u.id) ? '💪' : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="relative">
-              <div className="absolute left-3 top-2.5 w-4 h-4 rounded-full border-2 border-gray-300"></div>
-              <select
-                value={filterUrgency}
-                onChange={(e) => setFilterUrgency(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-200 focus:border-violet-500 outline-none transition-all text-sm appearance-none"
-              >
-                <option value="">Tüm Öncelikler</option>
-                {(Object.keys(URGENCY_CONFIGS) as UrgencyLevel[]).map(level => (
-                  <option key={level} value={level}>{URGENCY_CONFIGS[level].label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="relative">
-              <div className="absolute left-3 top-2.5 w-4 h-4 flex items-center justify-center">
-                <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-lg border border-violet-100 dark:border-slate-700 space-y-3 animate-in fade-in slide-in-from-top-4">
+            <div className="flex flex-col lg:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                <input
+                  type="text"
+                  placeholder="🔍 Kampanya adı, birim, personel, kanal ara…"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-200 focus:border-violet-500 outline-none transition-all text-sm"
+                />
               </div>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-200 focus:border-violet-500 outline-none transition-all text-sm appearance-none"
-              >
-                <option value="">Tüm Durumlar</option>
-                <option value="Planlandı">Planlandı</option>
-                <option value="Tamamlandı">Tamamlandı</option>
-                <option value="İptal Edildi">İptal Edildi</option>
-              </select>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsFilterPanelExpanded(prev => !prev)}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors"
+                >
+                  <Filter size={16} />
+                  {isFilterPanelExpanded ? 'Filtreleri Gizle' : 'Filtreleri Göster'}
+                  {activeFilterCount > 0 && (
+                    <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[11px] font-bold bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+
+                {activeFilterCount > 0 && (
+                  <>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                      {activeFilterCount} filtre aktif
+                    </span>
+                    <button
+                      onClick={clearFilters}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 dark:hover:bg-red-900/40 transition-colors"
+                    >
+                      <X size={14} /> Filtreleri Temizle
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
 
-            <button
-              onClick={clearFilters}
-              disabled={!hasActiveFilters}
-              className={`
-                            flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors
-                            ${hasActiveFilters
-                  ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'}
-                        `}
-            >
-              <X size={16} /> Filtreleri Temizle
-            </button>
+            {selectedFilterPills.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {selectedFilterPills.map((pill) => (
+                  <span
+                    key={pill.id}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-900/20 dark:text-violet-300 dark:border-violet-700/50"
+                  >
+                    {pill.label}
+                    <button
+                      type="button"
+                      onClick={pill.onRemove}
+                      className="text-violet-500 hover:text-violet-700 dark:hover:text-violet-200"
+                      aria-label={`${pill.label} filtresini kaldır`}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {isFilterPanelExpanded && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 border-t border-gray-100 dark:border-slate-700 pt-3">
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Personel</p>
+                  <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto pr-1 custom-scrollbar">
+                    {[...users].sort((a, b) => a.name.localeCompare(b.name, 'tr')).map((u) => {
+                      const selected = filterAssignees.includes(u.id);
+                      return (
+                        <button
+                          key={u.id}
+                          type="button"
+                          onClick={() => toggleMultiSelectValue(u.id, setFilterAssignees)}
+                          className={`px-2.5 py-1.5 rounded-full text-xs font-medium border transition-colors ${selected
+                            ? 'bg-violet-100 text-violet-700 border-violet-300 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-700/60'
+                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-slate-700 dark:text-gray-300 dark:border-slate-600 dark:hover:bg-slate-600'
+                            }`}
+                        >
+                          {u.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Durum</p>
+                  <div className="flex flex-wrap gap-2">
+                    {filterStatusOptions.map((status) => {
+                      const selected = filterStatuses.includes(status);
+                      return (
+                        <button
+                          key={status}
+                          type="button"
+                          onClick={() => toggleMultiSelectValue(status, setFilterStatuses)}
+                          className={`px-2.5 py-1.5 rounded-full text-xs font-medium border transition-colors ${selected
+                            ? 'bg-violet-100 text-violet-700 border-violet-300 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-700/60'
+                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-slate-700 dark:text-gray-300 dark:border-slate-600 dark:hover:bg-slate-600'
+                            }`}
+                        >
+                          {status === 'İptal Edildi' ? 'İptal' : status}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Öncelik</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(Object.keys(URGENCY_CONFIGS) as UrgencyLevel[]).map((level) => {
+                      const selected = filterUrgencies.includes(level);
+                      return (
+                        <button
+                          key={level}
+                          type="button"
+                          onClick={() => toggleMultiSelectValue(level, setFilterUrgencies)}
+                          className={`px-2.5 py-1.5 rounded-full text-xs font-medium border transition-colors ${selected
+                            ? 'bg-violet-100 text-violet-700 border-violet-300 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-700/60'
+                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-slate-700 dark:text-gray-300 dark:border-slate-600 dark:hover:bg-slate-600'
+                            }`}
+                        >
+                          {URGENCY_CONFIGS[level].label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
