@@ -45,33 +45,58 @@ const analyticsNameById = (users: AnalyticsUser[]) => {
   return map;
 };
 
-const getCampaignStatusBadgeClass = (status?: string) => {
-  switch (status) {
-    case 'Tamamlandı':
-      return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
-    case 'Planlandı':
-      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
-    case 'Bekleme':
-      return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300';
-    case 'İptal Edildi':
-      return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300';
-    default:
-      return 'bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-gray-300';
-  }
+type MobileStatus = 'Planlandı' | 'Tamamlandı' | 'Bekleme' | 'İptal Edildi';
+
+const normalizeCampaignStatus = (status?: string): MobileStatus => {
+  if (status === 'Tamamlandı') return 'Tamamlandı';
+  if (status === 'Bekleme') return 'Bekleme';
+  if (status === 'İptal Edildi') return 'İptal Edildi';
+  return 'Planlandı';
 };
 
-const getCampaignCardAccentClass = (status?: string) => {
+const normalizeReportStatus = (status?: string): MobileStatus => {
+  if (status === 'done') return 'Tamamlandı';
+  if (status === 'cancelled') return 'İptal Edildi';
+  return 'Planlandı';
+};
+
+const getStatusStyle = (status: MobileStatus) => {
   switch (status) {
     case 'Tamamlandı':
-      return 'border-l-4 border-l-emerald-500';
+      return {
+        label: 'Tamamlandı',
+        badgeClass: 'bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700/40',
+        dotClass: 'bg-emerald-500',
+        stripeClass: 'bg-emerald-500'
+      };
     case 'Planlandı':
-      return 'border-l-4 border-l-yellow-500';
+      return {
+        label: 'Planlandı',
+        badgeClass: 'bg-blue-100 text-blue-800 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700/40',
+        dotClass: 'bg-blue-500',
+        stripeClass: 'bg-blue-500'
+      };
     case 'Bekleme':
-      return 'border-l-4 border-l-amber-500';
+      return {
+        label: 'Beklemede',
+        badgeClass: 'bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700/40',
+        dotClass: 'bg-amber-500',
+        stripeClass: 'bg-amber-500'
+      };
     case 'İptal Edildi':
-      return 'border-l-4 border-l-red-500';
+      return {
+        label: 'İptal',
+        badgeClass: 'bg-red-100 text-red-800 border border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700/40',
+        dotClass: 'bg-red-500',
+        stripeClass: 'bg-red-500'
+      };
     default:
-      return 'border-l-4 border-l-gray-300 dark:border-l-slate-600';
+      return {
+        label: 'Planlandı',
+        badgeClass: 'bg-gray-100 text-gray-700 border border-gray-200 dark:bg-slate-700 dark:text-gray-300 dark:border-slate-600',
+        dotClass: 'bg-gray-400',
+        stripeClass: 'bg-gray-300'
+      };
   }
 };
 
@@ -159,24 +184,34 @@ export const MobileShell: React.FC<MobileShellProps> = ({
               <p className="text-sm text-gray-500">Bu filtrede kampanya bulunamadı.</p>
             ) : (
               sortedEvents.map((event) => (
-                <button
-                  key={event.id}
-                  onClick={() => onOpenEvent(event.id)}
-                  className={`w-full text-left p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${getCampaignCardAccentClass(event.status || 'Planlandı')}`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-semibold text-sm">{event.title}</p>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${getCampaignStatusBadgeClass(event.status || 'Planlandı')}`}>
-                      {event.status || 'Planlandı'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {format(event.date, 'd MMM yyyy', { locale: tr })} • {userMap.get(event.assigneeId || '') || 'Atanmamış'}
-                  </p>
-                  <p className="text-[11px] mt-1 text-violet-600 dark:text-violet-300">
-                    {event.campaignType || 'Yeni Kampanya'} • {URGENCY_CONFIGS[event.urgency]?.label || event.urgency}
-                  </p>
-                </button>
+                (() => {
+                  const status = normalizeCampaignStatus(event.status);
+                  const statusStyle = getStatusStyle(status);
+                  return (
+                    <button
+                      key={event.id}
+                      onClick={() => onOpenEvent(event.id)}
+                      className="relative w-full text-left p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden"
+                    >
+                      <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${statusStyle.stripeClass}`} />
+                      <div className="pl-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-semibold text-sm">{event.title}</p>
+                          <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-semibold ${statusStyle.badgeClass}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dotClass}`} />
+                            {statusStyle.label}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {format(event.date, 'd MMM yyyy', { locale: tr })} • {userMap.get(event.assigneeId || '') || 'Atanmamış'}
+                        </p>
+                        <p className="text-[11px] mt-1 text-violet-600 dark:text-violet-300">
+                          {event.campaignType || 'Yeni Kampanya'} • {URGENCY_CONFIGS[event.urgency]?.label || event.urgency}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })()
               ))
             )}
           </>
@@ -188,21 +223,31 @@ export const MobileShell: React.FC<MobileShellProps> = ({
               <p className="text-sm text-gray-500">Rapor bulunamadı.</p>
             ) : (
               sortedReports.map((report) => (
-                <button
-                  key={report.id}
-                  onClick={() => onOpenReport(report.id)}
-                  className="w-full text-left p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-semibold text-sm">{report.title}</p>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
-                      {report.status}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Teslim: {format(report.dueDate, 'd MMM yyyy', { locale: tr })} • {userMap.get(report.assigneeId || '') || 'Atanmamış'}
-                  </p>
-                </button>
+                (() => {
+                  const status = normalizeReportStatus(report.status);
+                  const statusStyle = getStatusStyle(status);
+                  return (
+                    <button
+                      key={report.id}
+                      onClick={() => onOpenReport(report.id)}
+                      className="relative w-full text-left p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden"
+                    >
+                      <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${statusStyle.stripeClass}`} />
+                      <div className="pl-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-semibold text-sm">{report.title}</p>
+                          <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-semibold ${statusStyle.badgeClass}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dotClass}`} />
+                            {statusStyle.label}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Teslim: {format(report.dueDate, 'd MMM yyyy', { locale: tr })} • {userMap.get(report.assigneeId || '') || 'Atanmamış'}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })()
               ))
             )}
           </>
@@ -214,21 +259,31 @@ export const MobileShell: React.FC<MobileShellProps> = ({
               <p className="text-sm text-gray-500">Analitik iş bulunamadı.</p>
             ) : (
               sortedAnalyticsTasks.map((task) => (
-                <button
-                  key={task.id}
-                  onClick={() => onOpenAnalyticsTask(task.id)}
-                  className="w-full text-left p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-semibold text-sm">{task.title}</p>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                      {task.status || 'Planlandı'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {format(task.date, 'd MMM yyyy', { locale: tr })} • {analyticsMap.get(task.assigneeId || '') || 'Atanmamış'}
-                  </p>
-                </button>
+                (() => {
+                  const status = normalizeCampaignStatus(task.status);
+                  const statusStyle = getStatusStyle(status);
+                  return (
+                    <button
+                      key={task.id}
+                      onClick={() => onOpenAnalyticsTask(task.id)}
+                      className="relative w-full text-left p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden"
+                    >
+                      <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${statusStyle.stripeClass}`} />
+                      <div className="pl-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-semibold text-sm">{task.title}</p>
+                          <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-semibold ${statusStyle.badgeClass}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dotClass}`} />
+                            {statusStyle.label}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {format(task.date, 'd MMM yyyy', { locale: tr })} • {analyticsMap.get(task.assigneeId || '') || 'Atanmamış'}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })()
               ))
             )}
           </>
