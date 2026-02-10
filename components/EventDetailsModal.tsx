@@ -36,6 +36,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   const [editUrgency, setEditUrgency] = useState<UrgencyLevel>('Medium');
   const [editDifficulty, setEditDifficulty] = useState<DifficultyLevel>('ORTA');
   const [editCampaignType, setEditCampaignType] = useState<CampaignType>('Yeni Kampanya');
+  const [editRequiresReport, setEditRequiresReport] = useState(true);
   const [editDescription, setEditDescription] = useState('');
   const [editAssigneeId, setEditAssigneeId] = useState('');
   const [editDepartmentId, setEditDepartmentId] = useState('');
@@ -56,6 +57,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
       setEditUrgency(event.urgency);
       setEditDifficulty(event.difficulty || 'ORTA');
       setEditCampaignType(event.campaignType || 'Yeni Kampanya');
+      setEditRequiresReport(event.requiresReport !== false);
       setEditDescription(event.description || '');
       setEditAssigneeId(event.assigneeId || '');
       setEditDepartmentId(event.departmentId || '');
@@ -92,7 +94,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
       urgency: editUrgency,
       difficulty: editDifficulty,
       campaignType: editCampaignType,
-      ...(editCampaignType === 'Kampanya Hatırlatması' ? { requiresReport: false } : {}),
+      requiresReport: editCampaignType === 'Kampanya Hatırlatması' ? false : editRequiresReport,
       description: editDescription,
       assigneeId: editAssigneeId || undefined,
       departmentId: editDepartmentId || undefined,
@@ -109,6 +111,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     setEditUrgency(event.urgency);
     setEditDifficulty(event.difficulty || 'ORTA');
     setEditCampaignType(event.campaignType || 'Yeni Kampanya');
+    setEditRequiresReport(event.requiresReport !== false);
     setEditDescription(event.description || '');
     setEditAssigneeId(event.assigneeId || '');
     setEditDepartmentId(event.departmentId || '');
@@ -121,6 +124,20 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     if (window.confirm(`"${event.title}" kampanyasını silmek istediğinize emin misiniz?`)) {
       onDelete(event.id);
       onClose();
+    }
+  };
+
+  const canManageReportSetting = isDesigner || isKampanyaYapan;
+  const currentCampaignType = isEditMode ? editCampaignType : (event.campaignType || 'Yeni Kampanya');
+  const isReminderType = currentCampaignType === 'Kampanya Hatırlatması';
+
+  const handleRequiresReportChange = (checked: boolean) => {
+    if (isReminderType) return;
+    setEditRequiresReport(checked);
+
+    // Allow quick toggle from detail modal without entering edit mode
+    if (!isEditMode && canManageReportSetting && onEdit) {
+      onEdit(event.id, { requiresReport: checked });
     }
   };
 
@@ -573,6 +590,31 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               ) : (
                 <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
                   Bu kampanya <strong>{urgencyConfig.label}</strong> öncelik seviyesindedir.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Report Setting Section */}
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg shrink-0">
+              <CheckCircle2 size={20} />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Rapor Ayarı</p>
+              <label className="mt-1 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={isReminderType ? false : editRequiresReport}
+                  onChange={(e) => handleRequiresReportChange(e.target.checked)}
+                  disabled={!canManageReportSetting || isReminderType}
+                  className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 dark:bg-slate-600 dark:border-slate-500 disabled:opacity-60"
+                />
+                Tamamlandığında rapor oluşturulsun
+              </label>
+              {isReminderType && (
+                <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                  Kampanya Hatırlatması için rapor kapalıdır.
                 </p>
               )}
             </div>
