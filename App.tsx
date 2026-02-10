@@ -2867,7 +2867,7 @@ function App() {
               <h1 className="text-2xl font-black tracking-tight flex items-center gap-2 whitespace-nowrap">
                 {isDesigner ? (
                   <span className="bg-gradient-to-r from-violet-700 via-indigo-700 to-violet-500 bg-clip-text text-transparent drop-shadow-sm">
-                    Kampanya Yönetimi Takvimi (CRM)
+                    Kampanya/Analitik Yönetim Takvimi
                   </span>
                 ) : isKampanyaYapan ? (
                   <span className="bg-gradient-to-r from-violet-700 via-indigo-700 to-violet-500 bg-clip-text text-transparent drop-shadow-sm">
