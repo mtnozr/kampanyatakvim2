@@ -1553,11 +1553,32 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
+      const raw = await response.text();
+      const contentType = response.headers.get('content-type') || '';
 
-      const result = await response.json();
+      let result: any = null;
+      if (raw && contentType.includes('application/json')) {
+        try {
+          result = JSON.parse(raw);
+        } catch {
+          result = null;
+        }
+      } else if (raw) {
+        try {
+          result = JSON.parse(raw);
+        } catch {
+          result = null;
+        }
+      }
 
       if (!response.ok) {
-        throw new Error(result.error || 'API işlemi başarısız');
+        const fallback = raw ? raw.slice(0, 180).replace(/\s+/g, ' ').trim() : 'Boş yanıt';
+        throw new Error(result?.error || `API ${response.status}: ${fallback}`);
+      }
+
+      if (!result) {
+        const fallback = raw ? raw.slice(0, 180).replace(/\s+/g, ' ').trim() : 'Boş yanıt';
+        throw new Error(`API geçersiz yanıt döndü: ${fallback}`);
       }
 
       return result;
