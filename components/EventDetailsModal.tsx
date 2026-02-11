@@ -71,6 +71,21 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
 
   // Urgency config (always fallback to Low if undefined)
   const urgencyConfig = URGENCY_CONFIGS[event.urgency] ?? URGENCY_CONFIGS['Low'];
+  const headerUrgency: UrgencyLevel = isEditMode ? editUrgency : (event.urgency || 'Low');
+
+  const headerGradientClass = (() => {
+    switch (headerUrgency) {
+      case 'Very High':
+        return 'bg-gradient-to-r from-red-50 via-white to-rose-100 dark:from-red-950/40 dark:via-slate-800 dark:to-rose-900/30';
+      case 'High':
+        return 'bg-gradient-to-r from-orange-50 via-white to-amber-100 dark:from-orange-950/35 dark:via-slate-800 dark:to-amber-900/25';
+      case 'Medium':
+        return 'bg-gradient-to-r from-blue-50 via-white to-sky-100 dark:from-blue-950/35 dark:via-slate-800 dark:to-sky-900/25';
+      case 'Low':
+      default:
+        return 'bg-gradient-to-r from-slate-50 via-white to-gray-100 dark:from-slate-900/70 dark:via-slate-800 dark:to-slate-700/45';
+    }
+  })();
 
   // Display config based on LOCAL Status state if exists, otherwise Urgency
   // This allows immediate UI feedback when clicking status buttons
@@ -231,7 +246,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all scale-100 flex flex-col max-h-[90vh] transition-colors">
 
         {/* Header with Status/Urgency Color */}
-        <div className={`px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex justify-between items-start ${displayConfig.colorBg} bg-opacity-30 shrink-0 transition-colors duration-300`}>
+        <div className={`px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex justify-between items-start ${headerGradientClass} shrink-0 transition-colors duration-300`}>
           <div className="flex-1">
             {/* Status Toggle UI for Authorized Users */}
             {(isDesigner || isKampanyaYapan) && (
