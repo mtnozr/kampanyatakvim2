@@ -24,7 +24,6 @@ export const EventBadge: React.FC<EventBadgeProps> = ({
   const config = (event.status && STATUS_STYLES[event.status])
     ? STATUS_STYLES[event.status]
     : (URGENCY_CONFIGS[event.urgency] ?? URGENCY_CONFIGS['Low']);
-  const hasPriorityAnimation = !isBlurred && (event.urgency === 'High' || event.urgency === 'Very High');
   const priorityBadge = !isBlurred
     ? event.urgency === 'Very High'
       ? { label: 'KRİTİK', icon: Flame, className: 'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/35 dark:text-red-200 dark:border-red-700/60' }
@@ -98,30 +97,20 @@ export const EventBadge: React.FC<EventBadgeProps> = ({
       </div>
 
       {/* The Colored Card */}
-      <div className="relative rounded-r-md rounded-l-sm overflow-visible">
-        {hasPriorityAnimation && (
-          <>
-            <div className={`priority-edge-glow ${event.urgency === 'Very High' ? 'priority-edge-glow-critical' : 'priority-edge-glow-high'}`} />
-            <div className={`priority-edge-ring ${event.urgency === 'Very High' ? 'priority-edge-ring-critical' : 'priority-edge-ring-high'}`} />
-          </>
-        )}
-
-        <div className={`
-          relative z-[1]
-          ${config.colorBg} 
-          border-l-4 ${config.colorBorder} 
-          rounded-r-md rounded-l-sm p-1.5 shadow-sm
-          flex flex-col gap-0.5
-          ${isBlurred ? 'blur-[3px] select-none' : ''}
-          dark:bg-opacity-20 dark:border-opacity-60 dark:backdrop-blur-sm
-        `}>
-          <span className={`text-[9px] font-bold uppercase tracking-wide opacity-80 ${config.colorText} dark:text-gray-100`}>
-            {isBlurred ? '---' : config.label}
-          </span>
-          <span className={`text-[11px] font-semibold leading-tight ${config.colorText} line-clamp-2 dark:text-white`}>
-            {isBlurred ? 'Diğer Birim Kampanyası' : event.title}
-          </span>
-        </div>
+      <div className={`
+        ${config.colorBg} 
+        border-l-4 ${config.colorBorder} 
+        rounded-r-md rounded-l-sm p-1.5 shadow-sm
+        flex flex-col gap-0.5
+        ${isBlurred ? 'blur-[3px] select-none' : ''}
+        dark:bg-opacity-20 dark:border-opacity-60 dark:backdrop-blur-sm
+      `}>
+        <span className={`text-[9px] font-bold uppercase tracking-wide opacity-80 ${config.colorText} dark:text-gray-100`}>
+          {isBlurred ? '---' : config.label}
+        </span>
+        <span className={`text-[11px] font-semibold leading-tight ${config.colorText} line-clamp-2 dark:text-white`}>
+          {isBlurred ? 'Diğer Birim Kampanyası' : event.title}
+        </span>
       </div>
     </div>
   );
