@@ -1,7 +1,7 @@
 import React from 'react';
 import { CalendarEvent, User } from '../types';
 import { URGENCY_CONFIGS, STATUS_STYLES } from '../constants';
-import { User as UserIcon, StickyNote, Flame, Zap } from 'lucide-react';
+import { User as UserIcon, StickyNote, Flame } from 'lucide-react';
 
 interface EventBadgeProps {
   event: CalendarEvent;
@@ -27,9 +27,7 @@ export const EventBadge: React.FC<EventBadgeProps> = ({
   const priorityBadge = !isBlurred
     ? event.urgency === 'Very High'
       ? { label: 'KRİTİK', icon: Flame, className: 'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/35 dark:text-red-200 dark:border-red-700/60' }
-      : event.urgency === 'High'
-        ? { label: 'YÜKSEK', icon: Zap, className: 'bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-900/35 dark:text-orange-200 dark:border-orange-700/60' }
-        : null
+      : null
     : null;
   const PriorityIcon = priorityBadge?.icon;
 
@@ -67,33 +65,32 @@ export const EventBadge: React.FC<EventBadgeProps> = ({
         }
       }}
       className={`
-        relative flex flex-col gap-1 mb-2 group transition-opacity
+        flex flex-col gap-1.5 mb-2 transition-opacity
         ${isClickable && !isBlurred ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}
         ${isBlurred ? 'opacity-70 grayscale' : ''}
       `}
     >
-      {/* Sticky Note Icon - Always visible if note exists */}
-      {event.note && !isBlurred && (
-        <div className="absolute -top-1 -right-1 z-10 group/note">
-          <div className="bg-yellow-100 border border-yellow-200 text-yellow-700 w-4 h-4 flex items-center justify-center rounded-full shadow-sm">
-            <StickyNote size={10} />
-          </div>
+      {/* Header: left avatar+name, right indicators (never overlap) */}
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-1">
+        <div className="min-w-0 flex items-center gap-1.5">
+          {!isBlurred && renderAvatar()}
+          <span className="text-[10px] text-gray-500 font-medium truncate leading-none min-w-0">
+            {isBlurred ? '🔒 Dolu' : (user ? `${user.name} ${monthlyBadges.trophy.includes(user.id) ? '🏆' : ''}${monthlyBadges.rocket.includes(user.id) ? '🚀' : ''}${monthlyBadges.power.includes(user.id) ? '💪' : ''}` : 'Atanmadı')}
+          </span>
         </div>
-      )}
-
-      {priorityBadge && (
-        <div className={`absolute -top-1 -left-1 z-10 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[9px] font-bold tracking-wide shadow-sm ${priorityBadge.className}`}>
-          {PriorityIcon && <PriorityIcon size={9} />}
-          <span>{priorityBadge.label}</span>
+        <div className="flex items-center gap-1 shrink-0 whitespace-nowrap">
+          {event.note && !isBlurred && (
+            <span className="inline-flex items-center justify-center bg-yellow-100 border border-yellow-200 text-yellow-700 w-4 h-4 rounded-full shadow-sm">
+              <StickyNote size={10} />
+            </span>
+          )}
+          {priorityBadge && (
+            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[9px] font-bold tracking-wide shadow-sm ${priorityBadge.className}`}>
+              {PriorityIcon && <PriorityIcon size={9} />}
+              <span>{priorityBadge.label}</span>
+            </span>
+          )}
         </div>
-      )}
-
-      {/* Assigned User Info (Avatar + Name) */}
-      <div className="flex items-center gap-1.5 px-1 min-w-0">
-        {!isBlurred && renderAvatar()}
-        <span className="text-[10px] text-gray-500 font-medium truncate leading-none">
-          {isBlurred ? '🔒 Dolu' : (user ? `${user.name} ${monthlyBadges.trophy.includes(user.id) ? '🏆' : ''}${monthlyBadges.rocket.includes(user.id) ? '🚀' : ''}${monthlyBadges.power.includes(user.id) ? '💪' : ''}` : 'Atanmadı')}
-        </span>
       </div>
 
       {/* The Colored Card */}

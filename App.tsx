@@ -23,6 +23,7 @@ import { CalendarEvent, UrgencyLevel, User, AppNotification, ToastMessage, Activ
 import { INITIAL_EVENTS, DAYS_OF_WEEK, INITIAL_USERS, URGENCY_CONFIGS, TURKISH_HOLIDAYS, INITIAL_DEPARTMENTS, DIFFICULTY_CONFIGS } from './constants';
 import { sendSMSWithTwilio, buildSMSFromTemplate, formatPhoneNumber } from './utils/smsService';
 import { EventBadge } from './components/EventBadge';
+import { EventBadgeLayoutExamples } from './components/EventBadgeLayoutExamples';
 import { AddEventModal } from './components/AddEventModal';
 import { RequestWorkModal } from './components/RequestWorkModal';
 import { IncomingRequestsModal } from './components/IncomingRequestsModal';
@@ -2968,6 +2969,10 @@ function App() {
 
   const activeFilterCount = filterAssignees.length + filterUrgencies.length + filterStatuses.length + filterDepartments.length;
   const hasActiveFilters = searchQuery.trim().length > 0 || activeFilterCount > 0;
+  const showBadgeLayoutExamples = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return new URLSearchParams(window.location.search).get('badgeLayoutTest') === '1';
+  }, []);
 
   const handleDashboardRefresh = async () => {
     setRefreshKey(prev => prev + 1);
@@ -4180,6 +4185,8 @@ function App() {
             )}
           </div>
         )}
+
+        {showBadgeLayoutExamples && <EventBadgeLayoutExamples />}
 
         {/* Printable Area Wrapper */}
         <div id="printable-calendar" className="p-1">
