@@ -86,6 +86,7 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from
 
 // Normalize urgency values coming from Firestore to avoid crashes on bad data
 const normalizeUrgency = (urgency: any): UrgencyLevel => {
+  if (urgency === 'Critical') return 'Very High';
   const validUrgencies: UrgencyLevel[] = ['Very High', 'High', 'Medium', 'Low'];
   return validUrgencies.includes(urgency) ? urgency : 'Low';
 };

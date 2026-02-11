@@ -76,11 +76,11 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   const headerGradientClass = (() => {
     switch (headerUrgency) {
       case 'Very High':
-        return 'bg-gradient-to-r from-red-50 via-white to-rose-100 dark:from-red-950/40 dark:via-slate-800 dark:to-rose-900/30';
+        return 'bg-gradient-to-r from-red-200 via-red-100 to-rose-200 dark:from-red-900/60 dark:via-red-900/45 dark:to-rose-900/55';
       case 'High':
-        return 'bg-gradient-to-r from-orange-50 via-white to-amber-100 dark:from-orange-950/35 dark:via-slate-800 dark:to-amber-900/25';
+        return 'bg-gradient-to-r from-red-100 via-rose-50 to-red-200 dark:from-red-900/45 dark:via-slate-800 dark:to-rose-900/40';
       case 'Medium':
-        return 'bg-gradient-to-r from-blue-50 via-white to-sky-100 dark:from-blue-950/35 dark:via-slate-800 dark:to-sky-900/25';
+        return 'bg-gradient-to-r from-orange-100 via-amber-50 to-orange-200 dark:from-orange-900/40 dark:via-slate-800 dark:to-amber-900/35';
       case 'Low':
       default:
         return 'bg-gradient-to-r from-slate-50 via-white to-gray-100 dark:from-slate-900/70 dark:via-slate-800 dark:to-slate-700/45';
@@ -606,7 +606,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   <option value="Low">Düşük (Low)</option>
                   <option value="Medium">Orta (Medium)</option>
                   <option value="High">Yüksek (High)</option>
-                  <option value="Critical">Kritik (Critical)</option>
+                  <option value="Very High">Kritik (Very High)</option>
                 </select>
               ) : (
                 <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
