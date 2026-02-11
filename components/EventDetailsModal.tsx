@@ -76,9 +76,9 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   const headerGradientClass = (() => {
     switch (headerUrgency) {
       case 'Very High':
-        return 'bg-gradient-to-r from-red-200 via-red-100 to-rose-200 dark:from-red-900/60 dark:via-red-900/45 dark:to-rose-900/55';
+        return 'bg-gradient-to-r from-red-400 via-red-300 to-red-400 dark:from-red-900/95 dark:via-red-900/80 dark:to-red-900/90';
       case 'High':
-        return 'bg-gradient-to-r from-red-100 via-rose-50 to-red-200 dark:from-red-900/45 dark:via-slate-800 dark:to-rose-900/40';
+        return 'bg-gradient-to-r from-red-200 via-red-100 to-red-200 dark:from-red-900/75 dark:via-red-900/55 dark:to-red-900/70';
       case 'Medium':
         return 'bg-gradient-to-r from-orange-100 via-amber-50 to-orange-200 dark:from-orange-900/40 dark:via-slate-800 dark:to-amber-900/35';
       case 'Low':

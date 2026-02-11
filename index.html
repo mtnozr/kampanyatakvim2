@@ -161,6 +161,80 @@
     .animate-confetti {
       animation: confetti ease-in-out infinite;
     }
+
+    /* Premium urgency border animation (High / Very High) */
+    @keyframes premium-border-spin {
+      0% {
+        transform: rotate(0deg) scale(1);
+      }
+      100% {
+        transform: rotate(360deg) scale(1);
+      }
+    }
+
+    @keyframes premium-border-glow {
+      0%,
+      100% {
+        opacity: 0.45;
+      }
+      50% {
+        opacity: 0.8;
+      }
+    }
+
+    .priority-edge-ring {
+      position: absolute;
+      inset: -1px;
+      border-radius: 0.45rem;
+      padding: 1px;
+      pointer-events: none;
+      z-index: 0;
+      animation: premium-border-spin 3.5s linear infinite;
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+    }
+
+    .priority-edge-ring-high {
+      background: conic-gradient(
+        from 0deg,
+        rgba(249, 115, 22, 0.10) 0deg,
+        rgba(249, 115, 22, 0.92) 75deg,
+        rgba(245, 158, 11, 0.22) 150deg,
+        rgba(251, 146, 60, 0.90) 230deg,
+        rgba(249, 115, 22, 0.10) 360deg
+      );
+    }
+
+    .priority-edge-ring-critical {
+      background: conic-gradient(
+        from 0deg,
+        rgba(220, 38, 38, 0.20) 0deg,
+        rgba(220, 38, 38, 0.96) 90deg,
+        rgba(248, 113, 113, 0.28) 170deg,
+        rgba(185, 28, 28, 0.96) 270deg,
+        rgba(220, 38, 38, 0.20) 360deg
+      );
+      animation-duration: 2.8s;
+    }
+
+    .priority-edge-glow {
+      position: absolute;
+      inset: -2px;
+      border-radius: 0.5rem;
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(6px);
+      animation: premium-border-glow 2.4s ease-in-out infinite;
+    }
+
+    .priority-edge-glow-high {
+      background: linear-gradient(135deg, rgba(251, 146, 60, 0.25), rgba(245, 158, 11, 0.18));
+    }
+
+    .priority-edge-glow-critical {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.30), rgba(220, 38, 38, 0.22));
+    }
   </style>
   <script type="importmap">
 {
