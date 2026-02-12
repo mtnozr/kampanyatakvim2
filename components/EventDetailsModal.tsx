@@ -222,8 +222,43 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     return `sip:${phone}`;
   };
 
-  const formatDuration = (start: Date, end: Date) => {
-    const diffMs = end.getTime() - start.getTime();
+  const getOverlapMs = (rangeStart: Date, rangeEnd: Date, start: Date, end: Date) => {
+    const overlapStart = Math.max(rangeStart.getTime(), start.getTime());
+    const overlapEnd = Math.min(rangeEnd.getTime(), end.getTime());
+    return Math.max(0, overlapEnd - overlapStart);
+  };
+
+  const calculatePausedMs = (start: Date, end: Date, currentStatus: CampaignStatus) => {
+    if (!event.history || event.history.length === 0) return 0;
+
+    const sortedHistory = [...event.history].sort((a, b) => a.date.getTime() - b.date.getTime());
+    let pausedMs = 0;
+    let beklemeStart: Date | null = null;
+
+    for (const historyItem of sortedHistory) {
+      const itemDate = historyItem.date;
+      if (!(itemDate instanceof Date)) continue;
+
+      if (historyItem.newStatus === 'Bekleme' && !beklemeStart) {
+        beklemeStart = itemDate;
+        continue;
+      }
+
+      if (historyItem.oldStatus === 'Bekleme' && beklemeStart) {
+        pausedMs += getOverlapMs(beklemeStart, itemDate, start, end);
+        beklemeStart = null;
+      }
+    }
+
+    if (beklemeStart && currentStatus === 'Bekleme') {
+      pausedMs += getOverlapMs(beklemeStart, end, start, end);
+    }
+
+    return pausedMs;
+  };
+
+  const formatDuration = (start: Date, end: Date, pausedMs = 0) => {
+    const diffMs = end.getTime() - start.getTime() - pausedMs;
     if (diffMs < 0) return '0 dk';
 
     const diffMins = Math.floor(diffMs / (1000 * 60));
@@ -747,23 +782,29 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   const now = new Date();
 
                   if (status === 'Tamamlandı') {
-                    // Find completion date from history
                     const completionEntry = event.history?.slice().reverse().find(h => h.newStatus === 'Tamamlandı');
+                    const completionDate = completionEntry?.date || event.updatedAt || null;
 
-                    if (completionEntry) {
+                    if (completionDate) {
+                      const pausedMs = calculatePausedMs(startDate, completionDate, status);
                       return (
                         <p className="text-sm text-gray-700 dark:text-gray-300 flex justify-between border-t border-indigo-100 dark:border-indigo-800/30 pt-1 mt-1">
                           <span className="font-semibold text-gray-500 dark:text-gray-400">Tamamlanma Süresi:</span>
-                          <span className="font-bold text-green-600 dark:text-green-400">{formatDuration(startDate, completionEntry.date)}</span>
+                          <span className="font-bold text-green-600 dark:text-green-400">
+                            {formatDuration(startDate, completionDate, pausedMs)}
+                          </span>
                         </p>
                       );
                     }
-                  } else if (status === 'Planlandı') {
+                  } else if (status === 'Planlandı' || status === 'Bekleme') {
+                    const pausedMs = calculatePausedMs(startDate, now, status);
                     return (
                       <p className="text-sm text-gray-700 dark:text-gray-300 flex justify-between border-t border-indigo-100 dark:border-indigo-800/30 pt-1 mt-1">
-                        <span className="font-semibold text-gray-500 dark:text-gray-400">Geçen Süre:</span>
+                        <span className="font-semibold text-gray-500 dark:text-gray-400">
+                          {status === 'Bekleme' ? 'Geçen Süre (Duraklatıldı):' : 'Geçen Süre:'}
+                        </span>
                         <span className="font-bold text-indigo-600 dark:text-indigo-400">
-                          {now >= startDate ? formatDuration(startDate, now) : ''}
+                          {now >= startDate ? formatDuration(startDate, now, pausedMs) : ''}
                         </span>
                       </p>
                     );
