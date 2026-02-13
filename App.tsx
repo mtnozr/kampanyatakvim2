@@ -207,8 +207,6 @@ function App() {
   const [isAdminPasswordOpen, setIsAdminPasswordOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [isQuickAddMenuOpen, setIsQuickAddMenuOpen] = useState(false);
-  const quickAddMenuRef = React.useRef<HTMLDivElement | null>(null);
   // Refactor: Store ID instead of object to ensure reactivity
   const [viewEventId, setViewEventId] = useState<string | null>(null);
   const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null);
@@ -2835,30 +2833,6 @@ function App() {
     }
   };
 
-  useEffect(() => {
-    if (!isQuickAddMenuOpen) return;
-
-    const handleOutsideClick = (event: MouseEvent) => {
-      if (!quickAddMenuRef.current) return;
-      if (!quickAddMenuRef.current.contains(event.target as Node)) {
-        setIsQuickAddMenuOpen(false);
-      }
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsQuickAddMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleOutsideClick);
-    document.addEventListener('keydown', handleEscape);
-    return () => {
-      document.removeEventListener('mousedown', handleOutsideClick);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [isQuickAddMenuOpen]);
-
   const openAddModal = (date?: Date) => {
     const targetDate = date || selectedDate || new Date();
 
@@ -2875,36 +2849,6 @@ function App() {
       setIsRequestModalOpen(true);
       return;
     }
-  };
-
-  const handleQuickAddCampaign = () => {
-    openAddModal(selectedDate || new Date());
-    setIsQuickAddMenuOpen(false);
-  };
-
-  const handleQuickAddReport = () => {
-    const targetDate = selectedDate || new Date();
-    setSelectedReportDate(targetDate);
-    setIsAddReportModalOpen(true);
-    setIsQuickAddMenuOpen(false);
-  };
-
-  const handleQuickAddAnalytics = () => {
-    const targetDate = selectedDate || new Date();
-    setSelectedAnalyticsDate(targetDate);
-    setIsAddAnalyticsModalOpen(true);
-    setIsQuickAddMenuOpen(false);
-  };
-
-  const handleCalendarDayClick = (day: Date) => {
-    if (isDesigner) {
-      setSelectedDate(day);
-      setSelectedReportDate(day);
-      setSelectedAnalyticsDate(day);
-      setIsQuickAddMenuOpen(true);
-      return;
-    }
-    openAddModal(day);
   };
 
   const getEventsForDay = (date: Date) => {
@@ -4006,41 +3950,13 @@ function App() {
                   />
                 </div>
 
-                <div className="relative" ref={quickAddMenuRef}>
-                  <button
-                    onClick={() => setIsQuickAddMenuOpen(prev => !prev)}
-                    className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg shadow-violet-200 dark:shadow-none hover:bg-violet-700 transition-transform active:scale-95"
-                  >
-                    <Plus size={18} />
-                    <span>Ekle</span>
-                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/20 border border-white/20">
-                      {format(selectedDate || new Date(), 'd MMM', { locale: tr })}
-                    </span>
-                  </button>
-
-                  {isQuickAddMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden z-50">
-                      <button
-                        onClick={handleQuickAddCampaign}
-                        className="w-full px-4 py-3 text-left text-sm font-semibold text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors"
-                      >
-                        + Kampanya
-                      </button>
-                      <button
-                        onClick={handleQuickAddReport}
-                        className="w-full px-4 py-3 text-left text-sm font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors border-t border-gray-100 dark:border-slate-700"
-                      >
-                        + Rapor
-                      </button>
-                      <button
-                        onClick={handleQuickAddAnalytics}
-                        className="w-full px-4 py-3 text-left text-sm font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors border-t border-gray-100 dark:border-slate-700"
-                      >
-                        + Analitik Notu
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <button
+                  onClick={() => openAddModal()}
+                  className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg shadow-violet-200 dark:shadow-none hover:bg-violet-700 transition-transform active:scale-95"
+                >
+                  <Plus size={18} />
+                  Ekle
+                </button>
               </>
             )}
 
@@ -4280,7 +4196,7 @@ function App() {
                     <div
                       key={day.toString()}
                       ref={isTodayDate ? todayCellRef : undefined}
-                      onClick={() => handleCalendarDayClick(day)}
+                      onClick={() => openAddModal(day)}
                       onDragOver={(e) => {
                         if (isDesigner) {
                           e.preventDefault();
