@@ -91,17 +91,18 @@ interface ProcessResult {
 function initFirebaseAdmin() {
     if (!admin.apps.length) {
         try {
-            const serviceAccountStr = process.env.FIREBASE_SERVICE_ACCOUNT;
+            const serviceAccountRaw = process.env.FIREBASE_SERVICE_ACCOUNT;
 
-            if (!serviceAccountStr) {
+            if (!serviceAccountRaw) {
                 throw new Error('FIREBASE_SERVICE_ACCOUNT environment variable is missing.');
             }
+            const normalizedRaw = serviceAccountRaw.trim().replace(/^FIREBASE_SERVICE_ACCOUNT=/, '');
 
             let serviceAccount;
             try {
-                serviceAccount = JSON.parse(serviceAccountStr);
+                serviceAccount = JSON.parse(normalizedRaw);
             } catch (e) {
-                throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON.');
+                throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON. Expected raw JSON object string.');
             }
 
             if (serviceAccount.private_key) {
@@ -652,11 +653,24 @@ export default async function handler(
     res: VercelResponse
 ) {
     // Verify Authorization
-    const authHeader = req.headers.authorization;
-    const queryKey = Array.isArray(req.query.key) ? req.query.key[0] : req.query.key;
-    const expectedKey = process.env.CRON_SECRET_KEY;
+    const authHeader = req.headers.authorization?.trim();
+    const queryKeyRaw = Array.isArray(req.query.key) ? req.query.key[0] : req.query.key;
+    const queryKey = typeof queryKeyRaw === 'string' ? queryKeyRaw.trim() : undefined;
+    const expectedKey = process.env.CRON_SECRET_KEY?.trim();
+    const expectedBearer = process.env.CRON_SECRET?.trim();
 
-    if (queryKey !== expectedKey && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    const hasQuerySecretConfigured = Boolean(expectedKey);
+    const hasBearerSecretConfigured = Boolean(expectedBearer);
+
+    if (!hasQuerySecretConfigured && !hasBearerSecretConfigured) {
+        console.error('Cron auth misconfigured: set CRON_SECRET_KEY and/or CRON_SECRET in environment variables.');
+        return res.status(500).json({ error: 'Cron auth is not configured' });
+    }
+
+    const queryAuthorized = hasQuerySecretConfigured && queryKey === expectedKey;
+    const bearerAuthorized = hasBearerSecretConfigured && authHeader === `Bearer ${expectedBearer}`;
+
+    if (!queryAuthorized && !bearerAuthorized) {
         console.warn('Unauthorized cron request');
         return res.status(401).json({ error: 'Unauthorized' });
     }
