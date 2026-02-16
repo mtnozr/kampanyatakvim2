@@ -292,7 +292,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({
   const isDateFiltered = selectedDate !== null;
 
   return (
-    <div className="min-h-screen bg-[#F8F9FE] dark:bg-slate-900 text-gray-900 dark:text-gray-100 pb-20">
+    <div className="min-h-screen bg-[#F8F9FE] dark:bg-slate-900 text-gray-900 dark:text-gray-100" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}>
       <div className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-gray-200 dark:border-slate-700">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
@@ -483,7 +483,8 @@ export const MobileShell: React.FC<MobileShellProps> = ({
       {(activeTab === 'kampanya' && canAddCampaign) && (
         <button
           onClick={onOpenAddCampaign}
-          className="fixed right-4 bottom-20 z-40 rounded-full w-14 h-14 bg-violet-600 text-white shadow-lg flex items-center justify-center"
+          className="fixed right-4 z-40 rounded-full w-14 h-14 bg-violet-600 text-white shadow-lg flex items-center justify-center active:scale-90 transition-transform"
+          style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom, 0px) + 0.5rem)' }}
           title="Kampanya Ekle"
         >
           <Plus size={24} />
@@ -493,7 +494,8 @@ export const MobileShell: React.FC<MobileShellProps> = ({
       {(activeTab === 'analitik' && canAddAnalytics) && (
         <button
           onClick={onOpenAddAnalytics}
-          className="fixed right-4 bottom-20 z-40 rounded-full w-14 h-14 bg-blue-600 text-white shadow-lg flex items-center justify-center"
+          className="fixed right-4 z-40 rounded-full w-14 h-14 bg-blue-600 text-white shadow-lg flex items-center justify-center active:scale-90 transition-transform"
+          style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom, 0px) + 0.5rem)' }}
           title="Analitik İş Ekle"
         >
           <Plus size={24} />
