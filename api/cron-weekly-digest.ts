@@ -438,11 +438,11 @@ async function sendEmailInternal(apiKey: string, params: {
 
 // ===== DIGEST LOCK & LOGGING =====
 
-async function checkWeeklyDigestAlreadySent(db: Firestore, weekStr: string): Promise<boolean> {
+async function checkWeeklyDigestAlreadySent(db: Firestore, weekStr: string, recipientId: string): Promise<boolean> {
     try {
         const logsRef = db.collection('reminderLogs');
         const snapshot = await logsRef
-            .where('eventId', '==', `weekly-digest-${weekStr}`)
+            .where('eventId', '==', `weekly-digest-${weekStr}-${recipientId}`)
             .where('status', '==', 'success')
             .get();
 
@@ -454,6 +454,7 @@ async function checkWeeklyDigestAlreadySent(db: Firestore, weekStr: string): Pro
 }
 
 async function logWeeklyDigest(db: Firestore, params: {
+    recipientId: string;
     recipientEmail: string;
     recipientName: string;
     status: 'success' | 'failed';
@@ -465,7 +466,7 @@ async function logWeeklyDigest(db: Firestore, params: {
         const weekRangeStr = `${params.digestContent.weekStart.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} - ${params.digestContent.weekEnd.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}`;
 
         const logEntry: Record<string, any> = {
-            eventId: `weekly-digest-${params.digestContent.weekStart.toISOString().split('T')[0]}`,
+            eventId: `weekly-digest-${params.digestContent.weekStart.toISOString().split('T')[0]}-${params.recipientId}`,
             eventType: 'weekly-digest',
             eventTitle: `Haftalık Bülten - ${weekRangeStr}`,
             recipientEmail: params.recipientEmail,
@@ -562,14 +563,7 @@ async function processWeeklyDigest(
     // Build digest content
     console.log('Building weekly digest content...');
     const digestContent = buildWeeklyDigest(reports, campaigns, users);
-
-    // Check if already sent this week
     const weekStr = digestContent.weekStart.toISOString().split('T')[0];
-    const alreadySent = await checkWeeklyDigestAlreadySent(db, weekStr);
-    if (alreadySent) {
-        console.log('Weekly digest already sent for this week');
-        return result;
-    }
 
     // Filter designer users
     const designerUsers = departmentUsers.filter(user => {
@@ -584,10 +578,16 @@ async function processWeeklyDigest(
 
     console.log(`Sending to ${designerUsers.length} designer users`);
 
-    let emailsSentCount = 0;
-
     // Send email to each designer
     for (const designer of designerUsers) {
+        // Check if already sent to this person this week
+        const alreadySent = await checkWeeklyDigestAlreadySent(db, weekStr, designer.id);
+        if (alreadySent) {
+            console.log(`⏭️ Already sent to ${designer.name || designer.username} this week, skipping`);
+            result.skipped++;
+            continue;
+        }
+
         try {
             const html = buildWeeklyDigestHTML({
                 recipientName: designer.name || designer.username,
@@ -608,9 +608,9 @@ async function processWeeklyDigest(
             if (emailResult.success) {
                 console.log(`✅ Sent to ${designer.name || designer.username}`);
                 result.sent++;
-                emailsSentCount++;
 
                 await logWeeklyDigest(db, {
+                    recipientId: designer.id,
                     recipientEmail: designer.email!,
                     recipientName: designer.name || designer.username,
                     status: 'success',
@@ -622,6 +622,7 @@ async function processWeeklyDigest(
                 result.failed++;
 
                 await logWeeklyDigest(db, {
+                    recipientId: designer.id,
                     recipientEmail: designer.email!,
                     recipientName: designer.name || designer.username,
                     status: 'failed',
@@ -634,6 +635,7 @@ async function processWeeklyDigest(
             result.failed++;
 
             await logWeeklyDigest(db, {
+                recipientId: designer.id,
                 recipientEmail: designer.email!,
                 recipientName: designer.name || designer.username,
                 status: 'failed',

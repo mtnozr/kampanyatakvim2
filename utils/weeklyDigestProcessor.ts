@@ -26,6 +26,7 @@ interface ProcessResult {
  * Log weekly digest send to Firestore
  */
 async function logWeeklyDigest(params: {
+    recipientId: string;
     recipientEmail: string;
     recipientName: string;
     status: 'success' | 'failed';
@@ -37,7 +38,7 @@ async function logWeeklyDigest(params: {
         const weekRangeStr = `${params.digestContent.weekStart.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} - ${params.digestContent.weekEnd.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}`;
 
         await addDoc(collection(db, 'reminderLogs'), {
-            eventId: `weekly-digest-${params.digestContent.weekStart.toISOString().split('T')[0]}`,
+            eventId: `weekly-digest-${params.digestContent.weekStart.toISOString().split('T')[0]}-${params.recipientId}`,
             eventType: 'weekly-digest',
             eventTitle: `Haftalık Bülten - ${weekRangeStr}`,
             recipientEmail: params.recipientEmail,
@@ -124,6 +125,7 @@ export async function processWeeklyDigest(
 
                 // Log success
                 await logWeeklyDigest({
+                    recipientId: designer.id,
                     recipientEmail: designer.email!,
                     recipientName: designer.name || designer.username,
                     status: 'success',
@@ -136,6 +138,7 @@ export async function processWeeklyDigest(
 
                 // Log failure
                 await logWeeklyDigest({
+                    recipientId: designer.id,
                     recipientEmail: designer.email!,
                     recipientName: designer.name || designer.username,
                     status: 'failed',
@@ -149,6 +152,7 @@ export async function processWeeklyDigest(
 
             // Log failure
             await logWeeklyDigest({
+                recipientId: designer.id,
                 recipientEmail: designer.email!,
                 recipientName: designer.name || designer.username,
                 status: 'failed',

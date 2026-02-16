@@ -371,11 +371,11 @@ async function sendEmailInternal(apiKey: string, params: {
 
 // ===== DIGEST LOCK & LOGGING =====
 
-async function checkDigestAlreadySent(db: Firestore, dateStr: string): Promise<boolean> {
+async function checkDigestAlreadySent(db: Firestore, dateStr: string, recipientId: string): Promise<boolean> {
     try {
         const logsRef = db.collection('reminderLogs');
         const snapshot = await logsRef
-            .where('eventId', '==', `daily-digest-${dateStr}`)
+            .where('eventId', '==', `daily-digest-${dateStr}-${recipientId}`)
             .where('status', '==', 'success')
             .get();
 
@@ -506,13 +506,7 @@ async function processDailyDigest(
         return result;
     }
 
-    // Check if already sent today
     const todayStr = now.toISOString().split('T')[0];
-    const alreadySent = await checkDigestAlreadySent(db, todayStr);
-    if (alreadySent) {
-        console.log('Daily digest already sent for today');
-        return result;
-    }
 
     // ⚠️ TEMP: Lock devre dışı - günde 10 gönderim testi için
     // const lockAcquired = await acquireDailyDigestLock(db, todayStr);
@@ -547,10 +541,16 @@ async function processDailyDigest(
     // OPTIMIZATION 4: Collect logs and batch write them at the end
     const logsToWrite: any[] = [];
 
-    let emailsSentCount = 0;
-
     // Send email to each designer
     for (const designer of designerUsers) {
+        // Check if already sent to this person today
+        const alreadySent = await checkDigestAlreadySent(db, todayStr, designer.id);
+        if (alreadySent) {
+            console.log(`⏭️ Already sent to ${designer.name || designer.username} today, skipping`);
+            result.skipped++;
+            continue;
+        }
+
         try {
             const html = buildDailyDigestHTML({
                 recipientName: designer.name || designer.username,
@@ -569,10 +569,10 @@ async function processDailyDigest(
             if (emailResult.success) {
                 console.log(`✅ Sent to ${designer.name || designer.username}`);
                 result.sent++;
-                emailsSentCount++;
 
                 // Collect log data instead of writing immediately
                 logsToWrite.push({
+                    recipientId: designer.id,
                     recipientEmail: designer.email!,
                     recipientName: designer.name || designer.username,
                     status: 'success',
@@ -584,6 +584,7 @@ async function processDailyDigest(
                 result.failed++;
 
                 logsToWrite.push({
+                    recipientId: designer.id,
                     recipientEmail: designer.email!,
                     recipientName: designer.name || designer.username,
                     status: 'failed',
@@ -596,6 +597,7 @@ async function processDailyDigest(
             result.failed++;
 
             logsToWrite.push({
+                recipientId: designer.id,
                 recipientEmail: designer.email!,
                 recipientName: designer.name || designer.username,
                 status: 'failed',
@@ -617,7 +619,7 @@ async function processDailyDigest(
         });
 
         const logEntry: Record<string, any> = {
-            eventId: `daily-digest-${logData.digestContent.date.toISOString().split('T')[0]}`,
+            eventId: `daily-digest-${logData.digestContent.date.toISOString().split('T')[0]}-${logData.recipientId}`,
             eventType: 'daily-digest',
             eventTitle: `Gün Sonu Bülteni - ${dateStr}`,
             recipientEmail: logData.recipientEmail,
