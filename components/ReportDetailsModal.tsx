@@ -14,6 +14,7 @@ interface ReportDetailsModalProps {
     onMarkDone: (reportId: string) => Promise<void>;
     onUpdateStatus: (reportId: string, status: ReportStatus) => Promise<void>;
     canEdit: boolean;
+    isMobile?: boolean;
 }
 
 export const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({
@@ -25,7 +26,8 @@ export const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({
     onDelete,
     onMarkDone,
     onUpdateStatus,
-    canEdit
+    canEdit,
+    isMobile = false
 }) => {
     const [title, setTitle] = useState('');
     const [assigneeId, setAssigneeId] = useState<string>('');
@@ -188,9 +190,8 @@ export const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({
         );
     };
 
-    return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100 dark:border-slate-700 max-h-[90vh] flex flex-col">
+    const modalContent = (
+            <div className={`bg-white dark:bg-slate-800 ${isMobile ? 'flex flex-col h-full' : 'rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] border border-gray-100 dark:border-slate-700'} overflow-hidden flex flex-col`}>
                 {/* Header */}
                 <div className={`p-5 ${getHeaderColor()} shrink-0`}>
                     <div className="flex items-center justify-between">
@@ -551,6 +552,13 @@ export const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({
                     )}
                 </div>
             </div>
+    );
+
+    if (isMobile) return modalContent;
+
+    return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            {modalContent}
         </div>
     );
 };

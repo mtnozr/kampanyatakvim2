@@ -56,6 +56,7 @@ import { useTheme } from './hooks/useTheme';
 import { useBrowserNotifications } from './hooks/useBrowserNotifications';
 import { useDeviceMode } from './hooks/useDeviceMode';
 import { MobileShell } from './components/mobile/MobileShell';
+import { MobileModalWrapper } from './components/mobile/MobileModalWrapper';
 import { MobileTabKey } from './components/mobile/MobileBottomNav';
 import { setCookie, getCookie, deleteCookie } from './utils/cookies';
 import { calculateMonthlyChampion } from './utils/gamification';
@@ -3494,95 +3495,124 @@ function App() {
           />
         </div>
 
-        <AddEventModal
-          isOpen={isAddModalOpen}
-          onClose={() => {
-            setIsAddModalOpen(false);
-            setConvertingRequest(null);
-          }}
-          onAdd={handleAddEvent}
-          initialDate={selectedDate}
-          initialData={convertingRequest ? {
-            title: convertingRequest.title,
-            urgency: convertingRequest.urgency,
-            description: convertingRequest.description,
-            departmentId: convertingRequest.departmentId
-          } : undefined}
-          users={users}
-          departments={departments}
-          events={events}
-          isKampanyaYapan={isKampanyaYapan}
-        />
+        {isAddModalOpen && (
+          <MobileModalWrapper isOpen={isAddModalOpen} onClose={() => { setIsAddModalOpen(false); setConvertingRequest(null); }}>
+            <AddEventModal
+              isOpen={isAddModalOpen}
+              onClose={() => { setIsAddModalOpen(false); setConvertingRequest(null); }}
+              onAdd={handleAddEvent}
+              initialDate={selectedDate}
+              initialData={convertingRequest ? {
+                title: convertingRequest.title,
+                urgency: convertingRequest.urgency,
+                description: convertingRequest.description,
+                departmentId: convertingRequest.departmentId
+              } : undefined}
+              users={users}
+              departments={departments}
+              events={events}
+              isKampanyaYapan={isKampanyaYapan}
+              isMobile
+            />
+          </MobileModalWrapper>
+        )}
 
-        <AddAnalyticsTaskModal
-          isOpen={isAddAnalyticsModalOpen}
-          onClose={() => {
-            setIsAddAnalyticsModalOpen(false);
-            setSelectedAnalyticsDate(undefined);
-          }}
-          onAdd={handleAddAnalyticsTask}
-          initialDate={selectedAnalyticsDate}
-          users={analyticsUsers}
-          tasks={analyticsTasks}
-        />
+        {isAddAnalyticsModalOpen && (
+          <MobileModalWrapper isOpen={isAddAnalyticsModalOpen} onClose={() => { setIsAddAnalyticsModalOpen(false); setSelectedAnalyticsDate(undefined); }}>
+            <AddAnalyticsTaskModal
+              isOpen={isAddAnalyticsModalOpen}
+              onClose={() => { setIsAddAnalyticsModalOpen(false); setSelectedAnalyticsDate(undefined); }}
+              onAdd={handleAddAnalyticsTask}
+              initialDate={selectedAnalyticsDate}
+              users={analyticsUsers}
+              tasks={analyticsTasks}
+              isMobile
+            />
+          </MobileModalWrapper>
+        )}
 
-        <EventDetailsModal
-          event={viewEvent}
-          onClose={() => setViewEventId(null)}
-          assignee={users.find(u => u.id === viewEvent?.assigneeId)}
-          departments={departments}
-          users={users}
-          isDesigner={isDesigner}
-          isKampanyaYapan={isKampanyaYapan}
-          onEdit={handleEditEvent}
-          onDelete={handleDeleteEvent}
-          onOpenNote={openEventNoteModal}
-          monthlyBadges={monthlyBadges}
-        />
+        {viewEvent && (
+          <MobileModalWrapper isOpen={!!viewEvent} onClose={() => setViewEventId(null)}>
+            <EventDetailsModal
+              event={viewEvent}
+              onClose={() => setViewEventId(null)}
+              assignee={users.find(u => u.id === viewEvent?.assigneeId)}
+              departments={departments}
+              users={users}
+              isDesigner={isDesigner}
+              isKampanyaYapan={isKampanyaYapan}
+              onEdit={handleEditEvent}
+              onDelete={handleDeleteEvent}
+              onOpenNote={openEventNoteModal}
+              monthlyBadges={monthlyBadges}
+              isMobile
+            />
+          </MobileModalWrapper>
+        )}
 
-        <ReportDetailsModal
-          isOpen={!!selectedReport}
-          report={selectedReport}
-          users={users}
-          onClose={() => setSelectedReport(null)}
-          onUpdate={handleUpdateReport}
-          onDelete={handleDeleteReport}
-          onMarkDone={handleMarkReportDone}
-          onUpdateStatus={handleUpdateReportStatus}
-          canEdit={isDesigner || isKampanyaYapan}
-        />
+        {selectedReport && (
+          <MobileModalWrapper isOpen={!!selectedReport} onClose={() => setSelectedReport(null)}>
+            <ReportDetailsModal
+              isOpen={!!selectedReport}
+              report={selectedReport}
+              users={users}
+              onClose={() => setSelectedReport(null)}
+              onUpdate={handleUpdateReport}
+              onDelete={handleDeleteReport}
+              onMarkDone={handleMarkReportDone}
+              onUpdateStatus={handleUpdateReportStatus}
+              canEdit={isDesigner || isKampanyaYapan}
+              isMobile
+            />
+          </MobileModalWrapper>
+        )}
 
-        <AnalyticsTaskDetailsModal
-          isOpen={!!selectedAnalyticsTask}
-          task={selectedAnalyticsTask}
-          users={analyticsUsers}
-          onClose={() => setSelectedAnalyticsTask(null)}
-          onUpdate={handleUpdateAnalyticsTask}
-          onDelete={handleDeleteAnalyticsTask}
-          onUpdateStatus={handleUpdateAnalyticsTaskStatus}
-          canEdit={isDesigner}
-          canChangeStatus={isDesigner || isAnalitik}
-        />
+        {selectedAnalyticsTask && (
+          <MobileModalWrapper isOpen={!!selectedAnalyticsTask} onClose={() => setSelectedAnalyticsTask(null)}>
+            <AnalyticsTaskDetailsModal
+              isOpen={!!selectedAnalyticsTask}
+              task={selectedAnalyticsTask}
+              users={analyticsUsers}
+              onClose={() => setSelectedAnalyticsTask(null)}
+              onUpdate={handleUpdateAnalyticsTask}
+              onDelete={handleDeleteAnalyticsTask}
+              onUpdateStatus={handleUpdateAnalyticsTaskStatus}
+              canEdit={isDesigner}
+              canChangeStatus={isDesigner || isAnalitik}
+              isMobile
+            />
+          </MobileModalWrapper>
+        )}
 
-        <DepartmentLoginModal
-          isOpen={isDeptLoginOpen}
-          onClose={() => setIsDeptLoginOpen(false)}
-          departmentUsers={departmentUsers}
-          departments={departments}
-          onLogin={handleDepartmentLogin}
-        />
+        {isDeptLoginOpen && (
+          <MobileModalWrapper isOpen={isDeptLoginOpen} onClose={() => setIsDeptLoginOpen(false)}>
+            <DepartmentLoginModal
+              isOpen={isDeptLoginOpen}
+              onClose={() => setIsDeptLoginOpen(false)}
+              departmentUsers={departmentUsers}
+              departments={departments}
+              onLogin={handleDepartmentLogin}
+              isMobile
+            />
+          </MobileModalWrapper>
+        )}
 
-        <MyTasksModal
-          isOpen={isMyTasksOpen}
-          onClose={() => setIsMyTasksOpen(false)}
-          tasks={events.filter(e => {
-            if (!loggedInDeptUser) return false;
-            if (e.assigneeId === loggedInDeptUser.id) return true;
-            if (connectedPersonnelUser && e.assigneeId === connectedPersonnelUser.id) return true;
-            return false;
-          })}
-          onUpdateStatus={(id, status) => handleEditEvent(id, { status })}
-        />
+        {isMyTasksOpen && (
+          <MobileModalWrapper isOpen={isMyTasksOpen} onClose={() => setIsMyTasksOpen(false)}>
+            <MyTasksModal
+              isOpen={isMyTasksOpen}
+              onClose={() => setIsMyTasksOpen(false)}
+              tasks={events.filter(e => {
+                if (!loggedInDeptUser) return false;
+                if (e.assigneeId === loggedInDeptUser.id) return true;
+                if (connectedPersonnelUser && e.assigneeId === connectedPersonnelUser.id) return true;
+                return false;
+              })}
+              onUpdateStatus={(id, status) => handleEditEvent(id, { status })}
+              isMobile
+            />
+          </MobileModalWrapper>
+        )}
 
         <ToastContainer toasts={toasts} removeToast={removeToast} />
       </div>

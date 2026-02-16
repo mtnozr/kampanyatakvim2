@@ -15,6 +15,7 @@ interface AnalyticsTaskDetailsModalProps {
     onUpdateStatus: (taskId: string, status: CampaignStatus) => Promise<void>;
     canEdit: boolean;        // Admin can edit
     canChangeStatus: boolean; // Analitik or Admin can change status
+    isMobile?: boolean;
 }
 
 export const AnalyticsTaskDetailsModal: React.FC<AnalyticsTaskDetailsModalProps> = ({
@@ -26,7 +27,8 @@ export const AnalyticsTaskDetailsModal: React.FC<AnalyticsTaskDetailsModalProps>
     onDelete,
     onUpdateStatus,
     canEdit,
-    canChangeStatus
+    canChangeStatus,
+    isMobile = false
 }) => {
     const [title, setTitle] = useState('');
     const [notes, setNotes] = useState('');
@@ -177,9 +179,8 @@ export const AnalyticsTaskDetailsModal: React.FC<AnalyticsTaskDetailsModalProps>
         }
     };
 
-    return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100 dark:border-slate-700 max-h-[90vh] flex flex-col">
+    const modalContent = (
+            <div className={`bg-white dark:bg-slate-800 ${isMobile ? 'flex flex-col h-full' : 'rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] border border-gray-100 dark:border-slate-700'} overflow-hidden flex flex-col`}>
                 {/* Header */}
                 <div className={`p-5 ${getHeaderColor()} shrink-0`}>
                     <div className="flex items-center justify-between">
@@ -532,6 +533,13 @@ export const AnalyticsTaskDetailsModal: React.FC<AnalyticsTaskDetailsModalProps>
                     )}
                 </div>
             </div>
+    );
+
+    if (isMobile) return modalContent;
+
+    return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            {modalContent}
         </div>
     );
 };

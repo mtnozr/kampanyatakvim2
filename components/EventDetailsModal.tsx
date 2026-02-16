@@ -17,6 +17,7 @@ interface EventDetailsModalProps {
   onDelete?: (eventId: string) => void;
   onOpenNote?: (eventId: string, currentNote?: string) => void;
   monthlyBadges?: { trophy: string[], rocket: string[], power: string[] };
+  isMobile?: boolean;
 }
 
 export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
@@ -30,7 +31,8 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   onEdit,
   onDelete,
   onOpenNote,
-  monthlyBadges = { trophy: [], rocket: [], power: [] }
+  monthlyBadges = { trophy: [], rocket: [], power: [] },
+  isMobile = false
 }) => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editTitle, setEditTitle] = useState('');
@@ -276,9 +278,8 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all scale-100 flex flex-col max-h-[90vh] transition-colors">
+  const modalContent = (
+      <div className={`bg-white dark:bg-slate-800 ${isMobile ? 'flex flex-col h-full' : 'rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh]'} overflow-hidden transform transition-all scale-100 flex flex-col transition-colors`}>
 
         {/* Header with Status/Urgency Color */}
         <div className={`px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex justify-between items-start ${headerGradientClass} shrink-0 transition-colors duration-300`}>
@@ -883,6 +884,13 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
           )}
         </div>
       </div>
+  );
+
+  if (isMobile) return modalContent;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      {modalContent}
     </div>
   );
 };

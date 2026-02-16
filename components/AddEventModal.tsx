@@ -24,6 +24,7 @@ interface AddEventModalProps {
   monthlyBadges?: { trophy: string[], rocket: string[], power: string[] };
   events: CalendarEvent[];
   isKampanyaYapan?: boolean;
+  isMobile?: boolean;
 }
 
 export const AddEventModal: React.FC<AddEventModalProps> = ({
@@ -36,7 +37,8 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
   departments,
   monthlyBadges = { trophy: [], rocket: [], power: [] },
   events,
-  isKampanyaYapan = false
+  isKampanyaYapan = false,
+  isMobile = false
 }) => {
   const [title, setTitle] = useState('');
   const [urgency, setUrgency] = useState<UrgencyLevel>('Medium');
@@ -197,9 +199,8 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
+  const modalContent = (
+      <div className={`bg-white dark:bg-slate-800 ${isMobile ? 'flex flex-col h-full' : 'rounded-2xl shadow-xl w-full max-w-md max-h-[90vh]'} overflow-hidden transform transition-all flex flex-col`}>
         <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex justify-between items-center bg-gray-50/50 dark:bg-slate-800/50 shrink-0">
           <h2 className="text-lg font-bold text-gray-800 dark:text-white">Kampanya Ekle</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
@@ -630,6 +631,13 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
           </div>
         </form>
       </div>
+  );
+
+  if (isMobile) return modalContent;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      {modalContent}
     </div>
   );
 };

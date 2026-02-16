@@ -10,6 +10,7 @@ interface AddAnalyticsTaskModalProps {
     initialDate?: Date;
     users: AnalyticsUser[];
     tasks: AnalyticsTask[];
+    isMobile?: boolean;
 }
 
 export const AddAnalyticsTaskModal: React.FC<AddAnalyticsTaskModalProps> = ({
@@ -18,7 +19,8 @@ export const AddAnalyticsTaskModal: React.FC<AddAnalyticsTaskModalProps> = ({
     onAdd,
     initialDate,
     users,
-    tasks
+    tasks,
+    isMobile = false
 }) => {
     const [title, setTitle] = useState('');
     const [urgency, setUrgency] = useState<UrgencyLevel>('Medium');
@@ -95,9 +97,8 @@ export const AddAnalyticsTaskModal: React.FC<AddAnalyticsTaskModalProps> = ({
 
     if (!isOpen) return null;
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
+    const modalContent = (
+            <div className={`bg-white dark:bg-slate-800 ${isMobile ? 'flex flex-col h-full' : 'rounded-2xl shadow-xl w-full max-w-md max-h-[90vh]'} overflow-hidden transform transition-all flex flex-col`}>
                 <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex justify-between items-center bg-blue-50/50 dark:bg-slate-800/50 shrink-0">
                     <h2 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
                         <Briefcase size={20} className="text-blue-600" />
@@ -265,6 +266,13 @@ export const AddAnalyticsTaskModal: React.FC<AddAnalyticsTaskModalProps> = ({
                     </div>
                 </form>
             </div>
+    );
+
+    if (isMobile) return modalContent;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+            {modalContent}
         </div>
     );
 };

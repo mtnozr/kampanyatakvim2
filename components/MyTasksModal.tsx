@@ -10,6 +10,7 @@ interface MyTasksModalProps {
   onClose: () => void;
   tasks: CalendarEvent[];
   onUpdateStatus: (eventId: string, newStatus: CampaignStatus) => Promise<void>;
+  isMobile?: boolean;
 }
 
 const STATUS_COLORS: Record<CampaignStatus, string> = {
@@ -23,7 +24,8 @@ export const MyTasksModal: React.FC<MyTasksModalProps> = ({
   isOpen,
   onClose,
   tasks,
-  onUpdateStatus
+  onUpdateStatus,
+  isMobile = false
 }) => {
   const [filterStatus, setFilterStatus] = useState<CampaignStatus | 'All'>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -71,9 +73,8 @@ export const MyTasksModal: React.FC<MyTasksModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200 border border-gray-100 dark:border-slate-800">
+  const modalContent = (
+      <div className={`bg-white dark:bg-slate-900 ${isMobile ? 'flex flex-col h-full' : 'rounded-2xl shadow-xl w-full max-w-4xl h-[85vh] border border-gray-100 dark:border-slate-800'} flex flex-col overflow-hidden`}>
         
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-800/50 shrink-0">
@@ -254,6 +255,13 @@ export const MyTasksModal: React.FC<MyTasksModalProps> = ({
           )}
         </div>
       </div>
+  );
+
+  if (isMobile) return modalContent;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      {modalContent}
     </div>
   );
 };

@@ -10,6 +10,7 @@ interface DepartmentLoginModalProps {
     departmentUsers: DepartmentUser[];
     departments: Department[];
     onLogin: (user: DepartmentUser) => void;
+    isMobile?: boolean;
 }
 
 export const DepartmentLoginModal: React.FC<DepartmentLoginModalProps> = ({
@@ -17,7 +18,8 @@ export const DepartmentLoginModal: React.FC<DepartmentLoginModalProps> = ({
     onClose,
     departmentUsers,
     departments,
-    onLogin
+    onLogin,
+    isMobile = false
 }) => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
@@ -101,9 +103,8 @@ export const DepartmentLoginModal: React.FC<DepartmentLoginModalProps> = ({
 
     if (!isOpen) return null;
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-sm overflow-hidden transition-colors">
+    const modalContent = (
+            <div className={`bg-white dark:bg-slate-800 ${isMobile ? 'flex flex-col h-full' : 'rounded-2xl shadow-xl w-full max-w-sm'} overflow-hidden transition-colors`}>
                 {/* Header */}
                 <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex justify-between items-center bg-teal-50 dark:bg-slate-700/50">
                     <div className="flex items-center gap-2 text-teal-800 dark:text-teal-400">
@@ -172,6 +173,13 @@ export const DepartmentLoginModal: React.FC<DepartmentLoginModalProps> = ({
                     </button>
                 </form>
             </div>
+    );
+
+    if (isMobile) return modalContent;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+            {modalContent}
         </div>
     );
 };
