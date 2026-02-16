@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
-import { format } from 'date-fns';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
+import { format, startOfWeek, addDays, isSameDay, isSameMonth, isToday, startOfMonth, eachDayOfInterval, endOfMonth } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { CalendarEvent, Report, AnalyticsTask, User, AnalyticsUser } from '../../types';
-import { Plus, ChevronLeft, ChevronRight, LogIn, UserPlus } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, LogIn, UserPlus, CalendarDays, FileText, BarChart3, Inbox } from 'lucide-react';
 import { URGENCY_CONFIGS } from '../../constants';
 import MobileBottomNav, { MobileTabKey } from './MobileBottomNav';
 
@@ -100,6 +100,103 @@ const getStatusStyle = (status: MobileStatus) => {
   }
 };
 
+// --- Empty State Component ---
+const EmptyState: React.FC<{
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  actionLabel?: string;
+  onAction?: () => void;
+}> = ({ icon, title, description, actionLabel, onAction }) => (
+  <div className="flex flex-col items-center justify-center py-16 px-6">
+    <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center mb-4 text-gray-400 dark:text-gray-500">
+      {icon}
+    </div>
+    <p className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-1">{title}</p>
+    <p className="text-sm text-gray-400 dark:text-gray-500 text-center leading-relaxed">{description}</p>
+    {actionLabel && onAction && (
+      <button
+        onClick={onAction}
+        className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-violet-600 text-white text-sm font-medium shadow-sm active:scale-95 transition-transform"
+      >
+        <Plus size={16} />
+        {actionLabel}
+      </button>
+    )}
+  </div>
+);
+
+// --- Mini Calendar Strip ---
+const DAY_LABELS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pz'];
+
+const MiniCalendarStrip: React.FC<{
+  currentDate: Date;
+  selectedDate: Date | null;
+  onSelectDate: (date: Date | null) => void;
+  eventDates: Set<string>;
+}> = ({ currentDate, selectedDate, onSelectDate, eventDates }) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const todayRef = useRef<HTMLButtonElement>(null);
+
+  const days = useMemo(() => {
+    const start = startOfMonth(currentDate);
+    const end = endOfMonth(currentDate);
+    return eachDayOfInterval({ start, end });
+  }, [currentDate]);
+
+  useEffect(() => {
+    if (todayRef.current && scrollRef.current) {
+      const container = scrollRef.current;
+      const el = todayRef.current;
+      const scrollLeft = el.offsetLeft - container.offsetWidth / 2 + el.offsetWidth / 2;
+      container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+    }
+  }, [currentDate]);
+
+  return (
+    <div
+      ref={scrollRef}
+      className="flex gap-1 overflow-x-auto py-2 px-3 scrollbar-hide"
+      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
+    >
+      {days.map((day) => {
+        const dayKey = format(day, 'yyyy-MM-dd');
+        const isSelected = selectedDate && isSameDay(day, selectedDate);
+        const isTodayDate = isToday(day);
+        const hasEvent = eventDates.has(dayKey);
+        const dayOfWeek = (day.getDay() + 6) % 7; // Monday=0
+
+        return (
+          <button
+            key={dayKey}
+            ref={isTodayDate ? todayRef : undefined}
+            onClick={() => onSelectDate(isSelected ? null : day)}
+            className={`flex flex-col items-center flex-shrink-0 w-10 py-1.5 rounded-xl transition-all ${
+              isSelected
+                ? 'bg-violet-600 text-white shadow-md shadow-violet-200 dark:shadow-violet-900/40'
+                : isTodayDate
+                  ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300'
+                  : 'text-gray-600 dark:text-gray-400'
+            }`}
+          >
+            <span className={`text-[10px] font-medium ${isSelected ? 'text-violet-200' : 'text-gray-400 dark:text-gray-500'}`}>
+              {DAY_LABELS[dayOfWeek]}
+            </span>
+            <span className={`text-sm font-bold mt-0.5 ${isSelected ? 'text-white' : ''}`}>
+              {format(day, 'd')}
+            </span>
+            <div className={`w-1 h-1 rounded-full mt-0.5 ${
+              hasEvent
+                ? isSelected ? 'bg-white' : 'bg-violet-500 dark:bg-violet-400'
+                : 'bg-transparent'
+            }`} />
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
 export const MobileShell: React.FC<MobileShellProps> = ({
   currentDate,
   onPrevPeriod,
@@ -128,9 +225,43 @@ export const MobileShell: React.FC<MobileShellProps> = ({
 }) => {
   const userMap = useMemo(() => userNameById(users), [users]);
   const analyticsMap = useMemo(() => analyticsNameById(analyticsUsers), [analyticsUsers]);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+
+  // Reset selected date when month changes
+  useEffect(() => {
+    setSelectedDate(null);
+  }, [currentDate]);
+
+  // Build event date sets for the dot indicators on the calendar strip
+  const eventDateSet = useMemo(() => {
+    const set = new Set<string>();
+    events.forEach(e => set.add(format(e.date, 'yyyy-MM-dd')));
+    return set;
+  }, [events]);
+
+  const reportDateSet = useMemo(() => {
+    const set = new Set<string>();
+    reports.forEach(r => set.add(format(r.dueDate, 'yyyy-MM-dd')));
+    return set;
+  }, [reports]);
+
+  const analyticsDateSet = useMemo(() => {
+    const set = new Set<string>();
+    analyticsTasks.forEach(t => set.add(format(t.date, 'yyyy-MM-dd')));
+    return set;
+  }, [analyticsTasks]);
+
+  const activeDateSet = activeTab === 'kampanya' ? eventDateSet
+    : activeTab === 'rapor' ? reportDateSet
+    : activeTab === 'analitik' ? analyticsDateSet
+    : eventDateSet;
 
   const sortedEvents = useMemo(() => {
-    return [...events].sort((a, b) => {
+    let filtered = [...events];
+    if (selectedDate) {
+      filtered = filtered.filter(e => isSameDay(e.date, selectedDate));
+    }
+    return filtered.sort((a, b) => {
       const aStatus = a.status || 'Planlandı';
       const bStatus = b.status || 'Planlandı';
       const aRank = aStatus === 'Planlandı' ? 0 : 1;
@@ -139,49 +270,78 @@ export const MobileShell: React.FC<MobileShellProps> = ({
       if (aRank !== bRank) return aRank - bRank;
       return a.date.getTime() - b.date.getTime();
     });
-  }, [events]);
-  const sortedReports = useMemo(
-    () => [...reports].sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime()),
-    [reports]
-  );
-  const sortedAnalyticsTasks = useMemo(
-    () => [...analyticsTasks].sort((a, b) => a.date.getTime() - b.date.getTime()),
-    [analyticsTasks]
-  );
+  }, [events, selectedDate]);
+
+  const sortedReports = useMemo(() => {
+    let filtered = [...reports];
+    if (selectedDate) {
+      filtered = filtered.filter(r => isSameDay(r.dueDate, selectedDate));
+    }
+    return filtered.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+  }, [reports, selectedDate]);
+
+  const sortedAnalyticsTasks = useMemo(() => {
+    let filtered = [...analyticsTasks];
+    if (selectedDate) {
+      filtered = filtered.filter(t => isSameDay(t.date, selectedDate));
+    }
+    return filtered.sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [analyticsTasks, selectedDate]);
+
+  // Determine if filtering by date (for empty state messaging)
+  const isDateFiltered = selectedDate !== null;
 
   return (
     <div className="min-h-screen bg-[#F8F9FE] dark:bg-slate-900 text-gray-900 dark:text-gray-100 pb-20">
-      <div className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-gray-200 dark:border-slate-700 px-4 py-3">
-        <div className="flex items-center justify-between">
-          <h1 className="text-base font-bold">Kampanya-Analitik Takvim (Mobil)</h1>
-          {!isLoggedIn && (
-            <button
-              onClick={onOpenLogin}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs bg-teal-600 text-white"
-            >
-              <LogIn size={14} />
-              Giriş
+      <div className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-gray-200 dark:border-slate-700">
+        <div className="px-4 py-3">
+          <div className="flex items-center justify-between">
+            <h1 className="text-base font-bold">Kampanya Takvimi</h1>
+            {!isLoggedIn && (
+              <button
+                onClick={onOpenLogin}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs bg-teal-600 text-white"
+              >
+                <LogIn size={14} />
+                Giriş
+              </button>
+            )}
+          </div>
+          <div className="mt-3 flex items-center justify-between">
+            <button onClick={onPrevPeriod} className="p-2 rounded-lg bg-gray-100 dark:bg-slate-800 active:scale-95 transition-transform">
+              <ChevronLeft size={16} />
             </button>
-          )}
+            <button onClick={onResetToToday} className="text-sm font-semibold">
+              {format(currentDate, 'MMMM yyyy', { locale: tr })}
+            </button>
+            <button onClick={onNextPeriod} className="p-2 rounded-lg bg-gray-100 dark:bg-slate-800 active:scale-95 transition-transform">
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
-        <div className="mt-3 flex items-center justify-between">
-          <button onClick={onPrevPeriod} className="p-2 rounded-lg bg-gray-100 dark:bg-slate-800">
-            <ChevronLeft size={16} />
-          </button>
-          <button onClick={onResetToToday} className="text-sm font-semibold">
-            {format(currentDate, 'MMMM yyyy', { locale: tr })}
-          </button>
-          <button onClick={onNextPeriod} className="p-2 rounded-lg bg-gray-100 dark:bg-slate-800">
-            <ChevronRight size={16} />
-          </button>
-        </div>
+        {(activeTab === 'kampanya' || activeTab === 'rapor' || activeTab === 'analitik') && (
+          <MiniCalendarStrip
+            currentDate={currentDate}
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            eventDates={activeDateSet}
+          />
+        )}
       </div>
 
       <div className="p-4 space-y-3">
         {activeTab === 'kampanya' && (
           <>
             {sortedEvents.length === 0 ? (
-              <p className="text-sm text-gray-500">Bu filtrede kampanya bulunamadı.</p>
+              <EmptyState
+                icon={<CalendarDays size={28} />}
+                title={isDateFiltered ? 'Bu günde kampanya yok' : 'Kampanya bulunamadı'}
+                description={isDateFiltered
+                  ? `${format(selectedDate!, 'd MMMM', { locale: tr })} tarihinde planlanmış kampanya bulunmuyor.`
+                  : `${format(currentDate, 'MMMM yyyy', { locale: tr })} ayında henüz kampanya eklenmemiş.`}
+                actionLabel={canAddCampaign ? 'Kampanya Ekle' : undefined}
+                onAction={canAddCampaign ? onOpenAddCampaign : undefined}
+              />
             ) : (
               sortedEvents.map((event) => (
                 (() => {
@@ -220,7 +380,13 @@ export const MobileShell: React.FC<MobileShellProps> = ({
         {activeTab === 'rapor' && (
           <>
             {sortedReports.length === 0 ? (
-              <p className="text-sm text-gray-500">Rapor bulunamadı.</p>
+              <EmptyState
+                icon={<FileText size={28} />}
+                title={isDateFiltered ? 'Bu günde rapor yok' : 'Rapor bulunamadı'}
+                description={isDateFiltered
+                  ? `${format(selectedDate!, 'd MMMM', { locale: tr })} tarihinde teslim edilecek rapor bulunmuyor.`
+                  : `${format(currentDate, 'MMMM yyyy', { locale: tr })} ayında rapor bulunmuyor.`}
+              />
             ) : (
               sortedReports.map((report) => (
                 (() => {
@@ -256,7 +422,15 @@ export const MobileShell: React.FC<MobileShellProps> = ({
         {activeTab === 'analitik' && (
           <>
             {sortedAnalyticsTasks.length === 0 ? (
-              <p className="text-sm text-gray-500">Analitik iş bulunamadı.</p>
+              <EmptyState
+                icon={<BarChart3 size={28} />}
+                title={isDateFiltered ? 'Bu günde analitik iş yok' : 'Analitik iş bulunamadı'}
+                description={isDateFiltered
+                  ? `${format(selectedDate!, 'd MMMM', { locale: tr })} tarihinde analitik iş bulunmuyor.`
+                  : `${format(currentDate, 'MMMM yyyy', { locale: tr })} ayında analitik iş bulunmuyor.`}
+                actionLabel={canAddAnalytics ? 'Analitik İş Ekle' : undefined}
+                onAction={canAddAnalytics ? onOpenAddAnalytics : undefined}
+              />
             ) : (
               sortedAnalyticsTasks.map((task) => (
                 (() => {
@@ -290,21 +464,18 @@ export const MobileShell: React.FC<MobileShellProps> = ({
         )}
 
         {activeTab === 'islerim' && (
-          <div className="space-y-3">
-            <p className="text-sm text-gray-600 dark:text-gray-300">Size atanmış işleri tek listede görmek için açın.</p>
-            <button
-              onClick={onOpenMyTasks}
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-violet-600 text-white font-medium"
-            >
-              <UserPlus size={16} />
-              İşlerimi Aç
-            </button>
-          </div>
+          <EmptyState
+            icon={<Inbox size={28} />}
+            title="İşleriniz"
+            description="Size atanmış kampanya, rapor ve analitik işleri tek listede görüntüleyin."
+            actionLabel="İşlerimi Aç"
+            onAction={onOpenMyTasks}
+          />
         )}
 
         {activeTab === 'diger' && (
-          <div className="space-y-2">
-            <p className="text-sm text-gray-600 dark:text-gray-300">Faz 1 mobil kabuk aktif. Ek yönetim ekranları Faz 2 ile genişletilecek.</p>
+          <div className="py-8 px-2 space-y-3">
+            <p className="text-sm text-gray-400 dark:text-gray-500 text-center">Ek yönetim ekranları yakında eklenecek.</p>
           </div>
         )}
       </div>
