@@ -2785,13 +2785,13 @@ function App() {
         // Atanan kullanıcıya "Kampanya Hatırlatma" maili gönder
         try {
           const assignee = event.assigneeId
-            ? departmentUsers.find(u => u.id === event.assigneeId)
+            ? users.find(u => u.id === event.assigneeId)
             : null;
-          console.log('[CopyMail] assigneeId:', event.assigneeId, '| assignee:', assignee?.username, '| email:', assignee?.email);
+          console.log('[CopyMail] assigneeId:', event.assigneeId, '| assignee:', assignee?.name, '| email:', assignee?.email);
           if (!event.assigneeId) {
             console.log('[CopyMail] Kampanyada atanan kişi yok, mail gönderilmedi.');
           } else if (!assignee) {
-            console.log('[CopyMail] Atanan kullanıcı departmentUsers listesinde bulunamadı.');
+            console.log('[CopyMail] Atanan kullanıcı users listesinde bulunamadı.');
           } else if (!assignee.email) {
             console.log('[CopyMail] Atanan kullanıcının email adresi tanımlı değil.');
           }
@@ -2803,7 +2803,7 @@ function App() {
               const apiKey = settings.resendApiKey?.trim();
               console.log('[CopyMail] apiKey mevcut:', !!apiKey);
               if (apiKey) {
-                const safeName = escapeHtml(assignee.username);
+                const safeName = escapeHtml(assignee.name);
                 const safeTitle = escapeHtml(event.title);
                 const newDateText = format(newDate, 'd MMMM yyyy', { locale: tr });
                 const safeDate = escapeHtml(newDateText);
@@ -2871,7 +2871,7 @@ function App() {
 
                 const mailResult = await sendEmailWithResend(apiKey, {
                   to: assignee.email,
-                  toName: assignee.username,
+                  toName: assignee.name,
                   subject: `[Kampanya Takvimi] Kampanya Hatırlatma: ${event.title}`,
                   html,
                   eventId: event.id,
