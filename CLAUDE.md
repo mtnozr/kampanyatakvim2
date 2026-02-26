@@ -186,9 +186,23 @@ TWILIO_*                   # Opsiyonel
 - Proje incelenerek bu `CLAUDE.md` dosyası oluşturuldu. Her oturumda otomatik okunacak.
 
 ### 2026-02-26
-- `App.tsx` — `handleEventDrop` fonksiyonuna Ctrl+drag ile kampanya kopyalandığında atanan kullanıcıya Resend üzerinden "Kampanya Hatırlatma" emaili gönderme özelliği eklendi.
-  - Atanan kullanıcı `departmentUsers` listesinden `assigneeId` ile bulunur.
-  - Firestore `reminderSettings/default` dokümanından API key alınır.
-  - Email: kampanya adı, yeni tarih, kampanya türü (Hatırlatma/Yeni) ve aciliyet bilgisi içerir.
-  - Mail altyapısı eksikse veya kullanıcının email'i yoksa işlem sessizce atlanır (try/catch).
-  - Commit: `708b5e8`
+
+#### Ctrl+drag kampanya kopyalama — Resend mail
+- `App.tsx` / `handleEventDrop` — Ctrl+drag ile kampanya kopyalandığında atanan kullanıcıya "Kampanya Hatırlatma" maili gönderilir.
+  - Kullanıcı React state'inden değil doğrudan `getDoc(doc(db, 'users', assigneeId))` ile Firestore'dan çekilir (not mail mantığıyla aynı).
+  - Email: kampanya adı, yeni tarih, kampanya türü, aciliyet bilgisi içerir.
+  - Commits: `708b5e8` → `b796fa4` → `3be5e1b`
+
+#### Görevli değişiminde Resend mail (handleEditEvent)
+- `App.tsx` / `handleEditEvent` — Kampanya edit edilip `assigneeId` değiştiğinde hem eski hem yeni görevliye mail gönderilir.
+  - Eski `mailto:` açma kaldırıldı, yerine Resend geldi.
+  - Yeni görevliye: mor header, "Yeni Görev Atandı"; eski görevliye: gri header, "Görev Devredildi".
+  - Mail içeriği: kampanya adı, eski/yeni görevli, tarih, aciliyet, referans ID.
+  - Commit: `9ae6384`
+
+#### Görevli dropdown'ında son 30 gün tamamlanan kampanya sayısı
+- `AddEventModal.tsx` — Yeni kampanya eklerken görevli seçim listesinde her kullanıcının yanına son 30 günde tamamladığı kampanya sayısı eklendi.
+  - Format: `🟢 Ali Veli — 3 tamamlandı 🏆`
+- `EventDetailsModal.tsx` — Edit modunda da aynı bilgi gösterilir; `events` prop eklendi, emoji kaldırıldı.
+  - App.tsx'teki iki `EventDetailsModal` call site'ına `events={events}` geçildi.
+  - Commits: `a8e269a` → `9e965d2`
