@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Calendar, User as UserIcon, AlertCircle, AlignLeft, Building, Edit2, Save, XCircle, Trash2, CheckCircle2, XCircle as CancelIcon, Clock, Gauge, StickyNote, Mail, Phone, PauseCircle, Flag } from 'lucide-react';
 import { CalendarEvent, User, Department, UrgencyLevel, CampaignStatus, DifficultyLevel, CampaignType } from '../types';
 import { URGENCY_CONFIGS, STATUS_STYLES, DIFFICULTY_CONFIGS } from '../constants';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
 interface EventDetailsModalProps {
@@ -10,6 +10,7 @@ interface EventDetailsModalProps {
   assignee?: User;
   departments: Department[];
   users: User[];
+  events?: CalendarEvent[];
   isDesigner: boolean;
   isKampanyaYapan?: boolean;
   onClose: () => void;
@@ -25,6 +26,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   assignee,
   departments,
   users,
+  events = [],
   isDesigner,
   isKampanyaYapan,
   onClose,
@@ -428,11 +430,23 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   className="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                 >
                   <option value="">Atama Yok</option>
-                  {users.map(user => (
-                    <option key={user.id} value={user.id}>
-                      {user.emoji} {user.name} {monthlyBadges.trophy.includes(user.id) ? '🏆' : ''}{monthlyBadges.rocket.includes(user.id) ? '🚀' : ''}{monthlyBadges.power.includes(user.id) ? '💪' : ''}
-                    </option>
-                  ))}
+                  {[...users]
+                    .sort((a, b) => a.name.localeCompare(b.name, 'tr'))
+                    .map(user => {
+                      const hasPendingEvents = events.some(e => e.assigneeId === user.id && e.status === 'Planlandı');
+                      const indicator = hasPendingEvents ? '🔴' : '🟢';
+                      const thirtyDaysAgo = subDays(new Date(), 30);
+                      const completedLast30 = events.filter(e =>
+                        e.assigneeId === user.id &&
+                        e.status === 'Tamamlandı' &&
+                        e.date >= thirtyDaysAgo
+                      ).length;
+                      return (
+                        <option key={user.id} value={user.id}>
+                          {indicator} {user.emoji} {user.name} — {completedLast30} tamamlandı {monthlyBadges.trophy.includes(user.id) ? '🏆' : ''}{monthlyBadges.rocket.includes(user.id) ? '🚀' : ''}{monthlyBadges.power.includes(user.id) ? '💪' : ''}
+                        </option>
+                      );
+                    })}
                 </select>
               ) : (
                 assignee ? (

@@ -3,7 +3,7 @@ import { X, UserPlus, AlertCircle, AlignLeft, AlertTriangle, Building, Gauge } f
 import { UrgencyLevel, User, Department, DifficultyLevel, CalendarEvent, SendType, CampaignType } from '../types';
 import { URGENCY_CONFIGS, TURKISH_HOLIDAYS, DIFFICULTY_CONFIGS } from '../constants';
 import { RichTextEditor } from './RichTextEditor';
-import { addDays, format } from 'date-fns';
+import { addDays, format, subDays } from 'date-fns';
 import { calculateReportDueDate } from '../utils/businessDays';
 
 interface AddEventModalProps {
@@ -267,9 +267,15 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
                     .map(user => {
                       const hasPendingEvents = events.some(e => e.assigneeId === user.id && e.status === 'Planlandı');
                       const indicator = hasPendingEvents ? '🔴' : '🟢';
+                      const thirtyDaysAgo = subDays(new Date(), 30);
+                      const completedLast30 = events.filter(e =>
+                        e.assigneeId === user.id &&
+                        e.status === 'Tamamlandı' &&
+                        e.date >= thirtyDaysAgo
+                      ).length;
                       return (
                         <option key={user.id} value={user.id}>
-                          {indicator} {user.name} {monthlyBadges.trophy.includes(user.id) ? '🏆' : ''}{monthlyBadges.rocket.includes(user.id) ? '🚀' : ''}{monthlyBadges.power.includes(user.id) ? '💪' : ''}
+                          {indicator} {user.name} — {completedLast30} tamamlandı {monthlyBadges.trophy.includes(user.id) ? '🏆' : ''}{monthlyBadges.rocket.includes(user.id) ? '🚀' : ''}{monthlyBadges.power.includes(user.id) ? '💪' : ''}
                         </option>
                       );
                     })}

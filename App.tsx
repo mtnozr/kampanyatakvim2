@@ -3745,6 +3745,7 @@ function App() {
               assignee={users.find(u => u.id === viewEvent?.assigneeId)}
               departments={departments}
               users={users}
+              events={events}
               isDesigner={isDesigner}
               isKampanyaYapan={isKampanyaYapan}
               onEdit={handleEditEvent}
@@ -4764,6 +4765,7 @@ function App() {
           assignee={users.find(u => u.id === viewEvent?.assigneeId)}
           departments={departments}
           users={users}
+          events={events}
           isDesigner={isDesigner}
           isKampanyaYapan={isKampanyaYapan}
           onEdit={handleEditEvent}
