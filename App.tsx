@@ -2784,26 +2784,18 @@ function App() {
 
         // Atanan kullanıcıya "Kampanya Hatırlatma" maili gönder
         try {
-          const assignee = event.assigneeId
-            ? users.find(u => u.id === event.assigneeId)
-            : null;
-          console.log('[CopyMail] assigneeId:', event.assigneeId, '| assignee:', assignee?.name, '| email:', assignee?.email);
-          if (!event.assigneeId) {
-            console.log('[CopyMail] Kampanyada atanan kişi yok, mail gönderilmedi.');
-          } else if (!assignee) {
-            console.log('[CopyMail] Atanan kullanıcı users listesinde bulunamadı.');
-          } else if (!assignee.email) {
-            console.log('[CopyMail] Atanan kullanıcının email adresi tanımlı değil.');
-          }
-          if (assignee?.email) {
-            const settingsDoc = await getDoc(doc(db, 'reminderSettings', 'default'));
-            console.log('[CopyMail] reminderSettings exists:', settingsDoc.exists());
-            if (settingsDoc.exists()) {
-              const settings = settingsDoc.data() as ReminderSettings;
-              const apiKey = settings.resendApiKey?.trim();
-              console.log('[CopyMail] apiKey mevcut:', !!apiKey);
-              if (apiKey) {
-                const safeName = escapeHtml(assignee.name);
+          if (!event.assigneeId) return;
+          const assigneeSnap = await getDoc(doc(db, 'users', event.assigneeId));
+          if (!assigneeSnap.exists()) return;
+          const assigneeData = assigneeSnap.data() as User;
+          if (!assigneeData.email) return;
+
+          const settingsDoc = await getDoc(doc(db, 'reminderSettings', 'default'));
+          if (settingsDoc.exists()) {
+            const settings = settingsDoc.data() as ReminderSettings;
+            const apiKey = settings.resendApiKey?.trim();
+            if (apiKey) {
+                const safeName = escapeHtml(assigneeData.name);
                 const safeTitle = escapeHtml(event.title);
                 const newDateText = format(newDate, 'd MMMM yyyy', { locale: tr });
                 const safeDate = escapeHtml(newDateText);
@@ -2870,8 +2862,8 @@ function App() {
                 `;
 
                 const mailResult = await sendEmailWithResend(apiKey, {
-                  to: assignee.email,
-                  toName: assignee.name,
+                  to: assigneeData.email,
+                  toName: assigneeData.name,
                   subject: `[Kampanya Takvimi] Kampanya Hatırlatma: ${event.title}`,
                   html,
                   eventId: event.id,
@@ -2879,11 +2871,6 @@ function App() {
                   eventType: 'campaign',
                   urgency: event.urgency,
                 });
-                console.log('[CopyMail] Gönderim sonucu:', mailResult);
-                if (!mailResult.success) {
-                  console.error('[CopyMail] Hata:', mailResult.error);
-                }
-              }
             }
           }
         } catch (mailError) {
