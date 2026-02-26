@@ -443,7 +443,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                       ).length;
                       return (
                         <option key={user.id} value={user.id}>
-                          {indicator} {user.emoji} {user.name} — {completedLast30} tamamlandı {monthlyBadges.trophy.includes(user.id) ? '🏆' : ''}{monthlyBadges.rocket.includes(user.id) ? '🚀' : ''}{monthlyBadges.power.includes(user.id) ? '💪' : ''}
+                          {indicator} {user.name} — {completedLast30} tamamlandı {monthlyBadges.trophy.includes(user.id) ? '🏆' : ''}{monthlyBadges.rocket.includes(user.id) ? '🚀' : ''}{monthlyBadges.power.includes(user.id) ? '💪' : ''}
                         </option>
                       );
                     })}
