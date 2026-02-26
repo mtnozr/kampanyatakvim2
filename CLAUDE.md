@@ -2,6 +2,10 @@
 
 Bu dosya, her seferinde projeyi sıfırdan anlatmak zorunda kalmamak için Claude Code'un otomatik okuduğu hafıza dosyasıdır.
 
+## Çalışma Kuralları
+
+- **Her geliştirme oturumu sonunda**, kullanıcı söylemeden, yapılanları ve önemli konuşmaları `Konuşma Geçmişi` bölümüne tarih başlığıyla ekle. Commit hash'lerini de yaz.
+
 ---
 
 ## Proje Özeti
