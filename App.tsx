@@ -2787,11 +2787,21 @@ function App() {
           const assignee = event.assigneeId
             ? departmentUsers.find(u => u.id === event.assigneeId)
             : null;
+          console.log('[CopyMail] assigneeId:', event.assigneeId, '| assignee:', assignee?.username, '| email:', assignee?.email);
+          if (!event.assigneeId) {
+            console.log('[CopyMail] Kampanyada atanan kişi yok, mail gönderilmedi.');
+          } else if (!assignee) {
+            console.log('[CopyMail] Atanan kullanıcı departmentUsers listesinde bulunamadı.');
+          } else if (!assignee.email) {
+            console.log('[CopyMail] Atanan kullanıcının email adresi tanımlı değil.');
+          }
           if (assignee?.email) {
             const settingsDoc = await getDoc(doc(db, 'reminderSettings', 'default'));
+            console.log('[CopyMail] reminderSettings exists:', settingsDoc.exists());
             if (settingsDoc.exists()) {
               const settings = settingsDoc.data() as ReminderSettings;
               const apiKey = settings.resendApiKey?.trim();
+              console.log('[CopyMail] apiKey mevcut:', !!apiKey);
               if (apiKey) {
                 const safeName = escapeHtml(assignee.username);
                 const safeTitle = escapeHtml(event.title);
@@ -2859,7 +2869,7 @@ function App() {
                   </div>
                 `;
 
-                await sendEmailWithResend(apiKey, {
+                const mailResult = await sendEmailWithResend(apiKey, {
                   to: assignee.email,
                   toName: assignee.username,
                   subject: `[Kampanya Takvimi] Kampanya Hatırlatma: ${event.title}`,
@@ -2869,11 +2879,15 @@ function App() {
                   eventType: 'campaign',
                   urgency: event.urgency,
                 });
+                console.log('[CopyMail] Gönderim sonucu:', mailResult);
+                if (!mailResult.success) {
+                  console.error('[CopyMail] Hata:', mailResult.error);
+                }
               }
             }
           }
         } catch (mailError) {
-          console.error('Kopya mail gönderilemedi:', mailError);
+          console.error('[CopyMail] Exception:', mailError);
         }
       } else {
         // MOVE: Update existing campaign date
