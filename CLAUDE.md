@@ -184,3 +184,11 @@ TWILIO_*                   # Opsiyonel
 - Repo `https://github.com/mtnozr/kampanyatakvim2` masaüstüne `kampanya_takvim_proje` olarak klonlandı.
 - Masaüstüne `kampanyaproje.command` adlı bir terminal script oluşturuldu. Çift tıklanınca proje klasörüne girip Claude'u başlatıyor.
 - Proje incelenerek bu `CLAUDE.md` dosyası oluşturuldu. Her oturumda otomatik okunacak.
+
+### 2026-02-26
+- `App.tsx` — `handleEventDrop` fonksiyonuna Ctrl+drag ile kampanya kopyalandığında atanan kullanıcıya Resend üzerinden "Kampanya Hatırlatma" emaili gönderme özelliği eklendi.
+  - Atanan kullanıcı `departmentUsers` listesinden `assigneeId` ile bulunur.
+  - Firestore `reminderSettings/default` dokümanından API key alınır.
+  - Email: kampanya adı, yeni tarih, kampanya türü (Hatırlatma/Yeni) ve aciliyet bilgisi içerir.
+  - Mail altyapısı eksikse veya kullanıcının email'i yoksa işlem sessizce atlanır (try/catch).
+  - Commit: `708b5e8`
