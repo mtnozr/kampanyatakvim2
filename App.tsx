@@ -2781,6 +2781,100 @@ function App() {
           }]
         });
         addToast('Kampanya kopyalandı!', 'success');
+
+        // Atanan kullanıcıya "Kampanya Hatırlatma" maili gönder
+        try {
+          const assignee = event.assigneeId
+            ? departmentUsers.find(u => u.id === event.assigneeId)
+            : null;
+          if (assignee?.email) {
+            const settingsDoc = await getDoc(doc(db, 'reminderSettings', 'default'));
+            if (settingsDoc.exists()) {
+              const settings = settingsDoc.data() as ReminderSettings;
+              const apiKey = settings.resendApiKey?.trim();
+              if (apiKey) {
+                const safeName = escapeHtml(assignee.username);
+                const safeTitle = escapeHtml(event.title);
+                const newDateText = format(newDate, 'd MMMM yyyy', { locale: tr });
+                const safeDate = escapeHtml(newDateText);
+                const urgencyLabels: Record<string, string> = {
+                  'Very High': 'Çok Acil',
+                  'High': 'Acil',
+                  'Medium': 'Orta',
+                  'Low': 'Düşük',
+                };
+                const urgencyColors: Record<string, string> = {
+                  'Very High': '#EF4444',
+                  'High': '#F97316',
+                  'Medium': '#3B82F6',
+                  'Low': '#6B7280',
+                };
+                const urgencyLabel = escapeHtml(urgencyLabels[event.urgency] || event.urgency);
+                const urgencyColor = urgencyColors[event.urgency] || '#6B7280';
+                const campaignTypeLabel = escapeHtml(selectedCampaignType);
+
+                const html = `
+                  <div style="margin:0;padding:24px;background:#f1f5f9;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#334155;">
+                    <div style="max-width:680px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 12px 30px rgba(15,23,42,0.15);">
+                      <div style="padding:40px 28px;text-align:center;background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#a855f7 100%);">
+                        <div style="margin:0 auto 16px;width:64px;height:64px;border-radius:14px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:30px;">📋</div>
+                        <h1 style="margin:0 0 8px 0;font-size:28px;line-height:1.2;color:#ffffff;font-weight:700;">Kampanya Hatırlatma</h1>
+                        <p style="margin:0;color:rgba(255,255,255,0.82);font-size:13px;letter-spacing:0.4px;font-weight:600;">Kampanya Takvimi</p>
+                      </div>
+                      <div style="padding:28px;">
+                        <p style="margin:0 0 16px 0;font-size:16px;color:#334155;">Merhaba <strong>${safeName}</strong>,</p>
+                        <p style="margin:0 0 20px 0;font-size:15px;color:#475569;line-height:1.65;">
+                          Aşağıdaki kampanya sizin için <strong>${safeDate}</strong> tarihine kopyalanarak iş listenizdeki yerini aldı.
+                        </p>
+                        <div style="border:1px solid #e2e8f0;border-radius:12px;background:linear-gradient(135deg,#f8fafc 0%,#f1f5f9 100%);padding:18px;margin-bottom:20px;">
+                          <p style="margin:0 0 4px 0;font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;">Kampanya</p>
+                          <p style="margin:0 0 14px 0;font-size:20px;color:#0f172a;font-weight:700;">${safeTitle}</p>
+                          <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                            <tr>
+                              <td width="50%" style="padding-right:6px;vertical-align:top;">
+                                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;">
+                                  <p style="margin:0 0 4px 0;font-size:11px;color:#64748b;font-weight:700;">TÜR</p>
+                                  <p style="margin:0;font-size:14px;color:#0f172a;font-weight:600;">${campaignTypeLabel}</p>
+                                </div>
+                              </td>
+                              <td width="50%" style="padding-left:6px;vertical-align:top;">
+                                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;">
+                                  <p style="margin:0 0 4px 0;font-size:11px;color:#64748b;font-weight:700;">ACİLİYET</p>
+                                  <p style="margin:0;font-size:14px;font-weight:700;color:${urgencyColor};">${urgencyLabel}</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </table>
+                        </div>
+                        <div style="text-align:center;margin:24px 0 8px 0;">
+                          <a href="https://kampanya-takvimi.vercel.app" style="display:inline-block;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none;color:#ffffff;background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%);">
+                            Takvime Git →
+                          </a>
+                        </div>
+                      </div>
+                      <div style="padding:18px 24px;text-align:center;background:#f8fafc;border-top:1px solid #e2e8f0;">
+                        <p style="margin:0;font-size:12px;color:#94a3b8;">© ${new Date().getFullYear()} Kampanya Takvimi</p>
+                      </div>
+                    </div>
+                  </div>
+                `;
+
+                await sendEmailWithResend(apiKey, {
+                  to: assignee.email,
+                  toName: assignee.username,
+                  subject: `[Kampanya Takvimi] Kampanya Hatırlatma: ${event.title}`,
+                  html,
+                  eventId: event.id,
+                  eventTitle: event.title,
+                  eventType: 'campaign',
+                  urgency: event.urgency,
+                });
+              }
+            }
+          }
+        } catch (mailError) {
+          console.error('Kopya mail gönderilemedi:', mailError);
+        }
       } else {
         // MOVE: Update existing campaign date
         addToast('Tarih güncelleniyor...', 'info');
