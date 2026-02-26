@@ -2634,57 +2634,168 @@ function App() {
           }
         }
 
-        // Check if assignee changed (Send Email to New Assignee via mailto)
+        // Check if assignee changed → Resend ile eski ve yeni görevliye mail gönder
         if (updates.assigneeId && updates.assigneeId !== currentEvent.assigneeId) {
-          const newAssignee = users.find(u => u.id === updates.assigneeId);
+          // 1. Bildirim
+          await addDoc(collection(db, "notifications"), {
+            title: 'Görev Size Atandı (Devir)',
+            message: `"${currentEvent.title}" görevi size devredildi/atandı.`,
+            date: Timestamp.now(),
+            isRead: false,
+            type: 'email'
+          });
 
-          if (newAssignee) {
-            // 1. Add Notification
-            await addDoc(collection(db, "notifications"), {
-              title: 'Görev Size Atandı (Devir)',
-              message: `"${currentEvent.title}" görevi size devredildi/atandı.`,
-              date: Timestamp.now(),
-              isRead: false,
-              type: 'email'
-            });
+          // 2. Log
+          const newAssigneeForLog = users.find(u => u.id === updates.assigneeId);
+          await addDoc(collection(db, "logs"), {
+            message: `"${currentEvent.title}" görevi ${newAssigneeForLog?.name || 'Yeni Kullanıcı'} kişisine devredildi.`,
+            timestamp: Timestamp.now()
+          });
 
-            // 2. Add Log
-            await addDoc(collection(db, "logs"), {
-              message: `"${currentEvent.title}" görevi ${newAssignee.name} kişisine devredildi.`,
-              timestamp: Timestamp.now()
-            });
+          // 3. Resend ile mail gönder
+          try {
+            const settingsDoc = await getDoc(doc(db, 'reminderSettings', 'default'));
+            if (settingsDoc.exists()) {
+              const settings = settingsDoc.data() as ReminderSettings;
+              const apiKey = settings.resendApiKey?.trim();
+              if (apiKey) {
+                const [oldSnap, newSnap] = await Promise.all([
+                  currentEvent.assigneeId ? getDoc(doc(db, 'users', currentEvent.assigneeId)) : Promise.resolve(null),
+                  getDoc(doc(db, 'users', updates.assigneeId as string)),
+                ]);
 
-            // 3. Open mailto for task reassignment
-            const oldAssignee = users.find(u => u.id === currentEvent.assigneeId);
-            const oldAssigneeName = oldAssignee ? oldAssignee.name : 'Bilinmeyen Kullanıcı';
+                const oldAssigneeData = oldSnap?.exists() ? oldSnap.data() as User : null;
+                const newAssigneeData = newSnap.exists() ? newSnap.data() as User : null;
 
-            let emailMessage = `"${currentEvent.title}" kampanyası için görevlendirildiniz (Görev Devri).\n\n`;
-            emailMessage += `Görevi Devreden: ${oldAssigneeName}\n`;
-            emailMessage += `Tarih: ${format(updates.date instanceof Date ? updates.date : (updates.date ? (updates.date as any).toDate() : (currentEvent.date as any).toDate()), 'd MMMM yyyy', { locale: tr })}\n`;
-            emailMessage += `Aciliyet: ${URGENCY_CONFIGS[updates.urgency || currentEvent.urgency].label}`;
+                const campaignDate = updates.date instanceof Date
+                  ? updates.date
+                  : (currentEvent.date instanceof Date ? currentEvent.date : (currentEvent.date as any).toDate());
+                const campaignDateText = format(campaignDate, 'd MMMM yyyy', { locale: tr });
+                const effectiveUrgency = updates.urgency || currentEvent.urgency;
+                const urgencyLabels: Record<string, string> = {
+                  'Very High': 'Çok Acil', 'High': 'Acil', 'Medium': 'Orta', 'Low': 'Düşük',
+                };
+                const urgencyColors: Record<string, string> = {
+                  'Very High': '#EF4444', 'High': '#F97316', 'Medium': '#3B82F6', 'Low': '#6B7280',
+                };
+                const urgencyLabel = urgencyLabels[effectiveUrgency] || effectiveUrgency;
+                const urgencyColor = urgencyColors[effectiveUrgency] || '#6B7280';
+                const refId = `#${eventId.substring(0, 6).toUpperCase()}`;
+                const safeTitle = escapeHtml(currentEvent.title);
+                const safeDate = escapeHtml(campaignDateText);
+                const safeUrgency = escapeHtml(urgencyLabel);
+                const safeOldName = escapeHtml(oldAssigneeData?.name || 'Bilinmiyor');
+                const safeNewName = escapeHtml(newAssigneeData?.name || 'Bilinmiyor');
+                const safeRefId = escapeHtml(refId);
 
-            const diff = updates.difficulty || currentEvent.difficulty;
-            if (diff) emailMessage += `\nZorluk Seviyesi: ${DIFFICULTY_CONFIGS[diff].label}`;
+                const buildAssigneeChangeHtml = (recipientName: string, role: 'old' | 'new') => {
+                  const safeRecipient = escapeHtml(recipientName);
+                  const roleMessage = role === 'new'
+                    ? `<strong>${safeTitle}</strong> kampanyası size atandı. Lütfen görevi inceleyiniz.`
+                    : `<strong>${safeTitle}</strong> kampanyasındaki göreviniz başka bir kişiye devredildi.`;
+                  const headerColor = role === 'new' ? '#6366f1' : '#64748b';
+                  const headerColorEnd = role === 'new' ? '#8b5cf6' : '#94a3b8';
+                  const icon = role === 'new' ? '📋' : '🔄';
+                  const headerTitle = role === 'new' ? 'Yeni Görev Atandı' : 'Görev Devredildi';
 
-            const desc = updates.description || currentEvent.description;
-            if (desc) emailMessage += `\n\nAçıklama:\n${stripHtml(desc)}`;
+                  return `
+                    <div style="margin:0;padding:24px;background:#f1f5f9;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#334155;">
+                      <div style="max-width:680px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 12px 30px rgba(15,23,42,0.15);">
+                        <div style="padding:40px 28px;text-align:center;background:linear-gradient(135deg,${headerColor} 0%,${headerColorEnd} 100%);">
+                          <div style="margin:0 auto 16px;width:64px;height:64px;border-radius:14px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:30px;">${icon}</div>
+                          <h1 style="margin:0 0 8px 0;font-size:26px;line-height:1.2;color:#ffffff;font-weight:700;">Kampanya Görev Değişimi</h1>
+                          <p style="margin:0;color:rgba(255,255,255,0.82);font-size:13px;letter-spacing:0.4px;font-weight:600;">${headerTitle}</p>
+                        </div>
+                        <div style="padding:28px;">
+                          <p style="margin:0 0 16px 0;font-size:16px;color:#334155;">Merhaba <strong>${safeRecipient}</strong>,</p>
+                          <p style="margin:0 0 20px 0;font-size:15px;color:#475569;line-height:1.65;">${roleMessage}</p>
 
-            const deptId = updates.departmentId || currentEvent.departmentId;
-            if (deptId) {
-              const dept = departments.find(d => d.id === deptId);
-              if (dept) emailMessage += `\n\nTalep Eden Birim: ${dept.name}`;
+                          <div style="border:1px solid #e2e8f0;border-radius:12px;background:linear-gradient(135deg,#f8fafc 0%,#f1f5f9 100%);padding:18px;margin-bottom:20px;">
+                            <p style="margin:0 0 4px 0;font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;">Kampanya</p>
+                            <p style="margin:0 0 16px 0;font-size:20px;color:#0f172a;font-weight:700;">${safeTitle}</p>
+                            <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                              <tr>
+                                <td width="50%" style="padding-right:6px;padding-bottom:10px;vertical-align:top;">
+                                  <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;">
+                                    <p style="margin:0 0 4px 0;font-size:11px;color:#64748b;font-weight:700;">ESKİ GÖREVLİ</p>
+                                    <p style="margin:0;font-size:14px;color:#0f172a;font-weight:600;">${safeOldName}</p>
+                                  </div>
+                                </td>
+                                <td width="50%" style="padding-left:6px;padding-bottom:10px;vertical-align:top;">
+                                  <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;">
+                                    <p style="margin:0 0 4px 0;font-size:11px;color:#64748b;font-weight:700;">YENİ GÖREVLİ</p>
+                                    <p style="margin:0;font-size:14px;color:#0f172a;font-weight:600;">${safeNewName}</p>
+                                  </div>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td width="50%" style="padding-right:6px;vertical-align:top;">
+                                  <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;">
+                                    <p style="margin:0 0 4px 0;font-size:11px;color:#64748b;font-weight:700;">KAMPANYA TARİHİ</p>
+                                    <p style="margin:0;font-size:14px;color:#0f172a;font-weight:600;">${safeDate}</p>
+                                  </div>
+                                </td>
+                                <td width="50%" style="padding-left:6px;vertical-align:top;">
+                                  <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;">
+                                    <p style="margin:0 0 4px 0;font-size:11px;color:#64748b;font-weight:700;">ACİLİYET</p>
+                                    <p style="margin:0;font-size:14px;font-weight:700;color:${urgencyColor};">${safeUrgency}</p>
+                                  </div>
+                                </td>
+                              </tr>
+                            </table>
+                          </div>
+
+                          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;margin-bottom:20px;text-align:center;">
+                            <p style="margin:0;font-size:12px;color:#64748b;">Referans: <strong style="color:#0f172a;">${safeRefId}</strong></p>
+                          </div>
+
+                          <div style="text-align:center;margin:24px 0 8px 0;">
+                            <a href="https://kampanya-takvimi.vercel.app" style="display:inline-block;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none;color:#ffffff;background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%);">
+                              Takvime Git →
+                            </a>
+                          </div>
+                        </div>
+                        <div style="padding:18px 24px;text-align:center;background:#f8fafc;border-top:1px solid #e2e8f0;">
+                          <p style="margin:0;font-size:12px;color:#94a3b8;">© ${new Date().getFullYear()} Kampanya Takvimi</p>
+                        </div>
+                      </div>
+                    </div>
+                  `;
+                };
+
+                const emailSubject = `[Kampanya Takvimi] Kampanya Görev Değişimi: ${currentEvent.title}`;
+
+                // Yeni görevliye gönder
+                if (newAssigneeData?.email) {
+                  await sendEmailWithResend(apiKey, {
+                    to: newAssigneeData.email,
+                    toName: newAssigneeData.name,
+                    subject: emailSubject,
+                    html: buildAssigneeChangeHtml(newAssigneeData.name, 'new'),
+                    eventId,
+                    eventTitle: currentEvent.title,
+                    eventType: 'campaign',
+                    urgency: effectiveUrgency,
+                  });
+                }
+
+                // Eski görevliye gönder
+                if (oldAssigneeData?.email) {
+                  await sendEmailWithResend(apiKey, {
+                    to: oldAssigneeData.email,
+                    toName: oldAssigneeData.name,
+                    subject: emailSubject,
+                    html: buildAssigneeChangeHtml(oldAssigneeData.name, 'old'),
+                    eventId,
+                    eventTitle: currentEvent.title,
+                    eventType: 'campaign',
+                    urgency: effectiveUrgency,
+                  });
+                }
+              }
             }
-
-            const footerIdText = `Ref ID: #${eventId.substring(0, 6).toUpperCase()}`;
-            const effectiveUrgency = updates.urgency || currentEvent.urgency;
-            const isVeryHigh = effectiveUrgency === 'Very High';
-            const subjectPrefix = isVeryHigh ? 'ACİL: ' : '';
-
-            const subject = encodeURIComponent(`${subjectPrefix}${currentEvent.title} - Görev Ataması (Güncelleme)`);
-            const body = encodeURIComponent(`Merhaba ${newAssignee.name},\n\n${emailMessage}\n\n----------------\n${footerIdText}`);
-            window.location.href = `mailto:${newAssignee.email}?cc=kampanyayonetimi@vakifbank.com.tr&subject=${subject}&body=${body}`;
-
-            addToast('Mail istemcisi açılıyor...', 'info');
+          } catch (mailError) {
+            console.error('[AssigneeChangeMail] Exception:', mailError);
           }
         }
 
