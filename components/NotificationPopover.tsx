@@ -79,7 +79,7 @@ export const NotificationPopover: React.FC<NotificationPopoverProps> = ({ notifi
             onClick={onMarkAllRead}
             className="text-xs text-violet-600 hover:text-violet-800 font-medium"
           >
-            Tümünü Temizle
+            Tümünü Okundu İşaretle
           </button>
         )}
       </div>

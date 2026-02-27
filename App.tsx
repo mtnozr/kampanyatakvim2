@@ -4173,32 +4173,43 @@ function App() {
                 </div>
 
                 <div className="relative">
-                  <button
-                    onClick={() => {
-                      setIsNotifOpen(!isNotifOpen);
-                      setIsLogOpen(false);
-                    }}
-                    className={`
+                  {(() => {
+                    const unreadCount = notifications.filter(n => !n.isRead).length;
+                    return (
+                      <button
+                        onClick={() => {
+                          const opening = !isNotifOpen;
+                          setIsNotifOpen(opening);
+                          setIsLogOpen(false);
+                          if (opening) {
+                            notifications
+                              .filter(n => !n.isRead)
+                              .forEach(n => updateDoc(doc(db, "notifications", n.id), { isRead: true }));
+                          }
+                        }}
+                        className={`
                                     p-1 transition-colors rounded-lg shadow-sm border
                                     ${isNotifOpen
-                        ? 'text-violet-600 bg-violet-50 border-violet-100 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-700/50'
-                        : 'bg-white border-gray-100 text-gray-400 hover:text-violet-600 dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-violet-900/30'}
+                            ? 'text-violet-600 bg-violet-50 border-violet-100 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-700/50'
+                            : 'bg-white border-gray-100 text-gray-400 hover:text-violet-600 dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-violet-900/30'}
                                 `}
-                  >
-                    <Bell size={16} />
-                    {notifications.length > 0 && (
-                      <span className="absolute -top-2 -right-2 min-w-5 h-5 px-1 bg-red-500 text-white text-[11px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800">
-                        {notifications.length}
-                      </span>
-                    )}
-                  </button>
+                      >
+                        <Bell size={16} />
+                        <span
+                          className={`absolute -top-2 -right-2 min-w-5 h-5 px-1 bg-red-500 text-white text-[11px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800 transition-all duration-300 ${unreadCount > 0 ? 'opacity-100 scale-100' : 'opacity-0 scale-0 pointer-events-none'}`}
+                        >
+                          {unreadCount > 0 ? unreadCount : ''}
+                        </span>
+                      </button>
+                    );
+                  })()}
 
                   <NotificationPopover
                     isOpen={isNotifOpen}
                     notifications={notifications}
                     onClose={() => setIsNotifOpen(false)}
                     onMarkAllRead={() => {
-                      notifications.forEach(n => deleteDoc(doc(db, "notifications", n.id)));
+                      notifications.forEach(n => updateDoc(doc(db, "notifications", n.id), { isRead: true }));
                     }}
                   />
                 </div>
