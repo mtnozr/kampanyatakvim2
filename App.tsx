@@ -3952,14 +3952,14 @@ function App() {
           </div>
 
           {/* Right Column: Toolbar */}
-          <div className="flex items-center gap-1 bg-white/50 dark:bg-slate-800/50 p-1 rounded-2xl backdrop-blur-sm shadow-sm flex-wrap relative z-20 transition-colors justify-end">
+          <div className="flex items-center gap-0.5 bg-white/50 dark:bg-slate-800/50 p-1 rounded-2xl backdrop-blur-sm shadow-sm flex-nowrap overflow-hidden relative z-20 transition-colors justify-end">
             <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
 
             {/* Browser Notification Toggle */}
             {notificationsSupported && (
               <button
                 onClick={requestNotificationPermission}
-                className={`p-1.5 transition-colors rounded-lg shadow-sm border ${notificationsGranted
+                className={`p-1 transition-colors rounded-lg shadow-sm border ${notificationsGranted
                   ? 'text-green-600 bg-green-50 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700/50'
                   : notificationPermission === 'denied'
                     ? 'text-red-400 bg-red-50 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700/50 cursor-not-allowed'
@@ -3975,9 +3975,9 @@ function App() {
                 disabled={notificationPermission === 'denied'}
               >
                 {notificationsGranted ? (
-                  <SmartphoneNfc size={20} />
+                  <SmartphoneNfc size={16} />
                 ) : (
-                  <Smartphone size={20} />
+                  <Smartphone size={16} />
                 )}
               </button>
             )}
@@ -4006,25 +4006,25 @@ function App() {
               </div>
             )}
 
-            <button onClick={resetToToday} className="bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 dark:border dark:border-violet-700/50 px-3 py-1.5 rounded-lg text-sm font-semibold hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors">
+            <button onClick={resetToToday} className="bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 dark:border dark:border-violet-700/50 px-2 py-1 rounded-lg text-xs font-semibold hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors whitespace-nowrap">
               Bugün
             </button>
 
-            <div className="flex items-center gap-1">
-              <button onClick={prevPeriod} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-full transition-colors text-gray-600 dark:text-gray-300">
-                <ChevronLeft size={20} />
+            <div className="flex items-center gap-0.5">
+              <button onClick={prevPeriod} className="p-1 hover:bg-white dark:hover:bg-slate-700 rounded-full transition-colors text-gray-600 dark:text-gray-300">
+                <ChevronLeft size={14} />
               </button>
-              <h2 className="text-lg md:text-xl font-bold min-w-[140px] text-center tabular-nums capitalize text-gray-800 dark:text-gray-100">
+              <h2 className="text-sm font-bold min-w-[110px] text-center tabular-nums capitalize text-gray-800 dark:text-gray-100">
                 {viewMode === 'week'
                   ? `${format(weekDays[0], 'd')}-${format(weekDays[6], 'd MMMM yyyy', { locale: tr })}`
                   : format(currentDate, 'MMMM yyyy', { locale: tr })}
               </h2>
-              <button onClick={nextPeriod} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-full transition-colors text-gray-600 dark:text-gray-300">
-                <ChevronRight size={20} />
+              <button onClick={nextPeriod} className="p-1 hover:bg-white dark:hover:bg-slate-700 rounded-full transition-colors text-gray-600 dark:text-gray-300">
+                <ChevronRight size={14} />
               </button>
             </div>
 
-            <div className="h-6 w-px bg-gray-300 dark:bg-slate-600 mx-2 hidden md:block"></div>
+            <div className="h-4 w-px bg-gray-300 dark:bg-slate-600 mx-1 hidden md:block"></div>
 
             <button
               onClick={() => {
@@ -4034,13 +4034,13 @@ function App() {
                   return next;
                 });
               }}
-              className={`p-1.5 transition-colors rounded-lg shadow-sm border ${isSearchOpen || hasActiveFilters
+              className={`p-1 transition-colors rounded-lg shadow-sm border ${isSearchOpen || hasActiveFilters
                 ? 'text-violet-600 bg-violet-50 border-violet-100 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-700/50'
                 : 'bg-white border-gray-100 text-gray-500 hover:text-violet-600 dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-slate-700'
                 }`}
               title="Arama ve Filtrele"
             >
-              <Search size={20} />
+              <Search size={16} />
               {hasActiveFilters && (
                 <span className="absolute -top-1 -right-1 w-3 h-3 bg-violet-500 rounded-full animate-pulse"></span>
               )}
@@ -4048,16 +4048,16 @@ function App() {
 
             <button
               onClick={handleExportPdf}
-              className="p-1.5 text-gray-500 hover:text-pink-600 hover:bg-pink-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-pink-300 dark:hover:bg-pink-900/30"
+              className="p-1 text-gray-500 hover:text-pink-600 hover:bg-pink-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-pink-300 dark:hover:bg-pink-900/30"
               title="PDF Olarak İndir"
             >
-              <Download size={20} />
+              <Download size={16} />
             </button>
 
             {isDesigner && (
               <button
                 onClick={handleExportCsv}
-                className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-green-300 dark:hover:bg-green-900/30"
+                className="p-1 text-gray-500 hover:text-green-600 hover:bg-green-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-green-300 dark:hover:bg-green-900/30"
                 title="CSV Olarak İndir"
               >
                 <span className="text-xs font-bold leading-none">CSV</span>
@@ -4067,10 +4067,10 @@ function App() {
             {isDesigner && (
               <button
                 onClick={() => setIsReportsOpen(true)}
-                className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-900/30"
+                className="p-1 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-900/30"
                 title="Raporlar ve Dashboard"
               >
-                <PieChart size={20} />
+                <PieChart size={16} />
               </button>
             )}
 
@@ -4086,10 +4086,10 @@ function App() {
                     handleMarkAsRead(allIds);
                   }
                 }}
-                className="p-1.5 text-gray-500 hover:text-violet-600 hover:bg-violet-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm relative dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-violet-900/30"
+                className="p-1 text-gray-500 hover:text-violet-600 hover:bg-violet-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm relative dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-violet-900/30"
                 title="Duyurular"
               >
-                <Megaphone size={20} />
+                <Megaphone size={16} />
                 {unreadAnnouncementCount > 0 && (
                   <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800">
                     {unreadAnnouncementCount}
@@ -4101,29 +4101,29 @@ function App() {
             {loggedInDeptUser && (
               <button
                 onClick={() => setIsMyTasksOpen(true)}
-                className="p-1.5 text-gray-500 hover:text-violet-600 hover:bg-violet-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-violet-900/30"
+                className="p-1 text-gray-500 hover:text-violet-600 hover:bg-violet-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-violet-900/30"
                 title="İşlerim"
               >
-                <CheckSquare size={20} />
+                <CheckSquare size={16} />
               </button>
             )}
 
             <button
               onClick={() => setIsAdminOpen(true)}
-              className="p-1.5 text-gray-500 hover:text-violet-600 hover:bg-violet-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-violet-900/30"
+              className="p-1 text-gray-500 hover:text-violet-600 hover:bg-violet-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-violet-900/30"
               title="Yönetici Paneli"
             >
-              <Users size={20} />
+              <Users size={16} />
             </button>
 
             {/* Admin Password Change Button */}
             {isDesigner && (
               <button
                 onClick={() => setIsAdminPasswordOpen(true)}
-                className="p-1.5 text-gray-500 hover:text-amber-600 hover:bg-amber-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-amber-300 dark:hover:bg-amber-900/30"
+                className="p-1 text-gray-500 hover:text-amber-600 hover:bg-amber-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-amber-300 dark:hover:bg-amber-900/30"
                 title="Admin Şifre Değiştir"
               >
-                <Lock size={20} />
+                <Lock size={16} />
               </button>
             )}
 
@@ -4132,7 +4132,7 @@ function App() {
               <button
                 onClick={() => setActiveTab('ayarlar')}
                 className={`
-                  p-1.5 transition-colors rounded-lg shadow-sm border text-lg
+                  p-1 transition-colors rounded-lg shadow-sm border text-lg
                   ${activeTab === 'ayarlar'
                     ? 'text-blue-700 bg-blue-50 border-blue-200 dark:bg-blue-700/30 dark:text-blue-300 dark:border-blue-600'
                     : 'bg-white border-gray-100 text-gray-400 hover:text-blue-700 hover:bg-blue-50 dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-blue-300 dark:hover:bg-blue-700/30'}
@@ -4152,14 +4152,14 @@ function App() {
                       setIsNotifOpen(false);
                     }}
                     className={`
-                                    p-1.5 transition-colors rounded-lg shadow-sm border
+                                    p-1 transition-colors rounded-lg shadow-sm border
                                     ${isLogOpen
                         ? 'text-orange-600 bg-orange-50 border-orange-100 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700/50'
                         : 'bg-white border-gray-100 text-gray-400 hover:text-orange-600 dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-orange-300 dark:hover:bg-orange-900/30'}
                                 `}
                     title="İşlem Kütüğü"
                   >
-                    <ClipboardList size={20} />
+                    <ClipboardList size={16} />
                   </button>
 
                   <LogPopover
@@ -4179,13 +4179,13 @@ function App() {
                       setIsLogOpen(false);
                     }}
                     className={`
-                                    p-1.5 transition-colors rounded-lg shadow-sm border
+                                    p-1 transition-colors rounded-lg shadow-sm border
                                     ${isNotifOpen
                         ? 'text-violet-600 bg-violet-50 border-violet-100 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-700/50'
                         : 'bg-white border-gray-100 text-gray-400 hover:text-violet-600 dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-violet-300 dark:hover:bg-violet-900/30'}
                                 `}
                   >
-                    <Bell size={20} />
+                    <Bell size={16} />
                     {notifications.length > 0 && (
                       <span className="absolute -top-2 -right-2 min-w-5 h-5 px-1 bg-red-500 text-white text-[11px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800">
                         {notifications.length}
