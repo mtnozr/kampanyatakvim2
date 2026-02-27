@@ -62,6 +62,7 @@ import { setCookie, getCookie, deleteCookie } from './utils/cookies';
 import { calculateMonthlyChampion } from './utils/gamification';
 import { calculateReportDueDate } from './utils/businessDays';
 import { sendEmailWithResend } from './utils/emailService';
+import { exportEventsToCSV } from './utils/exportCSV';
 
 // --- FIREBASE IMPORTS ---
 import { db, firebaseConfig } from './firebase';
@@ -1525,6 +1526,11 @@ function App() {
       console.error('PDF Export Error:', error);
       addToast('PDF olusturulurken hata olustu.', 'info');
     }
+  };
+
+  const handleExportCsv = () => {
+    exportEventsToCSV(events, users, departments);
+    addToast('CSV indirildi.', 'success');
   };
 
   const handleAddAnnouncement = async (title: string, content: string, visibleTo: 'admin' | 'kampanya' | 'all') => {
@@ -4047,6 +4053,16 @@ function App() {
             >
               <Download size={20} />
             </button>
+
+            {isDesigner && (
+              <button
+                onClick={handleExportCsv}
+                className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 transition-colors bg-white border border-gray-100 rounded-lg shadow-sm dark:bg-transparent dark:border-slate-600 dark:text-gray-400 dark:hover:text-green-300 dark:hover:bg-green-900/30"
+                title="CSV Olarak İndir"
+              >
+                <span className="text-xs font-bold leading-none">CSV</span>
+              </button>
+            )}
 
             {isDesigner && (
               <button
