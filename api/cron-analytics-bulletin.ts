@@ -279,6 +279,10 @@ function buildAnalyticsBulletinHTML(params: {
 
 // ===== EMAIL SENDING =====
 
+function sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function sendEmailInternal(apiKey: string, params: {
     to: string;
     subject: string;
@@ -516,6 +520,8 @@ async function processAnalyticsBulletins(
             console.error(`Error processing bulletin for ${user.name}:`, error);
             result.failed++;
         }
+
+        await sleep(600); // Resend rate limit: max 2 istek/sn
     }
 
     return result;

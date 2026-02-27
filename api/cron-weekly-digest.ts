@@ -402,6 +402,12 @@ function buildWeeklyDigestHTML(params: {
     `;
 }
 
+// ===== HELPERS =====
+
+function sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 // ===== EMAIL SENDING =====
 
 async function sendEmailInternal(apiKey: string, params: {
@@ -643,6 +649,8 @@ async function processWeeklyDigest(
                 errorMessage: error instanceof Error ? error.message : 'Unknown error',
             });
         }
+
+        await sleep(600); // Resend rate limit: max 2 istek/sn
     }
 
     return result;

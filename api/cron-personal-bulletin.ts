@@ -306,6 +306,10 @@ function buildPersonalBulletinHTML(
 
 // ===== EMAIL SENDING =====
 
+function sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function sendEmailInternal(apiKey: string, params: {
     to: string;
     subject: string;
@@ -550,6 +554,8 @@ async function processPersonalBulletin(
                 overdueReportsCount: overdueReports.length,
             });
         }
+
+        await sleep(600); // Resend rate limit: max 2 istek/sn
     }
 
     // Batch write all logs at once (saves Firestore writes)
