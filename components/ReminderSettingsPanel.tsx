@@ -85,7 +85,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
   const [morningBulletinPreviewHTML, setMorningBulletinPreviewHTML] = useState('');
   const [isBuildingMorningBulletin, setIsBuildingMorningBulletin] = useState(false);
   const [isSendingMorningBulletin, setIsSendingMorningBulletin] = useState(false);
-  const [morningBulletinRecipientsState, setMorningBulletinRecipientsState] = useState<DepartmentUser[]>([]);
+  const [morningBulletinRecipients, setMorningBulletinRecipients] = useState<DepartmentUser[]>([]);
 
   // Personal Daily Bulletin states
   const [users, setUsers] = useState<User[]>([]);
@@ -671,18 +671,20 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
   async function handleOpenMorningBulletinPreview() {
     setIsBuildingMorningBulletin(true);
     try {
-      const selectedRecipients = departmentUsers.filter(u =>
-        (settings.morningBulletinRecipients || []).includes(u.id) && u.email
-      );
+      // Günsonu bültetiyle aynı mantık: emailCcRecipients + isDesigner
+      const selectedRecipients = departmentUsers.filter(u => {
+        const isSelected = (settings.emailCcRecipients || []).includes(u.id);
+        return u.isDesigner && u.email && isSelected;
+      });
 
       if (selectedRecipients.length === 0) {
-        setProcessMessage('⚠️ Lütfen önce sabah bülteni alıcılarını seçin.');
+        setProcessMessage('⚠️ Bülten Alıcıları bölümünden en az bir tasarımcı seçin.');
         setTimeout(() => setProcessMessage(''), 4000);
         setIsBuildingMorningBulletin(false);
         return;
       }
 
-      setMorningBulletinRecipientsState(selectedRecipients);
+      setMorningBulletinRecipients(selectedRecipients);
 
       const { campaigns, users: allUsers } = await fetchPanelData();
       const today = new Date();
@@ -786,9 +788,9 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
 
       const dateStr = today.toLocaleDateString('tr-TR');
 
-      for (const recipient of morningBulletinRecipientsState) {
+      for (const recipient of morningBulletinRecipients) {
         try {
-          setProcessMessage(`📧 Gönderiliyor: ${recipient.username} (${sentCount + failedCount + 1}/${morningBulletinRecipientsState.length})...`);
+          setProcessMessage(`📧 Gönderiliyor: ${recipient.username} (${sentCount + failedCount + 1}/${morningBulletinRecipients.length})...`);
 
           const result = await sendMorningBulletinEmail(
             settings.resendApiKey,
@@ -1591,51 +1593,10 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
                   </div>
                 )}
 
-                {/* Recipient Selection */}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                    Bülten Alacak Kişiler ({(settings.morningBulletinRecipients || []).length} seçili)
-                  </label>
-                  <div className="flex gap-2 mb-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const allIds = departmentUsers.filter(u => u.email).map(u => u.id);
-                        setSettings({ ...settings, morningBulletinRecipients: allIds });
-                      }}
-                      className="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded text-xs font-medium transition-colors"
-                    >
-                      ✓ Tümünü Seç
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSettings({ ...settings, morningBulletinRecipients: [] })}
-                      className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-300 rounded text-xs font-medium transition-colors"
-                    >
-                      ✗ Tümünü Kaldır
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
-                    {departmentUsers.filter(u => u.email).map(user => (
-                      <label key={user.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/20 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={(settings.morningBulletinRecipients || []).includes(user.id)}
-                          onChange={(e) => {
-                            const current = settings.morningBulletinRecipients || [];
-                            const updated = e.target.checked
-                              ? [...current, user.id]
-                              : current.filter(id => id !== user.id);
-                            setSettings({ ...settings, morningBulletinRecipients: updated });
-                          }}
-                          className="w-4 h-4 text-amber-600 rounded focus:ring-amber-200"
-                        />
-                        <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                          {user.username}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
+                <div className="mb-4 p-3 bg-amber-100/60 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                  <p className="text-xs text-amber-800 dark:text-amber-300">
+                    Alıcılar aşağıdaki <strong>Bülten Alıcıları</strong> bölümünden belirlenir (yalnızca Tasarımcı yetkisine sahip seçili kullanıcılar).
+                  </p>
                 </div>
 
                 <button
@@ -2543,7 +2504,7 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
 
             <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-800">
               <p className="text-sm text-amber-800 dark:text-amber-200">
-                <strong>Alıcılar ({morningBulletinRecipientsState.length}):</strong> {morningBulletinRecipientsState.map(u => u.username).join(', ')}
+                <strong>Alıcılar ({morningBulletinRecipients.length}):</strong> {morningBulletinRecipients.map(u => u.username).join(', ')}
               </p>
               <p className="text-xs text-amber-600 dark:text-amber-300 mt-1">
                 💡 Tüm alıcılar aynı ekip özetini alır.

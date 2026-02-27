@@ -253,7 +253,7 @@ export interface ReminderSettings {
   // Morning Bulletin Settings (Team morning summary)
   morningBulletinEnabled?: boolean;          // Enable/disable morning bulletin
   morningBulletinTime?: string;              // Time in HH:mm format (e.g., "08:30")
-  morningBulletinRecipients?: string[];      // Array of department user IDs to receive morning bulletin
+  // Alıcılar emailCcRecipients (Bülten Alıcıları) + isDesigner filtresiyle belirlenir
 
   // CC Recipients for all emails
   emailCcRecipients?: string[];  // Array of department user IDs to CC on all emails

@@ -19,7 +19,7 @@ interface ReminderSettings {
     resendApiKey?: string;
     morningBulletinEnabled?: boolean;
     morningBulletinTime?: string;
-    morningBulletinRecipients?: string[];
+    emailCcRecipients?: string[];
 }
 
 interface CalendarEvent {
@@ -41,6 +41,7 @@ interface DepartmentUser {
     username: string;
     name?: string;
     email?: string;
+    isDesigner?: boolean;
 }
 
 interface MorningCampaignDetails {
@@ -471,7 +472,7 @@ async function processMorningBulletin(
     console.log('=== MORNING BULLETIN PROCESS START ===');
     console.log('morningBulletinEnabled:', settings.morningBulletinEnabled);
     console.log('morningBulletinTime:', settings.morningBulletinTime);
-    console.log('morningBulletinRecipients count:', settings.morningBulletinRecipients?.length || 0);
+    console.log('emailCcRecipients count:', settings.emailCcRecipients?.length || 0);
 
     if (!settings.morningBulletinEnabled) {
         console.log('❌ REASON: Morning bulletin is disabled');
@@ -532,10 +533,10 @@ async function processMorningBulletin(
     // Build bulletin content
     const bulletinContent = buildMorningBulletin(overdueCampaigns, todayCampaigns, upcomingCampaigns, users, now);
 
-    // Filter recipients: morningBulletinRecipients listesindeki ve emaili olan kullanıcılar
+    // Günsonu bültetiyle aynı mantık: emailCcRecipients içinde olan ve isDesigner olan kullanıcılar
     const recipients = departmentUsers.filter(user => {
-        const isSelected = (settings.morningBulletinRecipients || []).includes(user.id);
-        return isSelected && user.email;
+        const isSelected = (settings.emailCcRecipients || []).includes(user.id);
+        return user.isDesigner && user.email && isSelected;
     });
 
     if (recipients.length === 0) {
@@ -766,8 +767,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             console.log(`Fetched ${users.length} assigned users`);
         }
 
-        // OPTIMIZATION: Only fetch department users in recipient list
-        const recipientIds = settings.morningBulletinRecipients || [];
+        // OPTIMIZATION: Only fetch department users in emailCcRecipients list
+        const recipientIds = settings.emailCcRecipients || [];
         let deptUsers: DepartmentUser[] = [];
 
         if (recipientIds.length > 0) {
