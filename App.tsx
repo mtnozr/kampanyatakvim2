@@ -3952,7 +3952,7 @@ function App() {
           </div>
 
           {/* Right Column: Toolbar */}
-          <div className="flex items-center gap-0.5 bg-white/50 dark:bg-slate-800/50 p-1 rounded-2xl backdrop-blur-sm shadow-sm flex-nowrap overflow-hidden relative z-20 transition-colors justify-end">
+          <div className="flex items-center gap-0.5 bg-white/50 dark:bg-slate-800/50 p-1 rounded-2xl backdrop-blur-sm shadow-sm flex-nowrap relative z-20 transition-colors justify-end">
             <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
 
             {/* Browser Notification Toggle */}
