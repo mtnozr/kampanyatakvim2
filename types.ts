@@ -250,6 +250,11 @@ export interface ReminderSettings {
   personalBulletinTime?: string;             // Time in HH:mm format (e.g., "09:00")
   personalBulletinRecipients?: string[];     // Array of user IDs (from users collection) to receive bulletins
 
+  // Morning Bulletin Settings (Team morning summary)
+  morningBulletinEnabled?: boolean;          // Enable/disable morning bulletin
+  morningBulletinTime?: string;              // Time in HH:mm format (e.g., "08:30")
+  morningBulletinRecipients?: string[];      // Array of department user IDs to receive morning bulletin
+
   // CC Recipients for all emails
   emailCcRecipients?: string[];  // Array of department user IDs to CC on all emails
 

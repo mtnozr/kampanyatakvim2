@@ -1351,3 +1351,227 @@ export async function sendAnalyticsBulletinEmail(
     urgency: 'Medium',
   });
 }
+
+// ── Morning Bulletin ──────────────────────────────────────────────────────────
+
+export interface MorningBulletinCampaign {
+  title: string;
+  assigneeName: string;
+  date: Date;
+  urgency: string;
+}
+
+export interface MorningBulletinTodayCampaign {
+  title: string;
+  assigneeName: string;
+  urgency: string;
+  status: string;
+}
+
+function getUrgencyLabelMorning(urgency: string): string {
+  const labels: Record<string, string> = {
+    'Very High': 'Çok Yüksek',
+    'High': 'Yüksek',
+    'Medium': 'Orta',
+    'Low': 'Düşük',
+  };
+  return labels[urgency] || urgency;
+}
+
+/**
+ * Build Morning Bulletin HTML
+ */
+export function buildMorningBulletinHTML(params: {
+  recipientName: string;
+  overdueCampaigns: MorningBulletinCampaign[];
+  todayCampaigns: MorningBulletinTodayCampaign[];
+  upcomingCampaigns: MorningBulletinCampaign[];
+  dateStr: string;
+}): string {
+  const { recipientName, overdueCampaigns, todayCampaigns, upcomingCampaigns, dateStr } = params;
+
+  const summaryHTML = `
+    <div style="display: flex; gap: 12px; margin-bottom: 28px;">
+      <div style="flex: 1; background: #FEF3C7; border: 1px solid #F59E0B; border-radius: 10px; padding: 16px; text-align: center;">
+        <p style="margin: 0; font-size: 28px; font-weight: 700; color: #92400E;">${todayCampaigns.length}</p>
+        <p style="margin: 4px 0 0 0; font-size: 12px; color: #78350F; font-weight: 600;">Bugün</p>
+      </div>
+      <div style="flex: 1; background: #FEE2E2; border: 1px solid #EF4444; border-radius: 10px; padding: 16px; text-align: center;">
+        <p style="margin: 0; font-size: 28px; font-weight: 700; color: #991B1B;">${overdueCampaigns.length}</p>
+        <p style="margin: 4px 0 0 0; font-size: 12px; color: #7F1D1D; font-weight: 600;">Geciken</p>
+      </div>
+      <div style="flex: 1; background: #EFF6FF; border: 1px solid #3B82F6; border-radius: 10px; padding: 16px; text-align: center;">
+        <p style="margin: 0; font-size: 28px; font-weight: 700; color: #1E40AF;">${upcomingCampaigns.length}</p>
+        <p style="margin: 4px 0 0 0; font-size: 12px; color: #1E3A8A; font-weight: 600;">Bu Hafta</p>
+      </div>
+    </div>
+  `;
+
+  const overdueSection = overdueCampaigns.length > 0 ? `
+    <h3 style="margin: 0 0 12px 0; font-size: 17px; color: #DC2626; font-weight: 700;">⚠️ Geciken Kampanyalar (${overdueCampaigns.length})</h3>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #FEF2F2; border: 1px solid #EF4444; border-radius: 8px; margin-bottom: 24px; border-collapse: collapse;">
+      <thead>
+        <tr style="background-color: #FECACA;">
+          <th style="text-align: left; font-size: 12px; color: #991B1B; font-weight: 600; padding: 10px 12px;">Kampanya</th>
+          <th style="text-align: left; font-size: 12px; color: #991B1B; font-weight: 600; padding: 10px 12px;">Atanan</th>
+          <th style="text-align: center; font-size: 12px; color: #991B1B; font-weight: 600; padding: 10px 12px;">Tarih</th>
+          <th style="text-align: center; font-size: 12px; color: #991B1B; font-weight: 600; padding: 10px 12px;">Aciliyet</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${overdueCampaigns.map((c, i) => `
+          <tr style="${i > 0 ? 'border-top: 1px solid #FCA5A5;' : ''}">
+            <td style="font-size: 13px; color: #7F1D1D; padding: 10px 12px;"><strong>${c.title}</strong></td>
+            <td style="font-size: 13px; color: #7F1D1D; padding: 10px 12px;">${c.assigneeName}</td>
+            <td style="font-size: 13px; color: #7F1D1D; padding: 10px 12px; text-align: center;">${c.date.toLocaleDateString('tr-TR')}</td>
+            <td style="font-size: 13px; color: #7F1D1D; padding: 10px 12px; text-align: center;">${getUrgencyLabelMorning(c.urgency)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  ` : `
+    <h3 style="margin: 0 0 12px 0; font-size: 17px; color: #10B981; font-weight: 700;">✅ Geciken Kampanya Yok</h3>
+    <div style="background-color: #D1FAE5; border: 1px solid #10B981; border-radius: 8px; padding: 14px; margin-bottom: 24px; text-align: center;">
+      <p style="margin: 0; font-size: 13px; color: #065F46;">Harika! Geciken kampanya bulunmuyor.</p>
+    </div>
+  `;
+
+  const todaySection = todayCampaigns.length > 0 ? `
+    <h3 style="margin: 0 0 12px 0; font-size: 17px; color: #D97706; font-weight: 700;">📅 Bugünkü Kampanyalar (${todayCampaigns.length})</h3>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #FFFBEB; border: 1px solid #F59E0B; border-radius: 8px; margin-bottom: 24px; border-collapse: collapse;">
+      <thead>
+        <tr style="background-color: #FEF3C7;">
+          <th style="text-align: left; font-size: 12px; color: #92400E; font-weight: 600; padding: 10px 12px;">Kampanya</th>
+          <th style="text-align: left; font-size: 12px; color: #92400E; font-weight: 600; padding: 10px 12px;">Atanan</th>
+          <th style="text-align: center; font-size: 12px; color: #92400E; font-weight: 600; padding: 10px 12px;">Aciliyet</th>
+          <th style="text-align: center; font-size: 12px; color: #92400E; font-weight: 600; padding: 10px 12px;">Durum</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${todayCampaigns.map((c, i) => `
+          <tr style="${i > 0 ? 'border-top: 1px solid #FDE68A;' : ''}">
+            <td style="font-size: 13px; color: #78350F; padding: 10px 12px;"><strong>${c.title}</strong></td>
+            <td style="font-size: 13px; color: #78350F; padding: 10px 12px;">${c.assigneeName}</td>
+            <td style="font-size: 13px; color: #78350F; padding: 10px 12px; text-align: center;">${getUrgencyLabelMorning(c.urgency)}</td>
+            <td style="font-size: 13px; color: #78350F; padding: 10px 12px; text-align: center;">${c.status}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  ` : `
+    <h3 style="margin: 0 0 12px 0; font-size: 17px; color: #6B7280; font-weight: 700;">📅 Bugünkü Kampanyalar</h3>
+    <div style="background-color: #F3F4F6; border: 1px solid #D1D5DB; border-radius: 8px; padding: 14px; margin-bottom: 24px; text-align: center;">
+      <p style="margin: 0; font-size: 13px; color: #4B5563;">Bugün için planlanmış kampanya bulunmuyor.</p>
+    </div>
+  `;
+
+  const upcomingSection = upcomingCampaigns.length > 0 ? `
+    <h3 style="margin: 0 0 12px 0; font-size: 17px; color: #2563EB; font-weight: 700;">🗓️ Bu Haftaki Yaklaşan Kampanyalar (${upcomingCampaigns.length})</h3>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #EFF6FF; border: 1px solid #3B82F6; border-radius: 8px; margin-bottom: 24px; border-collapse: collapse;">
+      <thead>
+        <tr style="background-color: #DBEAFE;">
+          <th style="text-align: left; font-size: 12px; color: #1E40AF; font-weight: 600; padding: 10px 12px;">Kampanya</th>
+          <th style="text-align: left; font-size: 12px; color: #1E40AF; font-weight: 600; padding: 10px 12px;">Atanan</th>
+          <th style="text-align: center; font-size: 12px; color: #1E40AF; font-weight: 600; padding: 10px 12px;">Tarih</th>
+          <th style="text-align: center; font-size: 12px; color: #1E40AF; font-weight: 600; padding: 10px 12px;">Aciliyet</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${upcomingCampaigns.map((c, i) => `
+          <tr style="${i > 0 ? 'border-top: 1px solid #BFDBFE;' : ''}">
+            <td style="font-size: 13px; color: #1E3A8A; padding: 10px 12px;"><strong>${c.title}</strong></td>
+            <td style="font-size: 13px; color: #1E3A8A; padding: 10px 12px;">${c.assigneeName}</td>
+            <td style="font-size: 13px; color: #1E3A8A; padding: 10px 12px; text-align: center;">${c.date.toLocaleDateString('tr-TR')}</td>
+            <td style="font-size: 13px; color: #1E3A8A; padding: 10px 12px; text-align: center;">${getUrgencyLabelMorning(c.urgency)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  ` : `
+    <h3 style="margin: 0 0 12px 0; font-size: 17px; color: #6B7280; font-weight: 700;">🗓️ Bu Haftaki Yaklaşan Kampanyalar</h3>
+    <div style="background-color: #F3F4F6; border: 1px solid #D1D5DB; border-radius: 8px; padding: 14px; margin-bottom: 24px; text-align: center;">
+      <p style="margin: 0; font-size: 13px; color: #4B5563;">Bu hafta için başka kampanya planlanmamış.</p>
+    </div>
+  `;
+
+  return `
+    <!DOCTYPE html>
+    <html lang="tr">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Sabah Bülteni</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #FFFBEB;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #FFFBEB; padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <table width="650" cellpadding="0" cellspacing="0" style="background-color: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.08);">
+              <tr>
+                <td style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); padding: 32px; text-align: center;">
+                  <h1 style="margin: 0; color: #FFFFFF; font-size: 28px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.15);">🌄 Sabah Bülteni</h1>
+                  <p style="margin: 8px 0 0 0; color: #FEF3C7; font-size: 15px; font-weight: 500;">${dateStr}</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 32px;">
+                  <p style="margin: 0 0 24px 0; font-size: 16px; color: #1F2937;">Günaydın <strong>${recipientName}</strong>,</p>
+                  <p style="margin: 0 0 24px 0; font-size: 14px; color: #4B5563; line-height: 1.6;">Bugün için ekip kampanya durumu aşağıdadır:</p>
+                  ${summaryHTML}
+                  ${overdueSection}
+                  ${todaySection}
+                  ${upcomingSection}
+                  <div style="text-align: center; margin: 32px 0 8px 0;">
+                    <a href="https://www.kampanyatakvimi.net.tr" style="display: inline-block; background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color: #FFFFFF; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(217, 119, 6, 0.3);">Takvime Git →</a>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td style="background-color: #FEF3C7; padding: 20px 32px; text-align: center; border-top: 1px solid #FDE68A;">
+                  <p style="margin: 0 0 4px 0; font-size: 12px; color: #78350F;">Bu otomatik bir sabah özetidir.</p>
+                  <p style="margin: 0; font-size: 12px; color: #92400E;">Kampanya Takvimi © ${new Date().getFullYear()}</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * Send Morning Bulletin email via Resend
+ */
+export async function sendMorningBulletinEmail(
+  apiKey: string,
+  recipientEmail: string,
+  recipientName: string,
+  overdueCampaigns: MorningBulletinCampaign[],
+  todayCampaigns: MorningBulletinTodayCampaign[],
+  upcomingCampaigns: MorningBulletinCampaign[],
+  dateStr: string
+): Promise<EmailResponse> {
+  const html = buildMorningBulletinHTML({
+    recipientName,
+    overdueCampaigns,
+    todayCampaigns,
+    upcomingCampaigns,
+    dateStr,
+  });
+
+  const total = todayCampaigns.length + overdueCampaigns.length + upcomingCampaigns.length;
+  const subject = `🌄 Sabah Bülteni - ${dateStr} (${total} Kampanya${overdueCampaigns.length > 0 ? ' ⚠️' : ''})`;
+
+  return sendEmailWithResend(apiKey, {
+    to: recipientEmail,
+    toName: recipientName,
+    subject,
+    html,
+    eventId: `morning-bulletin-${new Date().toISOString().split('T')[0]}-${recipientEmail}`,
+    eventTitle: `Sabah Bülteni - ${dateStr}`,
+    eventType: 'campaign',
+    urgency: 'Medium',
+  });
+}

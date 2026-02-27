@@ -18,7 +18,7 @@ import { sendTestSMS } from '../utils/smsService';
 import { saveReminderLog } from '../utils/reminderHelper';
 
 import { buildWeeklyDigest } from '../utils/weeklyDigestBuilder';
-import { buildWeeklyDigestHTML, sendWeeklyDigestEmail, buildDailyDigestHTML, sendDailyDigestEmail, buildAnalyticsBulletinHTML, sendAnalyticsBulletinEmail, buildPersonalBulletinHTML, sendPersonalBulletinEmail } from '../utils/emailService';
+import { buildWeeklyDigestHTML, sendWeeklyDigestEmail, buildDailyDigestHTML, sendDailyDigestEmail, buildAnalyticsBulletinHTML, sendAnalyticsBulletinEmail, buildPersonalBulletinHTML, sendPersonalBulletinEmail, buildMorningBulletinHTML, sendMorningBulletinEmail } from '../utils/emailService';
 import { buildDailyDigest } from '../utils/dailyDigestBuilder';
 import { buildAnalyticsBulletin } from '../utils/analyticsBulletinBuilder';
 
@@ -79,6 +79,13 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
   const [analyticsBulletinRecipients, setAnalyticsBulletinRecipients] = useState<AnalyticsUser[]>([]);
 
   const [analyticsUsers, setAnalyticsUsers] = useState<AnalyticsUser[]>([]);
+
+  // Morning Bulletin states
+  const [morningBulletinPreviewOpen, setMorningBulletinPreviewOpen] = useState(false);
+  const [morningBulletinPreviewHTML, setMorningBulletinPreviewHTML] = useState('');
+  const [isBuildingMorningBulletin, setIsBuildingMorningBulletin] = useState(false);
+  const [isSendingMorningBulletin, setIsSendingMorningBulletin] = useState(false);
+  const [morningBulletinRecipientsState, setMorningBulletinRecipientsState] = useState<DepartmentUser[]>([]);
 
   // Personal Daily Bulletin states
   const [users, setUsers] = useState<User[]>([]);
@@ -658,6 +665,180 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
       alert('Gönderim sırasında hata oluştu.');
     } finally {
       setIsSendingAnalyticsBulletin(false);
+    }
+  }
+
+  async function handleOpenMorningBulletinPreview() {
+    setIsBuildingMorningBulletin(true);
+    try {
+      const selectedRecipients = departmentUsers.filter(u =>
+        (settings.morningBulletinRecipients || []).includes(u.id) && u.email
+      );
+
+      if (selectedRecipients.length === 0) {
+        setProcessMessage('⚠️ Lütfen önce sabah bülteni alıcılarını seçin.');
+        setTimeout(() => setProcessMessage(''), 4000);
+        setIsBuildingMorningBulletin(false);
+        return;
+      }
+
+      setMorningBulletinRecipientsState(selectedRecipients);
+
+      const { campaigns, users: allUsers } = await fetchPanelData();
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const tomorrowStart = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+      const weekEnd = new Date(todayStart.getTime() + 8 * 24 * 60 * 60 * 1000);
+
+      const getUserName = (assigneeId?: string) => {
+        if (!assigneeId) return 'Atanmamış';
+        const u = allUsers.find((u: any) => u.id === assigneeId);
+        return (u as any)?.name || 'Bilinmiyor';
+      };
+
+      const overdueCampaigns = campaigns
+        .filter(c => {
+          const d = new Date(c.date.getFullYear(), c.date.getMonth(), c.date.getDate());
+          return d < todayStart && c.status !== 'İptal Edildi' && c.status !== 'Tamamlandı';
+        })
+        .map(c => ({ title: c.title, assigneeName: getUserName(c.assigneeId), date: c.date, urgency: c.urgency }));
+
+      const todayCampaigns = campaigns
+        .filter(c => {
+          const d = new Date(c.date.getFullYear(), c.date.getMonth(), c.date.getDate());
+          return d.getTime() === todayStart.getTime() && c.status !== 'İptal Edildi';
+        })
+        .map(c => ({ title: c.title, assigneeName: getUserName(c.assigneeId), urgency: c.urgency, status: c.status || 'Planlandı' }));
+
+      const upcomingCampaigns = campaigns
+        .filter(c => {
+          const d = new Date(c.date.getFullYear(), c.date.getMonth(), c.date.getDate());
+          return d >= tomorrowStart && d < weekEnd && c.status !== 'İptal Edildi' && c.status !== 'Tamamlandı';
+        })
+        .map(c => ({ title: c.title, assigneeName: getUserName(c.assigneeId), date: c.date, urgency: c.urgency }));
+
+      const dateStr = today.toLocaleDateString('tr-TR', {
+        day: 'numeric', month: 'long', year: 'numeric', weekday: 'long',
+      });
+
+      const previewHTML = buildMorningBulletinHTML({
+        recipientName: selectedRecipients[0].username,
+        overdueCampaigns,
+        todayCampaigns,
+        upcomingCampaigns,
+        dateStr,
+      });
+
+      setMorningBulletinPreviewHTML(previewHTML);
+      setMorningBulletinPreviewOpen(true);
+    } catch (error) {
+      console.error('Error building morning bulletin preview:', error);
+      setProcessMessage('❌ Önizleme hazırlanırken bir hata oluştu.');
+      setTimeout(() => setProcessMessage(''), 4000);
+    } finally {
+      setIsBuildingMorningBulletin(false);
+    }
+  }
+
+  async function handleSendMorningBulletinManually() {
+    if (!settings.resendApiKey) {
+      alert('API Key eksik!');
+      return;
+    }
+
+    setIsSendingMorningBulletin(true);
+    let sentCount = 0;
+    let failedCount = 0;
+
+    try {
+      const { campaigns, users: allUsers } = await fetchPanelData();
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const tomorrowStart = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+      const weekEnd = new Date(todayStart.getTime() + 8 * 24 * 60 * 60 * 1000);
+
+      const getUserName = (assigneeId?: string) => {
+        if (!assigneeId) return 'Atanmamış';
+        const u = allUsers.find((u: any) => u.id === assigneeId);
+        return (u as any)?.name || 'Bilinmiyor';
+      };
+
+      const overdueCampaigns = campaigns
+        .filter(c => {
+          const d = new Date(c.date.getFullYear(), c.date.getMonth(), c.date.getDate());
+          return d < todayStart && c.status !== 'İptal Edildi' && c.status !== 'Tamamlandı';
+        })
+        .map(c => ({ title: c.title, assigneeName: getUserName(c.assigneeId), date: c.date, urgency: c.urgency }));
+
+      const todayCampaigns = campaigns
+        .filter(c => {
+          const d = new Date(c.date.getFullYear(), c.date.getMonth(), c.date.getDate());
+          return d.getTime() === todayStart.getTime() && c.status !== 'İptal Edildi';
+        })
+        .map(c => ({ title: c.title, assigneeName: getUserName(c.assigneeId), urgency: c.urgency, status: c.status || 'Planlandı' }));
+
+      const upcomingCampaigns = campaigns
+        .filter(c => {
+          const d = new Date(c.date.getFullYear(), c.date.getMonth(), c.date.getDate());
+          return d >= tomorrowStart && d < weekEnd && c.status !== 'İptal Edildi' && c.status !== 'Tamamlandı';
+        })
+        .map(c => ({ title: c.title, assigneeName: getUserName(c.assigneeId), date: c.date, urgency: c.urgency }));
+
+      const dateStr = today.toLocaleDateString('tr-TR');
+
+      for (const recipient of morningBulletinRecipientsState) {
+        try {
+          setProcessMessage(`📧 Gönderiliyor: ${recipient.username} (${sentCount + failedCount + 1}/${morningBulletinRecipientsState.length})...`);
+
+          const result = await sendMorningBulletinEmail(
+            settings.resendApiKey,
+            recipient.email!,
+            recipient.username,
+            overdueCampaigns,
+            todayCampaigns,
+            upcomingCampaigns,
+            dateStr
+          );
+
+          try {
+            const logData: any = {
+              eventId: `morning-bulletin-${new Date().toISOString().split('T')[0]}-${recipient.id}`,
+              eventType: 'campaign',
+              eventTitle: '🌄 Sabah Bülteni',
+              recipientEmail: recipient.email!,
+              recipientName: recipient.username,
+              urgency: 'Medium',
+              sentAt: new Date(),
+              status: result.success ? 'success' : 'failed',
+              emailProvider: 'resend',
+            };
+            if (result.error) logData.errorMessage = result.error;
+            if (result.messageId) logData.messageId = result.messageId;
+            await saveReminderLog(logData);
+          } catch (logError) {
+            console.error('Error saving morning bulletin log:', logError);
+          }
+
+          if (result.success) {
+            sentCount++;
+          } else {
+            console.error(`Failed to send to ${recipient.username}:`, result.error);
+            failedCount++;
+          }
+        } catch (error) {
+          console.error(`Error sending to ${recipient.username}:`, error);
+          failedCount++;
+        }
+      }
+
+      setMorningBulletinPreviewOpen(false);
+      setProcessMessage(`✅ Bülten gönderimi tamamlandı!\nGönderilen: ${sentCount}, Başarısız: ${failedCount}`);
+      setTimeout(() => { loadRecentLogs(); setProcessMessage(''); }, 2000);
+    } catch (error) {
+      console.error('Error sending morning bulletins:', error);
+      alert('Gönderim sırasında hata oluştu.');
+    } finally {
+      setIsSendingMorningBulletin(false);
     }
   }
 
@@ -1369,6 +1550,111 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
                     </p>
                   </div>
                 )}
+              </div>
+
+              {/* Morning Bulletin */}
+              <div className="p-6 bg-amber-50 dark:bg-amber-900/10 rounded-lg border border-amber-200 dark:border-amber-800">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                      <Mail size={20} className="text-amber-600" />
+                      Sabah Bülteni
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      Geciken, bugünkü ve bu haftaki kampanyaları içeren sabah özeti
+                    </p>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={settings.morningBulletinEnabled || false}
+                      onChange={(e) => setSettings({ ...settings, morningBulletinEnabled: e.target.checked })}
+                      className="w-5 h-5 text-amber-600 rounded focus:ring-2 focus:ring-amber-200"
+                    />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Otomatik Gönder
+                    </span>
+                  </label>
+                </div>
+
+                {settings.morningBulletinEnabled && (
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Gönderim Saati (Türkiye Saati)
+                    </label>
+                    <input
+                      type="time"
+                      value={settings.morningBulletinTime || '08:30'}
+                      onChange={(e) => setSettings({ ...settings, morningBulletinTime: e.target.value })}
+                      className="px-3 py-2 border border-amber-300 dark:border-amber-700 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 dark:bg-slate-700 dark:text-white"
+                    />
+                  </div>
+                )}
+
+                {/* Recipient Selection */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Bülten Alacak Kişiler ({(settings.morningBulletinRecipients || []).length} seçili)
+                  </label>
+                  <div className="flex gap-2 mb-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allIds = departmentUsers.filter(u => u.email).map(u => u.id);
+                        setSettings({ ...settings, morningBulletinRecipients: allIds });
+                      }}
+                      className="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded text-xs font-medium transition-colors"
+                    >
+                      ✓ Tümünü Seç
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSettings({ ...settings, morningBulletinRecipients: [] })}
+                      className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-300 rounded text-xs font-medium transition-colors"
+                    >
+                      ✗ Tümünü Kaldır
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                    {departmentUsers.filter(u => u.email).map(user => (
+                      <label key={user.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/20 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={(settings.morningBulletinRecipients || []).includes(user.id)}
+                          onChange={(e) => {
+                            const current = settings.morningBulletinRecipients || [];
+                            const updated = e.target.checked
+                              ? [...current, user.id]
+                              : current.filter(id => id !== user.id);
+                            setSettings({ ...settings, morningBulletinRecipients: updated });
+                          }}
+                          className="w-4 h-4 text-amber-600 rounded focus:ring-amber-200"
+                        />
+                        <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
+                          {user.username}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleOpenMorningBulletinPreview}
+                  disabled={isBuildingMorningBulletin || !settings.resendApiKey}
+                  className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium transition-all flex items-center gap-2 disabled:opacity-50 shadow-sm"
+                >
+                  {isBuildingMorningBulletin ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Hazırlanıyor...
+                    </>
+                  ) : (
+                    <>
+                      <Eye size={18} />
+                      Önizle ve Manuel Gönder
+                    </>
+                  )}
+                </button>
               </div>
 
               {/* Daily Digest */}
@@ -2222,6 +2508,65 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
                 className="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-md font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
               >
                 {isSendingAnalyticsBulletin ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Gönderiliyor...
+                  </>
+                ) : (
+                  <>
+                    <Send size={18} />
+                    Onayla ve Gönder
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Morning Bulletin Preview Modal */}
+      {morningBulletinPreviewOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Eye size={20} className="text-amber-600" />
+                Sabah Bülteni Önizleme
+              </h3>
+              <button
+                onClick={() => setMorningBulletinPreviewOpen(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-800">
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                <strong>Alıcılar ({morningBulletinRecipientsState.length}):</strong> {morningBulletinRecipientsState.map(u => u.username).join(', ')}
+              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-300 mt-1">
+                💡 Tüm alıcılar aynı ekip özetini alır.
+              </p>
+            </div>
+
+            <div className="flex-1 overflow-auto p-6 bg-gray-100 dark:bg-slate-900">
+              <div className="bg-white rounded shadow-lg mx-auto max-w-2xl" dangerouslySetInnerHTML={{ __html: morningBulletinPreviewHTML }} />
+            </div>
+
+            <div className="p-4 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-3 bg-gray-50 dark:bg-slate-800/50 rounded-b-xl">
+              <button
+                onClick={() => setMorningBulletinPreviewOpen(false)}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md font-medium transition-colors"
+              >
+                Kapat
+              </button>
+              <button
+                onClick={handleSendMorningBulletinManually}
+                disabled={isSendingMorningBulletin}
+                className="px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-md font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                {isSendingMorningBulletin ? (
                   <>
                     <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     Gönderiliyor...
