@@ -358,7 +358,7 @@ function buildMorningBulletinHTML(params: {
                         <table width="650" cellpadding="0" cellspacing="0" style="background-color: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                             <tr>
                                 <td style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); padding: 32px; text-align: center; border-bottom: 1px solid #E5E7EB;">
-                                    <h1 style="margin: 0; color: #FFFFFF; font-size: 28px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.15);">🌄 Sabah Bülteni</h1>
+                                    <h1 style="margin: 0; color: #FFFFFF; font-size: 28px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.15);">☀️ Sabah Bülteni</h1>
                                     <p style="margin: 8px 0 0 0; color: #FEF3C7; font-size: 16px; font-weight: 500;">${dateStr}</p>
                                 </td>
                             </tr>
@@ -566,7 +566,7 @@ async function processMorningBulletin(
 
             const emailResult = await sendEmailInternal(settings.resendApiKey, {
                 to: recipient.email!,
-                subject: `🌄 Sabah Bülteni - ${now.toLocaleDateString('tr-TR')}`,
+                subject: `☀️ Sabah Bülteni - ${now.toLocaleDateString('tr-TR')}`,
                 html,
             });
 

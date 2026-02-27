@@ -1509,7 +1509,7 @@ export function buildMorningBulletinHTML(params: {
             <table width="650" cellpadding="0" cellspacing="0" style="background-color: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.08);">
               <tr>
                 <td style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); padding: 32px; text-align: center;">
-                  <h1 style="margin: 0; color: #FFFFFF; font-size: 28px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.15);">🌄 Sabah Bülteni</h1>
+                  <h1 style="margin: 0; color: #FFFFFF; font-size: 28px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.15);">☀️ Sabah Bülteni</h1>
                   <p style="margin: 8px 0 0 0; color: #FEF3C7; font-size: 15px; font-weight: 500;">${dateStr}</p>
                 </td>
               </tr>
@@ -1562,7 +1562,7 @@ export async function sendMorningBulletinEmail(
   });
 
   const total = todayCampaigns.length + overdueCampaigns.length + upcomingCampaigns.length;
-  const subject = `🌄 Sabah Bülteni - ${dateStr} (${total} Kampanya${overdueCampaigns.length > 0 ? ' ⚠️' : ''})`;
+  const subject = `☀️ Sabah Bülteni - ${dateStr} (${total} Kampanya${overdueCampaigns.length > 0 ? ' ⚠️' : ''})`;
 
   return sendEmailWithResend(apiKey, {
     to: recipientEmail,
