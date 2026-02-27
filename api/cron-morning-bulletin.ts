@@ -701,27 +701,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Turkey day boundaries in UTC
         const startOfToday = new Date(Date.UTC(turkeyYear, turkeyMonth, turkeyDate, 0, 0, 0) - TURKEY_OFFSET_MS);
         const endOfToday   = new Date(Date.UTC(turkeyYear, turkeyMonth, turkeyDate, 23, 59, 59, 999) - TURKEY_OFFSET_MS);
-        const startOfTomorrow = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
-        const endOfWeek    = new Date(startOfToday.getTime() + 8 * 24 * 60 * 60 * 1000 - 1);
+
+        // Bu haftaki Pazartesi–Cuma: bugünden itibaren bu haftanın Cuma gününe kadar
+        // turkeyCurrentDay: 1=Pazartesi … 5=Cuma
+        const turkeyCurrentDay = turkeyTime.getUTCDay(); // 0=Pazar, 1=Pzt, …, 5=Cum, 6=Cmt
+        const daysToFriday = 5 - turkeyCurrentDay; // Cuma'ya kalan gün sayısı (negatifse hafta bitti)
+        const endOfThisWeekFriday = daysToFriday >= 0
+            ? new Date(Date.UTC(turkeyYear, turkeyMonth, turkeyDate + daysToFriday, 23, 59, 59, 999) - TURKEY_OFFSET_MS)
+            : endOfToday; // Cuma gündeyse veya geçtiyse kalan gün yok
 
         // OPTIMIZATION: 3 targeted queries instead of full collection scan
 
-        // 1. Geciken kampanyalar: date < bugün AND Planlandı veya Devam Ediyor
+        // 1. Geciken kampanyalar: date < bugün AND sadece Planlandı
         const overdueSnap = await db.collection('events')
             .where('date', '<', Timestamp.fromDate(startOfToday))
-            .where('status', 'in', ['Planlandı', 'Devam Ediyor'])
+            .where('status', '==', 'Planlandı')
             .get();
 
-        // 2. Bugünkü kampanyalar
+        // 2. Bugünkü kampanyalar (status filtresi post-query)
         const todaySnap = await db.collection('events')
             .where('date', '>=', Timestamp.fromDate(startOfToday))
             .where('date', '<=', Timestamp.fromDate(endOfToday))
             .get();
 
-        // 3. Yaklaşan kampanyalar (yarından itibaren 7 gün)
+        // 3. Bu haftaki yaklaşan kampanyalar: yarından bu haftanın Cumasına kadar, sadece Pazartesi–Cuma
         const upcomingSnap = await db.collection('events')
             .where('date', '>', Timestamp.fromDate(endOfToday))
-            .where('date', '<=', Timestamp.fromDate(endOfWeek))
+            .where('date', '<=', Timestamp.fromDate(endOfThisWeekFriday))
+            .where('status', '==', 'Planlandı')
             .get();
 
         const toEvent = (doc: FirebaseFirestore.QueryDocumentSnapshot): CalendarEvent => {
@@ -736,13 +743,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             };
         };
 
+        // Geciken: Planlandı (Firestore sorgusu zaten filtredi)
         const overdueCampaigns = overdueSnap.docs.map(toEvent);
+        // Bugün: Bekleme ve İptal Edildi hariç
         const todayCampaigns = todaySnap.docs
             .map(toEvent)
-            .filter(c => c.status !== 'İptal Edildi');
-        const upcomingCampaigns = upcomingSnap.docs
-            .map(toEvent)
-            .filter(c => c.status !== 'İptal Edildi' && c.status !== 'Tamamlandı');
+            .filter(c => c.status !== 'İptal Edildi' && c.status !== 'Bekleme');
+        // Yaklaşan: Planlandı + Pzt–Cum (Firestore sorgusu zaten filtredi)
+        const upcomingCampaigns = upcomingSnap.docs.map(toEvent);
 
         console.log(`Overdue: ${overdueCampaigns.length} | Today: ${todayCampaigns.length} | Upcoming: ${upcomingCampaigns.length}`);
 

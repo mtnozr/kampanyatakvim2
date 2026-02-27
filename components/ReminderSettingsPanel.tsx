@@ -690,7 +690,12 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
       const today = new Date();
       const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const tomorrowStart = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
-      const weekEnd = new Date(todayStart.getTime() + 8 * 24 * 60 * 60 * 1000);
+      // Bu haftaki Cuma sonu: bugünden (Pazartesi=1…Cuma=5) Cuma'ya kalan gün
+      const currentDay = today.getDay(); // 0=Paz, 1=Pzt, …, 5=Cum
+      const daysToFriday = 5 - currentDay;
+      const endOfThisWeekFriday = daysToFriday >= 0
+        ? new Date(todayStart.getTime() + daysToFriday * 24 * 60 * 60 * 1000 + 86399999)
+        : todayStart;
 
       const getUserName = (assigneeId?: string) => {
         if (!assigneeId) return 'Atanmamış';
@@ -698,24 +703,30 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
         return (u as any)?.name || 'Bilinmiyor';
       };
 
+      // Geciken: tarih < bugün, sadece Planlandı
       const overdueCampaigns = campaigns
         .filter(c => {
           const d = new Date(c.date.getFullYear(), c.date.getMonth(), c.date.getDate());
-          return d < todayStart && c.status !== 'İptal Edildi' && c.status !== 'Tamamlandı';
+          return d < todayStart && c.status === 'Planlandı';
         })
         .map(c => ({ title: c.title, assigneeName: getUserName(c.assigneeId), date: c.date, urgency: c.urgency }));
 
+      // Bugünkü: Bekleme ve İptal Edildi hariç
       const todayCampaigns = campaigns
         .filter(c => {
           const d = new Date(c.date.getFullYear(), c.date.getMonth(), c.date.getDate());
-          return d.getTime() === todayStart.getTime() && c.status !== 'İptal Edildi';
+          return d.getTime() === todayStart.getTime() && c.status !== 'İptal Edildi' && c.status !== 'Bekleme';
         })
         .map(c => ({ title: c.title, assigneeName: getUserName(c.assigneeId), urgency: c.urgency, status: c.status || 'Planlandı' }));
 
+      // Yaklaşan: yarından bu haftanın Cuma'sına, Pazartesi–Cuma günleri, sadece Planlandı
       const upcomingCampaigns = campaigns
         .filter(c => {
           const d = new Date(c.date.getFullYear(), c.date.getMonth(), c.date.getDate());
-          return d >= tomorrowStart && d < weekEnd && c.status !== 'İptal Edildi' && c.status !== 'Tamamlandı';
+          const dayOfWeek = d.getDay();
+          return d >= tomorrowStart && d <= endOfThisWeekFriday
+            && dayOfWeek >= 1 && dayOfWeek <= 5
+            && c.status === 'Planlandı';
         })
         .map(c => ({ title: c.title, assigneeName: getUserName(c.assigneeId), date: c.date, urgency: c.urgency }));
 
@@ -757,7 +768,11 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
       const today = new Date();
       const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const tomorrowStart = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
-      const weekEnd = new Date(todayStart.getTime() + 8 * 24 * 60 * 60 * 1000);
+      const currentDay = today.getDay();
+      const daysToFriday = 5 - currentDay;
+      const endOfThisWeekFriday = daysToFriday >= 0
+        ? new Date(todayStart.getTime() + daysToFriday * 24 * 60 * 60 * 1000 + 86399999)
+        : todayStart;
 
       const getUserName = (assigneeId?: string) => {
         if (!assigneeId) return 'Atanmamış';
@@ -768,21 +783,24 @@ Herhangi bir sorun veya gecikme varsa lütfen yöneticinizle iletişime geçin.`
       const overdueCampaigns = campaigns
         .filter(c => {
           const d = new Date(c.date.getFullYear(), c.date.getMonth(), c.date.getDate());
-          return d < todayStart && c.status !== 'İptal Edildi' && c.status !== 'Tamamlandı';
+          return d < todayStart && c.status === 'Planlandı';
         })
         .map(c => ({ title: c.title, assigneeName: getUserName(c.assigneeId), date: c.date, urgency: c.urgency }));
 
       const todayCampaigns = campaigns
         .filter(c => {
           const d = new Date(c.date.getFullYear(), c.date.getMonth(), c.date.getDate());
-          return d.getTime() === todayStart.getTime() && c.status !== 'İptal Edildi';
+          return d.getTime() === todayStart.getTime() && c.status !== 'İptal Edildi' && c.status !== 'Bekleme';
         })
         .map(c => ({ title: c.title, assigneeName: getUserName(c.assigneeId), urgency: c.urgency, status: c.status || 'Planlandı' }));
 
       const upcomingCampaigns = campaigns
         .filter(c => {
           const d = new Date(c.date.getFullYear(), c.date.getMonth(), c.date.getDate());
-          return d >= tomorrowStart && d < weekEnd && c.status !== 'İptal Edildi' && c.status !== 'Tamamlandı';
+          const dayOfWeek = d.getDay();
+          return d >= tomorrowStart && d <= endOfThisWeekFriday
+            && dayOfWeek >= 1 && dayOfWeek <= 5
+            && c.status === 'Planlandı';
         })
         .map(c => ({ title: c.title, assigneeName: getUserName(c.assigneeId), date: c.date, urgency: c.urgency }));
 
